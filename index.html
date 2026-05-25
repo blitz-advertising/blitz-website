@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Blitz — AI-powered creative studio. Photorealistic visuals and cinematic production at the speed of now.">
+  <title>Blitz — what they see matters</title>
+  <link rel="icon" type="image/png" href="assets/blitz-favicon.png">
+  <link rel="stylesheet" href="styles.css?v=39">
+  <script src="assets/gsap.min.js"></script>
+  <script src="assets/ScrollTrigger.min.js"></script>
+  <script src="assets/lenis.min.js"></script>
+  <script>gsap.registerPlugin(ScrollTrigger);</script>
+</head>
+<body>
+
+  <div class="cursor" id="cursor"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+
+  <!-- ─── NAV ─────────────────────────────────── -->
+  <nav class="nav" id="nav">
+    <a href="/" class="nav-logo">
+      <img src="assets/blitz-icon-white.png" alt="Blitz" class="nav-icon">
+      <span class="nav-wordmark">blitz</span>
+    </a>
+    <div class="nav-links">
+      <a href="#" class="nav-link">Home</a>
+      <a href="apply/" class="nav-link">Contact</a>
+    </div>
+    <a href="apply/" class="nav-cta">Work with us</a>
+  </nav>
+
+  <!-- ─── HERO ─────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-top">
+      <span class="hero-eyebrow">AI · Production Studio</span>
+      <span class="hero-eyebrow hero-eyebrow--right">Est. 2024</span>
+    </div>
+
+    <div class="hero-center">
+      <div>
+        <h1 class="hero-headline">
+          <span class="hl-line">ai-visuals <span class="hl-amp">&amp;</span></span>
+          <span class="hl-line">post-production.</span>
+        </h1>
+        <p class="hero-sub-tag">for artists and brands</p>
+      </div>
+    </div>
+
+    <div class="hero-bottom"></div>
+
+    <div class="hero-glow hero-glow--1"></div>
+    <div class="hero-glow hero-glow--2"></div>
+    <div class="hero-scanlines" aria-hidden="true"></div>
+  </section>
+
+  <!-- ─── LOGO STRIP ─────────────────────────────── -->
+  <section class="logo-strip">
+    <p class="logo-strip-label">trusted by 50+ brands & artists</p>
+    <div class="logo-marquee-wrap">
+      <div class="logo-marquee-track">
+        <span class="logo-item">Acropolis Fitness</span><span class="logo-sep">·</span>
+        <span class="logo-item">Reinaldo Style</span><span class="logo-sep">·</span>
+        <span class="logo-item">Smart Financial Centre</span><span class="logo-sep">·</span>
+        <span class="logo-item">Pixl Fuzion</span><span class="logo-sep">·</span>
+        <span class="logo-item">Omar Courtz</span><span class="logo-sep">·</span>
+        <span class="logo-item">Blueprint Coaching</span><span class="logo-sep">·</span>
+        <span class="logo-item">ROA</span><span class="logo-sep">·</span>
+        <span class="logo-item">Berseg</span><span class="logo-sep">·</span>
+        <span class="logo-item">Viejo Culprit</span><span class="logo-sep">·</span>
+        <span class="logo-item">CLPR Media</span><span class="logo-sep">·</span>
+        <span class="logo-item">RMAND</span><span class="logo-sep">·</span>
+        <span class="logo-item">The Flight Park</span><span class="logo-sep">·</span>
+        <span class="logo-item">Cancelados TV</span><span class="logo-sep">·</span>
+        <span class="logo-item">CAPS Manufacturing</span><span class="logo-sep">·</span>
+        <span class="logo-item">Albino</span><span class="logo-sep">·</span>
+        <span class="logo-item">Sanctuz</span><span class="logo-sep">·</span>
+        <span class="logo-item">Atomic Crossfit</span><span class="logo-sep">·</span>
+        <!-- duplicate for seamless loop -->
+        <span class="logo-item">Acropolis Fitness</span><span class="logo-sep">·</span>
+        <span class="logo-item">Reinaldo Style</span><span class="logo-sep">·</span>
+        <span class="logo-item">Smart Financial Centre</span><span class="logo-sep">·</span>
+        <span class="logo-item">Pixl Fuzion</span><span class="logo-sep">·</span>
+        <span class="logo-item">Omar Courtz</span><span class="logo-sep">·</span>
+        <span class="logo-item">Blueprint Coaching</span><span class="logo-sep">·</span>
+        <span class="logo-item">ROA</span><span class="logo-sep">·</span>
+        <span class="logo-item">Berseg</span><span class="logo-sep">·</span>
+        <span class="logo-item">Viejo Culprit</span><span class="logo-sep">·</span>
+        <span class="logo-item">CLPR Media</span><span class="logo-sep">·</span>
+        <span class="logo-item">RMAND</span><span class="logo-sep">·</span>
+        <span class="logo-item">The Flight Park</span><span class="logo-sep">·</span>
+        <span class="logo-item">Cancelados TV</span><span class="logo-sep">·</span>
+        <span class="logo-item">CAPS Manufacturing</span><span class="logo-sep">·</span>
+        <span class="logo-item">Albino</span><span class="logo-sep">·</span>
+        <span class="logo-item">Sanctuz</span><span class="logo-sep">·</span>
+        <span class="logo-item">Atomic Crossfit</span><span class="logo-sep">·</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── 001 — WHY BLITZ ───────────────────────── -->
+  <section class="section section--why" id="about">
+    <div class="section-meta">
+      <span class="section-num">001</span>
+      <span class="section-label">Why Blitz</span>
+    </div>
+    <div class="section-content">
+      <h2 class="statement-text"><span>If it can be imagined, it can be built.</span><span>We just do it faster.</span></h2>
+    </div>
+    <div class="stats-row">
+      <div class="stat-item">
+        <span class="stat-num" data-count="50">50+</span>
+        <span class="stat-label">Brands &amp; Artists</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">5 – 10</span>
+        <span class="stat-label">Day Turnaround</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">20 – 30%</span>
+        <span class="stat-label">Of Traditional Cost</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num stat-num--big">∞</span>
+        <span class="stat-label">Creative Iterations</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── MARQUEE ───────────────────────────────── -->
+  <div class="marquee-wrap">
+    <div class="marquee-track">
+      <span>AI Image Production</span><span class="marquee-dot">·</span>
+      <span>AI Video Production</span><span class="marquee-dot">·</span>
+      <span>Post Production</span><span class="marquee-dot">·</span>
+      <span>5–10 Day Turnaround</span><span class="marquee-dot">·</span>
+      <span>20–30% of Traditional Cost</span><span class="marquee-dot">·</span>
+      <span>50+ Brands &amp; Artists</span><span class="marquee-dot">·</span>
+      <span>AI Image Production</span><span class="marquee-dot">·</span>
+      <span>AI Video Production</span><span class="marquee-dot">·</span>
+      <span>Post Production</span><span class="marquee-dot">·</span>
+      <span>5–10 Day Turnaround</span><span class="marquee-dot">·</span>
+      <span>20–30% of Traditional Cost</span><span class="marquee-dot">·</span>
+      <span>50+ Brands &amp; Artists</span><span class="marquee-dot">·</span>
+    </div>
+  </div>
+
+  <!-- ─── 002 — SERVICES ───────────────────────── -->
+  <section class="section section--services" id="services">
+    <div class="section-meta">
+      <span class="section-num">002</span>
+      <span class="section-label">Services</span>
+    </div>
+    <div class="services-list">
+
+      <div class="service-row">
+        <div class="service-row-left">
+          <span class="service-index">01</span>
+        </div>
+        <div class="service-row-mid">
+          <h3 class="service-name">AI Image<br>Production</h3>
+        </div>
+        <div class="service-row-right">
+          <p class="service-desc">Photorealistic product imagery, multi-aesthetic campaign visuals, and brand-consistent content libraries. Built and iterated with AI, refined by hand.</p>
+          <a href="apply/" class="service-link">Start AI Image Project ↗</a>
+        </div>
+      </div>
+
+      <div class="rule rule--inner"></div>
+
+      <div class="service-row">
+        <div class="service-row-left">
+          <span class="service-index">02</span>
+        </div>
+        <div class="service-row-mid">
+          <h3 class="service-name">AI Video<br>Production</h3>
+        </div>
+        <div class="service-row-right">
+          <p class="service-desc">Cinematic production clips, full campaign visuals, visualizers, loops, b-roll packs, and more. Production-grade motion at content-grade speed.</p>
+          <a href="apply/" class="service-link">Start AI Video Project ↗</a>
+        </div>
+      </div>
+
+      <div class="rule rule--inner"></div>
+
+      <div class="service-row">
+        <div class="service-row-left">
+          <span class="service-index">03</span>
+        </div>
+        <div class="service-row-mid">
+          <h3 class="service-name">Post<br>Production</h3>
+        </div>
+        <div class="service-row-right">
+          <p class="service-desc">Color grading, editing, format conversion, and VFX available as standalone services or included in campaign packages and retainers.</p>
+          <a href="apply/" class="service-link">Start Post-Production Project ↗</a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="rule"></div>
+
+  <!-- ─── 003 — WHAT MAKES US DIFFERENT ──────────── -->
+  <section class="section section--benefits" id="benefits">
+    <div class="section-meta">
+      <span class="section-num">003</span>
+      <span class="section-label">What makes us different</span>
+    </div>
+    <div class="benefits-grid">
+      <div class="benefit-card">
+        <span class="benefit-num">01</span>
+        <h4 class="benefit-title">Unmatched Speed</h4>
+        <p class="benefit-desc">Most projects ship in 5–10 days. Traditional agencies quote 3–8 weeks.</p>
+      </div>
+      <div class="benefit-card">
+        <span class="benefit-num">02</span>
+        <h4 class="benefit-title">Unlimited Creativity</h4>
+        <p class="benefit-desc">Whatever you can imagine, we can bring it to life with AI-driven visuals.</p>
+      </div>
+      <div class="benefit-card">
+        <span class="benefit-num">03</span>
+        <h4 class="benefit-title">Scalable Content</h4>
+        <p class="benefit-desc">High volumes of consistent, high-quality content without increasing costs or timelines.</p>
+      </div>
+      <div class="benefit-card">
+        <span class="benefit-num">04</span>
+        <h4 class="benefit-title">Lower Production Costs</h4>
+        <p class="benefit-desc">We eliminate costly shoots and heavy post-production — delivering high-end at 20–30% of the price.</p>
+      </div>
+      <div class="benefit-card">
+        <span class="benefit-num">05</span>
+        <h4 class="benefit-title">Real + AI Integration</h4>
+        <p class="benefit-desc">Combine real footage, photography, and assets with advanced AI workflows for authentic visuals.</p>
+      </div>
+      <div class="benefit-card">
+        <span class="benefit-num">06</span>
+        <h4 class="benefit-title">Competitive Advantage</h4>
+        <p class="benefit-desc">Position your brand at the top of the AI creative game with unmatched speed and constant evolution.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="rule"></div>
+
+  <!-- ─── 004 — WORK ───────────────────────────── -->
+  <section class="section section--work" id="work">
+    <div class="section-meta">
+      <span class="section-num">004</span>
+      <span class="section-label">Worlds Designed To Be Seen</span>
+    </div>
+    <div class="work-grid">
+      <!-- ROW 1 — landscape 16:9 (pattern: 2 per row) -->
+      <div class="work-row work-row--wide">
+        <div class="work-cell">
+          <img src="assets/work/work_03.jpg" alt="Blitz work" loading="lazy">
+        </div>
+        <div class="work-cell">
+          <img src="assets/work/work_12.jpg" alt="Blitz work" loading="lazy">
+        </div>
+      </div>
+      <!-- ROW 2 — portrait 4:5 (pattern: 5 per row) -->
+      <div class="work-row work-row--tall">
+        <div class="work-cell">
+          <img src="assets/work/work_01.jpg" alt="Blitz work" loading="lazy">
+        </div>
+        <div class="work-cell">
+          <img src="assets/work/work_02.jpg" alt="Blitz work" loading="lazy">
+        </div>
+        <div class="work-cell">
+          <img src="assets/work/work_04.jpg" alt="Blitz work" loading="lazy">
+        </div>
+        <div class="work-cell">
+          <img src="assets/work/work_05.jpg" alt="Blitz work" loading="lazy">
+        </div>
+        <div class="work-cell">
+          <img src="assets/work/work_06.jpg" alt="Blitz work" loading="lazy">
+        </div>
+      </div>
+      <!-- ROW 3 — landscape 16:9 (pattern: 2 per row) -->
+      <div class="work-row work-row--wide">
+        <div class="work-cell">
+          <img src="assets/work/work_13.jpg" alt="Blitz work" loading="lazy">
+        </div>
+        <div class="work-cell">
+          <img src="assets/work/work_14.jpg" alt="Blitz work" loading="lazy">
+        </div>
+      </div>
+      <!-- ROW 4 — portrait 4:5 (pattern: 5 per row) -->
+      <div class="work-row work-row--tall">
+        <div class="work-cell">
+          <img src="assets/work/work_07.jpg" alt="Blitz work" loading="lazy">
+        </div>
+        <div class="work-cell">
+          <img src="assets/work/work_08.jpg" alt="Blitz work" loading="lazy">
+        </div>
+        <div class="work-cell">
+          <img src="assets/work/work_15.jpg" alt="Blitz work" loading="lazy">
+        </div>
+        <div class="work-cell">
+          <img src="assets/work/work_10.jpg" alt="Blitz work" loading="lazy">
+        </div>
+        <div class="work-cell">
+          <img src="assets/work/work_11.jpg" alt="Blitz work" loading="lazy">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="rule"></div>
+
+  <!-- ─── 005 — FAQ ────────────────────────────── -->
+  <section class="section section--faq" id="faq">
+    <div class="section-meta">
+      <span class="section-num">005</span>
+      <span class="section-label">FAQ</span>
+    </div>
+    <div class="faq-layout">
+    <div class="faq-main">
+    <h3 class="faq-heading">answers...</h3>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">
+          <span>Is the work actually AI-generated, or is this just a label?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><div class="faq-a-in">
+          <p>Yes, we use generative AI workflows as our core production engine, paired with manual creative direction, color, and editing.</p>
+        </div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">
+          <span>How can AI creative help my business?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><div class="faq-a-in">
+          <p>You get campaign-quality visuals at roughly 20–30% of traditional cost. That means more content, faster launches, and campaigns you couldn't previously afford.</p>
+        </div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">
+          <span>Do I need AI experience to work with Blitz?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><div class="faq-a-in">
+          <p>No. You only bring the idea and brief — we handle everything from strategy and creative direction to workflow and production.</p>
+        </div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">
+          <span>What kind of AI work do you actually do?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><div class="faq-a-in">
+          <p>Product imagery, campaign visuals, cinematic product videos, music visualizers, B-roll, Spotify Canvases, full post-production, and any custom project.</p>
+        </div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">
+          <span>Will my brand still look premium with AI?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><div class="faq-a-in">
+          <p>Yes. AI is only the production engine, not the strategy. We develop the concept together, curate taste-driven campaign references, and handle every step of post-production.</p>
+        </div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">
+          <span>Can AI replace a real production?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><div class="faq-a-in">
+          <p>Yes for product imagery, lifestyle scenes, and most campaign concepts. No for specific real people, real locations, or documentary-style content. Share your project and we'll let you know upfront if it's the right fit.</p>
+        </div></div>
+      </div>
+    </div>
+    </div>
+
+    <div class="faq-side">
+      <div class="status-pulse">
+        <span class="pulse-dot"></span>
+        <span class="pulse-label">booking new projects</span>
+      </div>
+      <span class="process-eyebrow">/ the process</span>
+      <div class="process">
+        <div class="process-step">
+          <span class="process-num">01</span>
+          <div class="process-text">
+            <h4 class="process-name">brief</h4>
+            <p class="process-desc">You share the vision, goals, and references.</p>
+          </div>
+        </div>
+        <div class="process-step">
+          <span class="process-num">02</span>
+          <div class="process-text">
+            <h4 class="process-name">concept</h4>
+            <p class="process-desc">We shape the creative direction and lock the look.</p>
+          </div>
+        </div>
+        <div class="process-step">
+          <span class="process-num">03</span>
+          <div class="process-text">
+            <h4 class="process-name">production</h4>
+            <p class="process-desc">AI generation, iteration, and hand-finishing.</p>
+          </div>
+        </div>
+        <div class="process-step">
+          <span class="process-num">04</span>
+          <div class="process-text">
+            <h4 class="process-name">delivery</h4>
+            <p class="process-desc">Polished assets delivered, ready to launch.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <div class="rule"></div>
+
+  <!-- ─── 006 — CTA ────────────────────────────── -->
+  <section class="section section--cta" id="contact">
+    <div class="section-meta">
+      <span class="section-num">006</span>
+      <span class="section-label">Get Started</span>
+    </div>
+    <div class="cta-inner">
+      <h2 class="cta-headline">dominate today.</h2>
+      <p class="cta-body">Click below and let's talk about how we can help your business move faster, look better, and spend less.</p>
+      <a href="apply/" class="cta-btn">Start your AI journey <span>↗</span></a>
+    </div>
+    <div class="cta-glow"></div>
+  </section>
+
+  <!-- ─── FOOTER ───────────────────────────────── -->
+  <footer class="footer">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <p class="footer-tagline">what they see matters.</p>
+      </div>
+      <div class="footer-nav">
+        <a href="#services">Services</a>
+        <a href="#work">Work</a>
+        <a href="#faq">FAQ</a>
+        <a href="apply/">Work with us</a>
+      </div>
+      <div class="footer-social">
+        <a href="https://instagram.com/adsbyblitz" target="_blank" rel="noopener">Instagram</a>
+        <a href="https://facebook.com/adsbyblitz" target="_blank" rel="noopener">Facebook</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Blitz Advertising LLC. All rights reserved.</span>
+      <div class="footer-links">
+        <a href="/privacy-policy/">Privacy Policy</a>
+        <a href="/terms-of-service/">Terms of Service</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js?v=39"></script>
+</body>
+</html>
