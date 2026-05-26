@@ -28,7 +28,10 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 16px; }
+html {
+  font-size: 16px;
+  scrollbar-gutter: stable;  /* reserve scrollbar space so layout stays centered consistently */
+}
 
 body {
   background: var(--bg);
@@ -1380,16 +1383,35 @@ body::before {
 }
 
 /* ─── RESPONSIVE ─────────────────────────────── */
+/* ─── TABLET (≤960px) ────────────────────────── */
 @media (max-width: 960px) {
   .nav { padding: 0 24px; }
-  .nav-links { display: none; }
+  .nav-links {
+    display: flex;
+    gap: 22px;
+    /* desktop centering via position:absolute kept */
+  }
+  .nav-link {
+    font-size: 9.5px;
+    color: rgba(255,255,255,0.78);
+    font-weight: 400;
+    letter-spacing: 0.1em;
+  }
 
-  .hero { padding: 0 24px; }
+  .hero { padding: 0 24px; min-height: auto; }
+  .hero-top { padding-top: 72px; }
+  .hero-eyebrow { font-size: 10px; letter-spacing: 0.1em; }
+  .hero-headline { font-size: clamp(40px, 10vw, 92px); }
+  .hero-center { padding: 64px 0 48px; }
 
   .section { padding: 80px 24px; }
   .section--services { padding: 80px 24px; }
   .section--cta { padding: 100px 24px; }
   .rule { margin: 0; }
+
+  .section-num, .section-label { font-size: 14px; }
+
+  .statement-text { font-size: clamp(22px, 3.6vw, 38px); padding-left: 22px; }
 
   .service-row { grid-template-columns: 44px 1fr; gap: 20px; }
   .service-row-right { grid-column: 2; }
@@ -1400,24 +1422,183 @@ body::before {
   .clients-content { grid-template-columns: 1fr; gap: 40px; }
   .faq-layout { grid-template-columns: 1fr; gap: 44px; }
   .faq-chat { position: static; }
+  .faq-side { align-items: flex-start; }
 
   .work-row { flex-wrap: wrap; }
   .work-row--wide .work-cell { flex: 1 1 100%; }
   .work-row--tall .work-cell { flex: 1 1 calc(33.333% - 7px); }
 
+  .cta-headline { font-size: clamp(48px, 9.5vw, 92px); }
+
   .footer { padding: 40px 24px 28px; }
   .footer-top { flex-direction: column; gap: 24px; align-items: flex-start; }
+  .footer-nav, .footer-social { gap: 20px; flex-wrap: wrap; }
 
   .apply-hero { padding: 120px 24px 60px; }
   .apply-form { padding: 60px 24px 80px; }
   .form-row { grid-template-columns: 1fr; }
   .form-group.full { grid-column: span 1; }
+  .contact-form { padding: 36px 24px 32px; }
 }
 
+/* ─── PHONE (≤600px) ─────────────────────────── */
 @media (max-width: 600px) {
-  .benefits-grid { grid-template-columns: 1fr; }
-  .work-row--tall .work-cell { flex: 1 1 calc(50% - 5px); }
+  /* NAV — show Home + Contact, hide CTA button to save space */
+  .nav { padding: 0 18px; height: 56px; }
+  .nav-cta { display: none; }
+  .nav-links { gap: 14px; }
+  .nav-link {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    font-weight: 400;
+    color: rgba(255,255,255,0.78);
+  }
+  .nav-wordmark { font-size: 14px; }
+  .nav-icon { height: 16px; }
+  .nav-logo { gap: 7px; }
+
+  /* HERO — smaller font so 2-line layout holds */
+  .hero-top { padding-top: 68px; padding-bottom: 14px; }
+  .hero-eyebrow { font-size: 9px; }
+  .hero-headline { font-size: clamp(22px, 7vw, 38px); line-height: 1.04; }
+  .hl-line { white-space: nowrap; }
+  .hero-sub-tag { font-size: 14px; margin-top: 20px; }
+  .hero-center { padding: 50px 0 36px; }
+
+  .section { padding: 64px 20px; }
+  .section--services { padding: 64px 20px; }
+  .section--cta { padding: 80px 20px; }
+
+  .section-meta { gap: 10px; margin-bottom: 40px; padding-bottom: 12px; }
+  .section-num, .section-label { font-size: 13px; }
+
+  /* SECTION 001 — statement wraps, smaller font */
+  .statement-text { font-size: clamp(19px, 5.4vw, 30px); padding-left: 18px; margin-bottom: 44px; }
+  .statement-text span { white-space: normal; }
+
+  /* SECTION 001 STATS — 2×2 square cells (all identical) */
   .stats-row { grid-template-columns: 1fr 1fr; }
-  .service-row { grid-template-columns: 1fr; gap: 12px; }
+  .stat-item {
+    aspect-ratio: 1 / 1;
+    padding: 16px 14px;
+    justify-content: center;
+    gap: 10px;
+  }
+  .stat-num { font-size: clamp(22px, 6vw, 32px); }
+  .stat-num--big { font-size: clamp(30px, 8.5vw, 44px); }
+  .stat-label { font-size: 10px; letter-spacing: 0.08em; }
+
+  /* SERVICES */
+  .service-row { grid-template-columns: 1fr; gap: 12px; padding: 36px 0; }
   .service-index { display: none; }
+  .service-name { font-size: clamp(22px, 6vw, 32px); }
+  .service-desc { font-size: 14px; }
+
+  /* BENEFITS */
+  .benefits-grid { grid-template-columns: 1fr; }
+  .benefit-card { padding: 32px 24px; }
+
+  /* SECTION 004 WORK — alternating pattern: 1 landscape, 2 portraits, repeating */
+  .work-row { display: contents; }
+  .work-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .work-row--wide .work-cell {
+    grid-column: 1 / -1;
+    aspect-ratio: 16 / 9;
+    flex: none;
+  }
+  .work-row--tall .work-cell {
+    aspect-ratio: 4 / 5;
+    flex: none;
+  }
+
+  .cta-headline { font-size: clamp(24px, 7vw, 36px); margin-bottom: 28px; }
+  .cta-body { font-size: 14px; margin-bottom: 36px; }
+
+  /* PROCESS TIMELINE */
+  .process-step { gap: 18px; padding: 16px 0; }
+  .process-num { width: 38px; height: 38px; font-size: 11px; }
+  .process-step::before { left: 18px; }
+  .process-name { font-size: 22px; }
+  .process-desc { font-size: 13px; max-width: 100%; }
+
+  /* FAQ */
+  .faq-q { font-size: 14px; padding: 18px 0; gap: 14px; }
+  .faq-item { padding: 0 14px; margin: 0 -14px; }
+  .faq-heading { font-size: clamp(20px, 5.5vw, 30px); margin-bottom: 20px; }
+
+  /* FOOTER — ensure visible + clean stacking */
+  .footer { padding: 36px 20px 24px; }
+  .footer-top { gap: 24px; }
+  .footer-tagline { font-size: 15px; }
+  .footer-nav, .footer-social, .footer-links { gap: 16px; flex-wrap: wrap; }
+  .footer-bottom { flex-direction: column; gap: 14px; align-items: flex-start; padding-top: 20px; }
+
+  /* logo strip / marquee */
+  .logo-strip-label { font-size: 11px; margin: 16px 0 16px; }
+  .logo-item, .marquee-track { font-size: 12px; }
+  .logo-item, .marquee-track span { padding: 0 20px; }
+
+  /* APPLY PAGE */
+  .apply-hero { padding: 100px 20px 48px; }
+  .apply-form { padding: 40px 20px 64px; }
+  /* contact headline — scaled down so 2-line break holds */
+  .contact-headline { font-size: clamp(22px, 7vw, 36px); line-height: 1.0; white-space: nowrap; }
+  .contact-intro { max-width: 100%; }
+  .contact-sub { font-size: 12.5px; line-height: 1.65; max-width: 100%; }
+  .toggle-option { padding: 14px 18px; font-size: 12px; }
+  .form-toggle-group .form-label { font-size: 11px; }
+
+  /* legal pages */
+  .legal-headline { font-size: clamp(22px, 6.5vw, 34px); }
+  .legal-intro { margin-bottom: 44px; padding-bottom: 32px; }
+}
+
+/* ─── TOUCH DEVICES (no mouse) ──────────────── */
+@media (hover: none) and (pointer: coarse) {
+  body { cursor: auto; }
+  .cursor, .cursor-ring { display: none !important; }
+
+  /* Touch has no hover — kill the sticky hover states */
+  .work-cell:hover img { filter: none; }
+  .nav-cta:hover, .cta-btn:hover, .service-link:hover, .form-submit:hover {
+    box-shadow: none;
+  }
+
+  /* Tap-press feedback — buttons glow while finger is held down */
+  .nav-cta:active {
+    background: var(--blue);
+    border-color: var(--blue);
+    box-shadow: 0 0 38px rgba(74,125,240,0.65), 0 0 14px rgba(74,125,240,0.5);
+  }
+  .cta-btn:active {
+    background: var(--blue);
+    border-color: var(--blue);
+    box-shadow: 0 0 64px rgba(74,125,240,0.7), 0 0 22px rgba(74,125,240,0.55);
+  }
+  .service-link:active {
+    color: #fff;
+    background: var(--blue);
+    border-color: var(--blue);
+    box-shadow: 0 0 38px rgba(74,125,240,0.65), 0 0 14px rgba(74,125,240,0.5);
+  }
+  .form-submit:active {
+    background: var(--blue);
+    box-shadow: 0 0 56px rgba(74,125,240,0.7), 0 0 20px rgba(74,125,240,0.55);
+  }
+  .toggle-options input[type="radio"]:active + .toggle-option {
+    color: #fff;
+    background: rgba(31,72,200,0.18);
+    border-color: var(--blue);
+    box-shadow: 0 0 32px rgba(74,125,240,0.55);
+  }
+
+  /* Work images — invert while tap-and-hold */
+  .work-cell:active img {
+    filter: grayscale(1) invert(1) contrast(1.1);
+    transition: filter .2s var(--ease-out);
+  }
 }
