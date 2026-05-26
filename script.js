@@ -258,6 +258,14 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   });
 });
 
+/* ─── IMAGE PROTECTION ──────────────────────── */
+/* Disable right-click "Save Image" and drag-to-download on all images.
+   Not bulletproof — anyone can screenshot or open DevTools — but blocks casual saving. */
+document.querySelectorAll('img').forEach(img => {
+  img.addEventListener('contextmenu', e => e.preventDefault());
+  img.addEventListener('dragstart', e => e.preventDefault());
+});
+
 /* ─── CURSOR-REACTIVE GLOW ──────────────────── */
 const heroGlows = document.querySelectorAll('.hero-glow');
 if (heroGlows.length) {
