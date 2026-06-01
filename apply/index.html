@@ -114,7 +114,18 @@
           </div>
           <div class="form-group">
             <label class="form-label" for="phone">Phone</label>
-            <input class="form-input" type="tel" id="phone" name="phone" placeholder="+1 555 123 4567" required>
+            <input
+              class="form-input"
+              type="tel"
+              inputmode="tel"
+              id="phone"
+              name="phone"
+              placeholder="+1 555 123 4567"
+              required
+              minlength="7"
+              maxlength="20"
+              pattern="[\d+\-() ]{7,20}"
+              title="Enter a valid phone number (at least 7 digits)">
           </div>
           <div class="form-group full">
             <label class="form-label" for="service">Service Needed</label>
@@ -210,6 +221,41 @@
     document.querySelectorAll('input[name="audience"]').forEach(radio => {
       radio.addEventListener('change', e => updateServiceOptions(e.target.value));
     });
+
+    /* Phone input — strip non-phone chars + require minimum 10 digits */
+    const phoneInput = document.getElementById('phone');
+    const MIN_PHONE_DIGITS = 10;
+    function countDigits(s) { return (s.match(/\d/g) || []).length; }
+    function validatePhone() {
+      const digits = countDigits(phoneInput.value);
+      if (digits === 0) {
+        phoneInput.setCustomValidity('Please enter your phone number.');
+      } else if (digits < MIN_PHONE_DIGITS) {
+        phoneInput.setCustomValidity(`Phone number is too short — please enter at least ${MIN_PHONE_DIGITS} digits (you have ${digits}).`);
+      } else {
+        phoneInput.setCustomValidity('');
+      }
+    }
+    if (phoneInput) {
+      phoneInput.addEventListener('input', (e) => {
+        /* strip anything that's not digit / + - ( ) space */
+        const cleaned = e.target.value.replace(/[^\d+\-() ]/g, '');
+        if (cleaned !== e.target.value) e.target.value = cleaned;
+        validatePhone();
+      });
+      /* Reject paste of letters */
+      phoneInput.addEventListener('paste', (e) => {
+        const pasted = (e.clipboardData || window.clipboardData).getData('text');
+        if (/[^\d+\-() ]/.test(pasted)) {
+          e.preventDefault();
+          const cleaned = pasted.replace(/[^\d+\-() ]/g, '');
+          const start = phoneInput.selectionStart, end = phoneInput.selectionEnd;
+          phoneInput.value = phoneInput.value.slice(0, start) + cleaned + phoneInput.value.slice(end);
+          validatePhone();
+        }
+      });
+      phoneInput.addEventListener('blur', validatePhone);
+    }
 
     async function handleSubmit(e) {
       e.preventDefault();
