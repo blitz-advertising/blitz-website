@@ -1396,6 +1396,26 @@ body::before {
   margin-bottom: 24px;
 }
 
+/* Booking calendar embed — qualified-lead success view */
+.booking-embed {
+  margin-top: 36px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+.booking-embed iframe {
+  width: 100%;
+  border: 0;
+  display: block;
+  background: #fff;
+}
+.calendly-inline-widget { width: 100%; }
+@media (max-width: 600px) {
+  .calendly-inline-widget { height: 620px !important; }
+}
+
 /* ─── RESPONSIVE ─────────────────────────────── */
 /* ─── TABLET (≤960px) ────────────────────────── */
 @media (max-width: 960px) {
