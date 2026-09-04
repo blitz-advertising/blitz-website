@@ -802,7 +802,9 @@ body::before {
   display: grid;
   grid-template-columns: 1fr 0.82fr;
   gap: 56px;
-  align-items: start;
+  /* Centre the shorter column against the taller one so the FAQ list and the
+     process timeline read as one balanced block instead of both hanging from the top. */
+  align-items: center;
 }
 .faq-heading {
   font-family: var(--font-display);
