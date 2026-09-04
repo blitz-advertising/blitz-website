@@ -327,34 +327,6 @@ body::before {
   filter: blur(60px);
 }
 
-/* ─── MARQUEE ────────────────────────────────── */
-.marquee-wrap {
-  overflow: hidden;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  padding: 18px 0;
-  background: rgba(31,72,200,0.04);
-  position: relative;
-  z-index: 1;
-}
-.marquee-track {
-  display: flex;
-  white-space: nowrap;
-  animation: marqueeScroll 30s linear infinite;
-  font-size: 13px;
-  font-weight: 400;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.marquee-track span { padding: 0 36px; }
-.marquee-dot { color: var(--blue) !important; padding: 0 6px !important; font-size: 10px; }
-
-@keyframes marqueeScroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-
 /* ─── LOGO STRIP ────────────────────────────── */
 .logo-strip {
   position: relative;
@@ -1593,10 +1565,9 @@ body::before {
   .footer-nav, .footer-social, .footer-links { gap: 16px; flex-wrap: wrap; }
   .footer-bottom { flex-direction: column; gap: 14px; align-items: flex-start; padding-top: 20px; }
 
-  /* logo strip / marquee */
+  /* logo strip */
   .logo-strip-label { font-size: 11px; margin: 16px 0 16px; }
-  .logo-item, .marquee-track { font-size: 12px; }
-  .logo-item, .marquee-track span { padding: 0 20px; }
+  .logo-item { font-size: 12px; padding: 0 20px; }
 
   /* APPLY PAGE */
   .apply-hero { padding: 100px 20px 48px; }
