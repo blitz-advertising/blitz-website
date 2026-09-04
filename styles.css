@@ -195,8 +195,9 @@ body::before {
 .hero {
   position: relative;
   padding: 0 48px;
-  overflow-x: hidden;
-  overflow-y: visible;
+  /* No overflow clipping here — html/body already block horizontal scroll.
+     Clipping on one axis forces the other to compute as `auto`, which slices
+     the blurred glow flat at the section edge and shows as a hard-edged patch. */
   z-index: 1;
   min-height: 100vh;
   display: flex;
