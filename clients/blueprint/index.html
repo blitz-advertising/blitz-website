@@ -230,6 +230,15 @@ input:hover,select:hover,textarea:hover{border-color:var(--accent-line)}
   cursor:default;
 }
 .fixedval .lock{font-size:11px; color:var(--muted); font-family:"IBM Plex Sans",sans-serif; letter-spacing:.04em}
+.seedbox{
+  display:flex; align-items:flex-start; gap:9px; margin-top:12px;
+  padding:10px 11px; background:var(--surface-2); border:1px solid var(--line);
+  border-radius:8px; cursor:pointer;
+}
+.seedbox input{width:15px; height:15px; margin:1px 0 0; flex:0 0 auto; accent-color:var(--brand)}
+.seedbox span{font-size:12.5px; line-height:1.5; color:var(--muted)}
+.seedbox b{color:var(--ink-2); font-weight:600}
+.seedbox:hover{border-color:var(--accent-line)}
 input[type=file]{background:var(--surface-2); border:1px dashed var(--line-2); padding:10px}
 input[type=file]::file-selector-button{
   background:var(--accent-soft); color:var(--brand); border:1px solid var(--accent-line);
@@ -468,6 +477,33 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
 .drawer-head h3{font-size:16px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .drawer-body{overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:16px}
 .drawer-foot{display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--line); flex:none; background:var(--surface)}
+
+/* ---------- modales ----------
+   Propios y no confirm()/prompt() del navegador: los dialogos nativos estan
+   bloqueados en algunos entornos y devuelven false sin avisar, asi que el
+   boton parecia roto. Estos ademas permiten mas de dos opciones. */
+.modal-bg{
+  position:fixed; inset:0; z-index:400; display:flex; align-items:center; justify-content:center;
+  padding:20px; background:rgba(2,6,12,.72); backdrop-filter:blur(3px);
+  animation:modalIn .14s ease;
+}
+@keyframes modalIn{from{opacity:0}to{opacity:1}}
+.modal{
+  width:100%; max-width:400px; background:var(--surface);
+  border:1px solid var(--line-2); border-radius:14px; overflow:hidden;
+  box-shadow:0 30px 90px rgba(0,0,0,.6);
+}
+.modal-h{padding:20px 20px 0}
+.modal-h h3{font-size:17px; margin:0 0 6px}
+.modal-h p{font-size:13px; line-height:1.55; color:var(--muted); margin:0}
+.modal-b{padding:16px 20px 0}
+.modal-b input{font-size:19px; padding:11px 13px; text-align:center; font-family:"IBM Plex Mono",monospace}
+.modal-f{display:flex; gap:8px; padding:18px 20px 20px; flex-wrap:wrap}
+.modal-f .btn{flex:1; min-width:120px; justify-content:center}
+.modal-f .btn.wide{flex:1 0 100%}
+/* Botones de resultado dentro de la ficha */
+.resultbtns{display:flex; gap:8px; margin-bottom:14px}
+.resultbtns .btn{flex:1; justify-content:center; padding:11px}
 .fieldset{display:flex; flex-direction:column; gap:11px}
 .fieldset > .eyebrow{margin:0}
 .steps{display:flex; gap:6px; flex-wrap:wrap}
@@ -712,6 +748,7 @@ td.crit{color:var(--crit)}
   </form>
 </div>
 <div id="drawerHost"></div>
+<div id="modalHost"></div>
 <div id="toastHost"></div>
 
 <script>
@@ -858,6 +895,11 @@ let TOUCHDAYS = {};   // { "2026-09-07": 18, ... } — lo escribe la sincronizac
    no puede tocar (no sigue la cuenta, ventana cerrada) pero con la que sí hablaste. */
 let TOUCHMAN = {};
 let EDITID = false;   // handle y nombre van bloqueados hasta que se pida editarlos
+/* Confirmacion de archivar, en pantalla. No se usa confirm() del navegador
+   porque hay entornos que lo bloquean y devuelven false sin avisar: el boton
+   parecia roto. Guarda el ID del lead, no un booleano: asi cambiar de ficha
+   invalida la confirmacion sola, sin depender de acordarse de resetearla. */
+let ARCH_OK = null;
 
 /* ===================== lead ===================== */
 function blankLead(){
@@ -930,6 +972,11 @@ const yaAgendo       = l => l.pendingBook || !!l.agendo || !!l.callDate || tiene
 /* Cada lead vive en UNA sola pestaña. El orden de estas preguntas es el orden
    de mando: primero los estados terminales, luego el booking, luego el calor. */
 function segmento(l){
+  /* "Sin historial" manda sobre todo lo demas: son contactos de antes del CRM.
+     Su agenda o su cierre no son trabajo de este periodo, asi que no salen ni
+     en Llamadas ni como Clientes. Van a Archivo, que es de donde se rescatan
+     cuando vuelvan a ser leads. Sus datos siguen intactos en la base. */
+  if(l.seed) return "archivo";
   if(l.cierre === true || tieneTag(l,"Tag Client")) return "cliente";
   if(esNoInteresado(l) || esNoCerro(l) || l.estado === "muerto") return "archivo";
   if(yaAgendo(l)) return "llamadas";
@@ -1055,6 +1102,87 @@ function exitDemo(){
   MODE = DB ? "db" : "local";
 }
 
+/* ===================== modales =====================
+   Devuelven una promesa con la clave del boton pulsado (o null si se cierra).
+   No se usa confirm()/prompt(): hay entornos que los bloquean en silencio. */
+function modal({titulo, texto, campo, botones}){
+  return new Promise((resolve) => {
+    const host = document.getElementById("modalHost");
+    const cerrar = (val) => {
+      host.innerHTML = "";
+      document.removeEventListener("keydown", tecla);
+      resolve(val);
+    };
+    const tecla = (e) => {
+      if(e.key === "Escape"){ e.preventDefault(); cerrar(null); }
+      if(e.key === "Enter" && campo){
+        const b = botones.find(x => x.primario);
+        if(b){ e.preventDefault(); cerrar({ accion:b.k, valor:valorCampo() }); }
+      }
+    };
+    const valorCampo = () => {
+      const i = host.querySelector("#modalInput");
+      return i ? i.value : null;
+    };
+    host.innerHTML =
+      '<div class="modal-bg" data-bg="1"><div class="modal" role="dialog" aria-modal="true">' +
+        '<div class="modal-h"><h3>'+titulo+'</h3>'+(texto?'<p>'+texto+'</p>':'')+'</div>' +
+        (campo ? '<div class="modal-b"><input type="'+(campo.tipo||"text")+'" id="modalInput" ' +
+                 'inputmode="'+(campo.tipo==="number"?"decimal":"text")+'" ' +
+                 'placeholder="'+esc(campo.placeholder||"")+'" value="'+esc(campo.valor||"")+'"></div>' : '') +
+        '<div class="modal-f">' +
+          botones.map(b => '<button class="btn '+(b.clase||"")+(b.ancho?" wide":"")+'" data-mk="'+b.k+'">'+esc(b.lab)+'</button>').join("") +
+        '</div>' +
+      '</div></div>';
+    host.querySelector(".modal-bg").addEventListener("click", (e) => {
+      if(e.target.dataset.bg) cerrar(null);              /* clic fuera = cancelar */
+      const b = e.target.closest("[data-mk]");
+      if(b) cerrar({ accion:b.dataset.mk, valor:valorCampo() });
+    });
+    document.addEventListener("keydown", tecla);
+    const i = host.querySelector("#modalInput");
+    if(i) setTimeout(() => { i.focus(); i.select(); }, 40);
+  });
+}
+/* Al marcar "Cerró" se pide el importe en el acto. Se puede aplazar, porque
+   muchas veces la persona cierra pero paga mas tarde — pero entonces el lead
+   queda en "Cerradas · falta el dinero" y sale un aviso arriba, para que no se
+   pierda el dato. Sin importe, el cash y el ticket medio salen mal. */
+async function pedirImporte(l){
+  const r = await modal({
+    titulo: "¿Cuánto pagó @"+esc(l.handle)+"?",
+    texto: "Sin el importe, el cash y el ticket medio quedan incompletos.",
+    campo: { tipo:"number", placeholder:"0.00", valor: (+l.importe > 0) ? l.importe : "" },
+    botones: [
+      { k:"ok",     lab:"Guardar importe", clase:"primary", primario:true },
+      { k:"luego",  lab:"Todavía no pagó — lo pongo después", clase:"ghost", ancho:true }
+    ]
+  });
+  if(!r || r.accion !== "ok"){
+    toast("Anotado como cerrada. Te avisaré del importe hasta que lo pongas.");
+    render(); return false;
+  }
+  const v = Number(r.valor);
+  if(!(v > 0)){
+    toast("Ese importe no vale. Lo dejo pendiente.");
+    render(); return false;
+  }
+  l.importe = Math.round(v * 100) / 100;
+  if(!l.cierreAt) l.cierreAt = l.callDate || todayStr();
+  await persist(l);
+  toast(money2(l.importe) + " registrado.");
+  return true;
+}
+
+/* Atajo para un si/no. Devuelve true solo si se confirma. */
+async function confirmar({titulo, texto, ok, peligro}){
+  const r = await modal({ titulo, texto, botones:[
+    { k:"si", lab:ok || "Sí", clase:peligro ? "danger" : "primary" },
+    { k:"no", lab:"Cancelar", clase:"ghost" }
+  ]});
+  return !!r && r.accion === "si";
+}
+
 /* ===================== acciones ===================== */
 function markRespondio(lead){
   if(!lead.respondio){ lead.respondio = true; lead.respondioAt = todayStr(); }
@@ -1125,7 +1253,8 @@ function metrics(days, countBy){
   return m;
 }
 
-function agendasOn(day){ return LEADS.filter(l => l.agendoAt === day).length; }
+/* REAL(): una agenda de antes del CRM no cuenta como agenda tuya. */
+function agendasOn(day){ return REAL().filter(l => l.agendoAt === day).length; }
 /* Semana de lunes a domingo */
 function weekStart(s){
   const d = parseISO(s), off = (d.getDay() + 6) % 7;
@@ -1134,7 +1263,7 @@ function weekStart(s){
 }
 function agendasSemana(){
   const w = weekStart(todayStr());
-  return LEADS.filter(l => l.agendoAt && l.agendoAt >= w).length;
+  return REAL().filter(l => l.agendoAt && l.agendoAt >= w).length;
 }
 /* Un toque = cualquier interacción por DM, sea lead o no.
    La cuenta buena viene del log de ManyChat (Daily Touch), que la sincronización
@@ -1261,6 +1390,10 @@ function callQueue(){
   const T = todayStr();
   const asc = (a,b) => (a.callDate||"") < (b.callDate||"") ? -1 : 1;
   const desc = (a,b) => (a.callDate||"") > (b.callDate||"") ? -1 : 1;
+  /* Los "sin historial" traen agendas y cierres de antes del CRM. No son cola
+     del closer ni cuentan como clientes: se quedan solo en Archivo.
+     REAL() es justo eso — todos menos los seed. */
+  const LEADS = REAL();
   return {
     /* falta la fecha de la llamada */
     sinFecha:     LEADS.filter(l => l.pendingBook && !l.callDate),
@@ -1375,7 +1508,7 @@ function rowHTML(l, variant){
     if(falta.length) meta += '<span class="chip crit" title="El closer entra sin esto">falta: '+esc(falta.join(", "))+'</span>';
   }
   if(l.via === "VSL") meta += '<span class="chip b2">VSL</span>';
-  if(l.seed) meta += '<span class="chip" title="Entró en la importación inicial. No se sabe cuánto tardó en cada paso, así que no cuenta en las tasas de cohorte.">sin historial</span>';
+  if(l.seed) meta += '<span class="chip" title="Archivado: fuera de todas las métricas. Sus datos siguen guardados.">archivado</span>';
   const notas = [l.meta && "meta", l.dolor && "dolor", l.yaHace && "ya hace"].filter(Boolean);
   const notaChip = notas.length
     ? '<span class="chip good" title="Notas escritas">'+notas.join(" · ")+'</span>'
@@ -1431,6 +1564,9 @@ function metersHTML(){
 }
 
 function viewHoy(){
+  /* Los "sin historial" no son trabajo de hoy: fuera de la alerta de munición
+     y del recuento de tocados. queues() ya los deja fuera vía segmento(). */
+  const LEADS = REAL();
   const q = queues();
   const meters = metersHTML();
   /* Toques fechados en el futuro = la zona horaria de ManyChat no es la tuya. */
@@ -1471,7 +1607,8 @@ function viewHoy(){
 
 /* ---- lo que ya trabajaste hoy: para no repetir con 500 en la lista ---- */
 function tocadosHoyHTML(){
-  const hechos = LEADS.filter(tocadoHoy);
+  /* REAL() y no LEADS: los "sin historial" no son trabajo de hoy. */
+  const hechos = REAL().filter(tocadoHoy);
   if(!hechos.length) return "";
   return '<section class="qgroup"><div class="qhead"><h3>Tocados hoy</h3>' +
     '<span class="n">'+hechos.length+'</span><span class="rule"></span></div>' +
@@ -1561,7 +1698,9 @@ function calorChip(l){
 
   /* Archivo primero: "Not Closed" arrastra blockFloor 04 Pre-call y sin esta
      salida saldria como 🔥 — cuando ya tuvo su llamada y no compro. */
-  /* Cliente primero: pago, y eso manda sobre cualquier otro tag que arrastre. */
+  /* Sin historial primero: da igual que arrastre Client o Booked de antes. */
+  if(l.seed) return chip("🗄️","Archivado","dead");
+  /* Cliente despues: pago, y eso manda sobre cualquier otro tag que arrastre. */
   if(l.cierre === true || tieneTag(l,"Tag Client")) return chip("💪🏼","Client","client");
   if(esNoCerro(l))      return chip("👎🏼","No cerró","dead");
   if(esNoInteresado(l)) return chip("🚫","No interesado","dead");
@@ -1725,7 +1864,7 @@ function callRow(l, kind){
       : l.cierre === true ? '<span class="chip good">Cerró · '+money(l.importe)+'</span>'
       : '<span class="chip">No cerró'+(l.objecion?" · "+esc(l.objecion):"")+'</span>';
   }
-  if(l.seed) tags += '<span class="chip" title="Entró en la importación inicial.">sin historial</span>';
+  if(l.seed) tags += '<span class="chip" title="Archivado: fuera de las métricas.">archivado</span>';
 
   return '<div class="row '+tone+'">' +
     '<button class="row-main" data-open="'+l.id+'">' +
@@ -1746,7 +1885,7 @@ function sinFechaGroup(list){
     '<div class="rows">'+list.map(l =>
       '<div class="row late" style="flex-wrap:wrap"><button class="row-main" data-open="'+l.id+'">' +
         '<span class="row-l1"><span class="h">@'+esc(l.handle)+'</span>'+(l.nombre && norm(l.nombre)!==norm(l.handle)?'<span class="n">'+esc(l.nombre)+'</span>':"")+'</span>' +
-        '<span class="row-l2"><span class="chip crit">falta la fecha</span>'+(l.seed?'<span class="chip">sin historial</span>':'')+'</span></button>' +
+        '<span class="row-l2"><span class="chip crit">falta la fecha</span>'+(l.seed?'<span class="chip">archivado</span>':'')+'</span></button>' +
         '<span style="display:flex;gap:8px;flex:none;flex-wrap:wrap">' +
           '<span><label class="f" for="bc_'+l.id+'">Fecha de la llamada</label>' +
             '<input type="date" id="bc_'+l.id+'" data-calldate="'+l.id+'" value="'+(l.agendo||"")+'" style="width:auto"'+ro+'></span>' +
@@ -1759,6 +1898,9 @@ function sinFechaGroup(list){
 function viewLlamadas(){
   const c = callQueue();
   const T = todayStr();
+  /* Sin los "sin historial": ni su cash viejo cuenta ni sus llamadas de antes
+     del CRM salen en la alerta de munición. Están solo en Archivo. */
+  const LEADS = REAL();
   const money30 = LEADS.filter(l => l.cierre === true && l.cierreAt && l.cierreAt >= addDays(T,-29))
                         .reduce((a,l) => a + (+l.importe||0), 0);
   const head =
@@ -1777,6 +1919,16 @@ function viewLlamadas(){
         ? 'El closer necesita meta, dolor y qué ya hace. Ábrelas y escribe lo que te dijeron: '
         : 'Pídeselas al setter antes de la llamada: ') +
       ciegas.map(l => '@'+esc(l.handle)+' <span style="opacity:.75">(falta '+esc(municionFaltante(l).join(", "))+')</span>').join(" · ") +
+      '</p></div>' : "";
+  /* Cerradas sin importe. Cada una es dinero que entro y no esta contado: sin
+     el numero, el cash y el ticket medio salen por debajo de lo real. */
+  const debenImporte = c.sinImporte;
+  const avisoImporte = debenImporte.length ? '<div class="banner"><p><b>' +
+      (debenImporte.length === 1
+        ? 'Falta el importe de una venta cerrada.'
+        : 'Faltan los importes de '+debenImporte.length+' ventas cerradas.') +
+      '</b> Sin el número, tu cash y tu ticket medio salen por debajo de lo real. ' +
+      debenImporte.map(l => '<button class="linkish" data-askamount="'+l.id+'">@'+esc(l.handle)+'</button>').join(" · ") +
       '</p></div>' : "";
   const proximas = c.proximas.length ?
     '<section class="qgroup hero">' +
@@ -1798,7 +1950,7 @@ function viewLlamadas(){
   }
 
   return modeBanner() + '<div class="section">' +
-    '<div class="h-row"><h2>Llamadas</h2><span class="sub">Show, cierre e importe</span></div>' + head + alerta +
+    '<div class="h-row"><h2>Llamadas</h2><span class="sub">Show, cierre e importe</span></div>' + head + avisoImporte + alerta +
     proximas +
     grp("Por registrar", c.porRegistrar, "reg", "Ya pasó el día y nadie marcó el resultado. Mientras estén aquí, el show rate está incompleto.") +
     grp("Vinieron · falta el resultado", c.porResultado.filter(l => l.cierre === null), "resultado", "Se presentaron. ¿Cerró o no cerró?") +
@@ -1859,7 +2011,8 @@ function topTagRank(l){
   return r.length ? Math.max.apply(null, r) : null;
 }
 function tagFunnel(){
-  const conRank = LEADS.map(l => ({ l, r:topTagRank(l), st:tagStages(l) }));
+  /* El embudo por tags mide tu trabajo: fuera los de antes del CRM. */
+  const conRank = REAL().map(l => ({ l, r:topTagRank(l), st:tagStages(l) }));
   const pasos = LADDER.map((p, i) => {
     const rk = etapaRank(p.k);
     /* "parados aquí" = llegó a este escalón pero no al siguiente. Así los tags
@@ -1923,7 +2076,7 @@ function viewNumeros(){
     : "Agrupa por <b>la fecha de cada evento</b>. Una venta cobrada hoy cuenta hoy, aunque el lead entrara hace tres meses. Mide el mes que estás viviendo.";
 
   const sc = seedCount();
-  const seedNote = sc ? '<div class="banner info"><p><b>'+sc+' leads marcados «sin historial».</b> Son los que entraron en la importación inicial, ya empezados. Sus tags dicen dónde estaban, no cuándo llegaron ahí, así que no se puede reconstruir cuánto tardó cada paso.<br>Quedan fuera del modo <b>Cohorte</b>, que agrupa por fecha de entrada. Pero <b>en modo Actividad sí cuentan</b>: si uno de ellos agenda o cierra de hoy en adelante, eso tiene fecha real y entra en las tasas.</p></div>' : "";
+  const seedNote = sc ? '<div class="banner info"><p><b>'+sc+' leads archivados.</b> Fuera de todas las métricas — normalmente contactos de antes del CRM o que ya no trabajas. Sus tags dicen dónde estaban, no cuándo llegaron ahí, así que no se puede reconstruir cuánto tardó cada paso.<br>Quedan fuera del modo <b>Cohorte</b>, que agrupa por fecha de entrada. Pero <b>en modo Actividad sí cuentan</b>: si uno de ellos agenda o cierra de hoy en adelante, eso tiene fecha real y entra en las tasas.</p></div>' : "";
 
   const pend = m.pendReg ? '<div class="banner"><p><b>'+m.pendReg+' llamada'+(m.pendReg>1?"s":"")+' sin registrar.</b> Ya pasaron y nadie marcó si la persona vino. El show rate de abajo las excluye — no cuentan en contra tuya, pero el número está incompleto hasta que se registren.</p><span class="spacer"></span><button class="btn sm" data-nav="llamadas">Registrar</button></div>' : "";
 
@@ -2196,7 +2349,7 @@ function viewImportar(){
         '<div style="height:16px"></div>' +
         '<div class="grid2"><div><label class="f" for="impFuente">Fuente</label>' +
         '<select id="impFuente">'+FUENTES.map(f => '<option>'+esc(f)+'</option>').join("")+'</select></div>' +
-        '<div style="display:flex;align-items:flex-end"><p class="helptext">Lo que ya venía hecho en ManyChat entra marcado <b>sin historial</b>: aparece en tus colas, pero no en las tasas de cohorte, porque los tags no dicen cuándo pasó cada paso.</p></div></div>' +
+        '<div style="display:flex;align-items:flex-end"><p class="helptext">Lo que ya venía hecho en ManyChat entra <b>archivado</b>: aparece en tus colas, pero no en las tasas de cohorte, porque los tags no dicen cuándo pasó cada paso.</p></div></div>' +
         '<div style="height:14px"></div>' +
         '<button class="btn primary" data-act="doImport">Importar '+nuevos+' leads</button> ' +
         '<button class="btn ghost" data-act="cancelImport">Cancelar</button>');
@@ -2602,6 +2755,22 @@ function drawer(){
 
   const ventaBlock = l.agendo ?
     '<div class="fieldset"><p class="eyebrow">Llamada · lo llena el closer</p>' +
+      /* Botones grandes ademas de los desplegables: registrar el resultado es
+         lo que mas se hace aqui, y con los selectores hacian falta tres pasos.
+         "Cerró" abre el modal del importe, igual que desde la lista. */
+      (l.show === true && l.cierre === null ?
+        '<div class="resultbtns">' +
+          '<button class="btn good" data-close="'+l.id+'|1">Cerró</button>' +
+          '<button class="btn crit" data-close="'+l.id+'|0">No cerró</button>' +
+        '</div>' : "") +
+      (l.show === null ?
+        '<div class="resultbtns">' +
+          '<button class="btn good" data-show="'+l.id+'|1">Vino</button>' +
+          '<button class="btn crit" data-show="'+l.id+'|0">No vino</button>' +
+        '</div>' : "") +
+      (l.cierre === true && !(+l.importe > 0) ?
+        '<button class="btn primary" style="width:100%;margin-bottom:12px" data-askamount="'+l.id+'">' +
+          'Falta el importe — escribirlo</button>' : "") +
       '<div><label class="f" for="d_show">¿Se presentó?</label><select id="d_show" data-f="show">' +
         '<option value=""'+(l.show===null?" selected":"")+'>Sin registrar</option>' +
         '<option value="1"'+(l.show===true?" selected":"")+'>Vino</option>' +
@@ -2656,6 +2825,15 @@ function drawer(){
               '<span class="lock">fija</span>' +
             '</div></div>' +
         '</div>' +
+        /* El aviso de archivado. La accion vive en el boton de abajo, no aqui:
+           un solo sitio para archivar evita tener dos controles que hacen lo
+           mismo y acaban desincronizados. */
+        (l.seed ? '<div class="seedbox" style="cursor:default">' +
+            '<span>🗄️</span>' +
+            '<span><b>Archivado</b> — no cuenta en ninguna métrica y no sale en ' +
+            'Leads, Interesados ni Llamadas. Sus datos siguen intactos' +
+            (mine ? '. Con «Sacar del archivo», abajo, vuelve a contar.' : '.') +
+            '</span></div>' : "") +
       '</div>' +
 
       '<div class="fieldset"><p class="eyebrow">Sus palabras · munición para cerrarlo</p>' +
@@ -2672,7 +2850,20 @@ function drawer(){
       ventaBlock +
     '</div>' +
     '<div class="drawer-foot">' +
-      (mine ? '<button class="btn danger sm" data-act="delLead">Borrar</button>' : "") +
+      /* Nada de borrar: en Supabase no se elimina a nadie. Y aunque se hiciera,
+         el sync recrearia el lead desde el Sheet en horas — vacio, sin notas ni
+         importes. Archivar lo saca de las metricas y de las colas sin perder
+         una letra, y se deshace con el mismo boton. */
+      /* Rojo al archivar (pide confirmacion en un modal). Sacar del archivo va
+         neutro y directo: restaurar no necesita permiso. */
+      (mine ? '<button class="btn sm '+(l.seed ? "" : "danger")+'" data-act="archivar">' +
+        (l.seed ? "Sacar del archivo" : "Archivar") + '</button>' : "") +
+      /* Devolver a la cola: limpia agenda y resultado de golpe. Hace falta porque
+         los campos estan encadenados — borrar la fecha a mano pone pendingBook
+         en true y el lead se queda atascado en Llamadas "sin fecha". */
+      (mine && (yaAgendo(l) || l.show !== null || l.cierre !== null)
+        ? '<button class="btn sm" data-act="reactivar" title="Le quita agenda y resultado y lo devuelve a la cola del setter">Devolver a la cola</button>'
+        : "") +
       '<div class="spacer" style="flex:1"></div>' +
       '<button class="btn primary" data-act="closeDrawer">Listo</button>' +
     '</div>' +
@@ -2732,7 +2923,7 @@ document.addEventListener("click", async (e) => {
     VIEW = ROLE === "closer" ? "llamadas" : "hoy"; render(); return; }
   if(t.dataset.period !== undefined && t.dataset.period !== ""){ PERIOD = Number(t.dataset.period); render(); return; }
   if(t.dataset.countby){ COUNTBY = t.dataset.countby; render(); return; }
-  if(t.dataset.open){ OPEN = t.dataset.open; EDITID = false; drawer(); return; }
+  if(t.dataset.open){ OPEN = t.dataset.open; EDITID = false; ARCH_OK = null; drawer(); return; }
 
   if(t.dataset.show){
     const parts = t.dataset.show.split("|");
@@ -2742,6 +2933,12 @@ document.addEventListener("click", async (e) => {
     await persist(l);
     if(l.show){ OPEN = l.id; drawer(); toast("Vino. Registra el resultado."); }
     else toast("Marcado: no se presentó.");
+    return;
+  }
+  /* Desde el aviso de arriba o desde la ficha: pedir el importe que falta. */
+  if(t.dataset.askamount){
+    const l = getLead(t.dataset.askamount); if(!l) return;
+    await pedirImporte(l);
     return;
   }
   if(t.dataset.close){
@@ -2758,11 +2955,8 @@ document.addEventListener("click", async (e) => {
     if(l.show !== true){ l.show = true; l.showAt = l.callDate || todayStr(); }
     if(l.cierre){ l.estado = "cliente"; }
     await persist(l);
-    if(l.cierre){
-      toast("Cerró. Escribe cuánto pagó.");
-      /* el input del importe aparece en la misma fila: le damos el foco */
-      setTimeout(() => { const i = document.querySelector('[data-amount="'+l.id+'"]'); if(i) i.focus(); }, 30);
-    } else { OPEN = l.id; drawer(); toast("No cerró. Marca la objeción."); }
+    if(l.cierre) await pedirImporte(l);
+    else { OPEN = l.id; drawer(); toast("No cerró. Marca la objeción."); }
     return;
   }
   if(t.dataset.saveamount){
@@ -2780,7 +2974,7 @@ document.addEventListener("click", async (e) => {
   const act = t.dataset.act;
   if(!act) return;
 
-  if(act === "closeDrawer"){ OPEN = null; EDITID = false; drawer(); return; }
+  if(act === "closeDrawer"){ OPEN = null; EDITID = false; ARCH_OK = null; drawer(); return; }
   if(act === "editId"){
     if(ROLE !== "setter"){ toast("El @handle solo lo cambia el setter."); return; }
     EDITID = true; drawer(); setTimeout(() => { const el = document.getElementById("d_nombre"); if(el) el.focus(); }, 30); return;
@@ -2792,13 +2986,46 @@ document.addEventListener("click", async (e) => {
     VIEW = "importar"; render();
     return;
   }
-  if(act === "delLead"){
-    /* Borrar un lead rompe el enlace con ManyChat y no se puede deshacer.
-       Es del setter, aunque el botón no esté a la vista. */
-    if(ROLE !== "setter"){ toast("Solo el setter puede borrar leads."); return; }
+  if(act === "archivar"){
+    if(ROLE !== "setter"){ toast("Solo el setter archiva leads."); return; }
     const l = getLead(OPEN); if(!l) return;
-    if(!confirm("¿Borrar @"+l.handle+"? No se puede deshacer.")) return;
-    await removeLead(l.id); OPEN = null; drawer(); toast("Lead borrado.");
+    /* Archivar pregunta; sacar del archivo va directo — restaurar no destruye. */
+    if(!l.seed){
+      const ok = await confirmar({
+        titulo: "¿Archivar @"+esc(l.handle)+"?",
+        texto: "Deja de contar en todas las métricas y desaparece de Leads, Interesados y Llamadas. " +
+               "Sus notas, importes y fechas se conservan, y puedes sacarlo del archivo cuando quieras.",
+        ok: "Archivar", peligro: true
+      });
+      if(!ok) return;
+    }
+    l.seed = !l.seed;
+    await persist(l); drawer(); render();
+    toast(l.seed
+      ? "@"+l.handle+" archivado. Fuera de las métricas y de las colas; sus datos siguen ahí."
+      : "@"+l.handle+" vuelve a contar.");
+    return;
+  }
+  if(act === "reactivar"){
+    /* Un cliente viejo que vuelve, o una agenda que nunca fue tuya. El sync no
+       puede deshacer un cierre a proposito (protege al closer de que ManyChat
+       le borre una venta real), asi que esto se hace a mano y solo el setter.
+       Se limpia TODO el bloque de agenda y resultado a la vez: si se dejara uno
+       suelto, el lead rebota entre Llamadas y la cola sin quedarse quieto. */
+    if(ROLE !== "setter"){ toast("Solo el setter puede devolver un lead a la cola."); return; }
+    const l = getLead(OPEN); if(!l) return;
+    const tenia = [l.cierre === true ? "cierre" : null, l.show !== null ? "show" : null,
+                   (+l.importe > 0) ? money2(l.importe) : null, l.agendo ? "agenda" : null]
+                  .filter(Boolean).join(", ");
+    if(!confirm("¿Devolver @"+l.handle+" a la cola?\n\nSe le quita: "+(tenia||"nada")+
+                "\n\nSus notas (meta, dolor, ya hace) NO se tocan.")) return;
+    Object.assign(l, {
+      agendo:null, agendoHora:"", agendoAt:null, callDate:null, pendingBook:false,
+      show:null, showAt:null, cierre:null, cierreAt:null, importe:null,
+      objecion:"", estado:"activo"
+    });
+    await persist(l); drawer(); render();
+    toast("@"+l.handle+" vuelve a la cola.");
     return;
   }
   if(act === "startFresh"){ exitDemo(); render(); toast("Listo. Importa o añade tu primer lead."); return; }
@@ -2900,7 +3127,8 @@ document.addEventListener("change", async (e) => {
   if(el.dataset && el.dataset.f){
     const l = getLead(OPEN); if(!l) return;
     const k = el.dataset.f;
-    let v = el.value;
+    /* Un checkbox no lleva el estado en .value (ahi pone "on"), sino en .checked. */
+    let v = el.type === "checkbox" ? el.checked : el.value;
     if(k === "show" || k === "cierre") v = v === "" ? null : v === "1";
     else if(k === "importe") v = v === "" ? null : Number(v);
     else if(k === "handle") v = norm(v);
@@ -2983,7 +3211,7 @@ document.addEventListener("input", (e) => {
 });
 
 document.addEventListener("keydown", (e) => {
-  if(e.key === "Escape" && OPEN){ OPEN = null; EDITID = false; drawer(); }
+  if(e.key === "Escape" && OPEN){ OPEN = null; EDITID = false; ARCH_OK = null; drawer(); }
 });
 
 /* ===================== Supabase ===================== */
