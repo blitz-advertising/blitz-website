@@ -8,8 +8,8 @@
       ]
     }
   ],
-  "rewrites": [
-    { "source": "/sync/:path*", "destination": "/404.html" },
-    { "source": "/db/:path*", "destination": "/404.html" }
+  "redirects": [
+    { "source": "/sync/:path*", "destination": "/404.html", "permanent": false },
+    { "source": "/db/:path*", "destination": "/404.html", "permanent": false }
   ]
 }
