@@ -1290,7 +1290,10 @@ function toquesEn(dia){
      {"2026-09-07":18}  o  {dias:{"2026-09-07":18}} */
   const src = (TOUCHDAYS && TOUCHDAYS.dias && typeof TOUCHDAYS.dias === "object") ? TOUCHDAYS.dias : (TOUCHDAYS || {});
   const log = Number(src[dia] || 0);
-  const tocados = LEADS.filter(l => l.touchedAt === dia).map(l => norm(l.handle));
+  /* REAL() y no LEADS: los archivados no cuentan en ninguna metrica, y este
+     numero alimenta el medidor de "toques hoy". Si se contaran aqui, el
+     medidor diria 6 mientras la lista de abajo enseña 4. */
+  const tocados = REAL().filter(l => l.touchedAt === dia).map(l => norm(l.handle));
   /* ManyChat y la app ven a la misma gente, así que ahí se toma el mayor, no la
      suma. Los de a mano son justamente los que ManyChat NO puede ver, así que
      esos sí suman — descontando a los que ya cuentan como lead trabajado. */
@@ -1366,7 +1369,11 @@ function queues(){
   /* Fuera los del archivo: un "Not Closed" ya tuvo su llamada y no cerro, asi
      que no es trabajo de hoy del setter — su sitio es Archivo, para follow-up. */
   const active = LEADS.filter(l => l.estado === "activo" && l.cierre !== true && segmento(l) !== "archivo");
-  const pendientes = active.filter(l => l.pendingBook && !l.callDate);
+  /* pendingBook ya significa "agendo pero le falta algo": sin dia, o con dia
+     y sin hora. Antes se pedia ademas !callDate, y al escribir la fecha la
+     cita se caia de este grupo sin entrar en agendados — desaparecia al fondo
+     del embudo justo cuando faltaba un campo por rellenar. */
+  const pendientes = active.filter(l => l.pendingBook);
   const agendados  = active.filter(l => !l.pendingBook && l.agendo && l.agendo >= T);
   const espera     = new Set(pendientes.concat(agendados).map(l => l.id));
   const pool       = active.filter(l => !espera.has(l.id));
@@ -1881,11 +1888,11 @@ function sinFechaGroup(list){
   if(!list.length) return "";
   const mine = ROLE === "setter";
   const ro = mine ? "" : " disabled";
-  return '<section class="qgroup"><div class="qhead"><h3>Agendaron · falta la fecha</h3>' +
+  return '<section class="qgroup"><div class="qhead"><h3>Agendaron · falta confirmarlas</h3>' +
     '<span class="n">'+list.length+'</span><span class="rule"></span></div>' +
     '<p class="helptext" style="margin:-4px 0 9px">' +
-      (mine ? 'Los tags de ManyChat dicen que agendó pero no para cuándo. Pon las dos fechas y pasa a la vista de llamadas.'
-            : 'El setter todavía no ha puesto la fecha de estas llamadas. Aquí solo las ves.') + '</p>' +
+      (mine ? 'Los tags de ManyChat dicen que agendó pero no para cuándo. Se quedan aquí hasta que tengan <b>día y hora</b>; con las dos puestas pasan a Llamadas.'
+            : 'El setter todavía no ha confirmado día y hora. Aquí solo las ves.') + '</p>' +
     '<div class="rows">'+list.map(l =>
       '<div class="row late" style="flex-wrap:wrap"><button class="row-main" data-open="'+l.id+'">' +
         '<span class="row-l1"><span class="h">@'+esc(l.handle)+'</span>'+(l.nombre && norm(l.nombre)!==norm(l.handle)?'<span class="n">'+esc(l.nombre)+'</span>':"")+'</span>' +
@@ -3161,10 +3168,14 @@ document.addEventListener("change", async (e) => {
     else if(k === "handle") v = norm(v);
     else if((k === "entry" || k === "callDate" || k === "agendo" || k === "agendoAt") && v === "") v = null;
     l[k] = v;
+    /* Igual que en la fila de Hoy: no se confirma hasta tener dia Y hora. */
     if(k === "agendo"){
       l.callDate = v;
-      l.pendingBook = !v;
+      l.pendingBook = !(v && l.agendoHora);
       if(v){ l.respondio = true; l.propuesta = true; }
+    }
+    if(k === "agendoHora"){
+      l.pendingBook = !(l.agendo && v);
     }
     if(k === "cierre"){
       if(v === true){ l.cierreAt = todayStr(); l.estado = "cliente"; }
@@ -3203,20 +3214,29 @@ document.addEventListener("change", async (e) => {
     if(t){ t.stage = el.value; render(); }
     return;
   }
+  /* Fecha y hora de la agenda, desde la fila de Hoy.
+     La cita NO sale de "falta la fecha" hasta tener LAS DOS. Antes bastaba con
+     la fecha: al escribirla, pendingBook pasaba a false, la fila saltaba de
+     grupo en el mismo instante y el campo de la hora desaparecia debajo de los
+     dedos, dejando la cita a medias y sin sitio donde terminarla. */
   if(el.dataset && el.dataset.callhora){
     const l = getLead(el.dataset.callhora); if(!l) return;
     l.agendoHora = el.value || "";
+    l.pendingBook = !(l.agendo && l.agendoHora);
     await persist(l);
-    if(el.value) toast("Llamada a las "+fmtHora(el.value)+".");
+    if(el.value && l.agendo) toast("Agendada: "+fmtShort(l.agendo)+" a las "+fmtHora(el.value)+".");
+    else if(el.value) toast("Hora puesta. Falta el día.");
     return;
   }
   if(el.dataset && el.dataset.calldate){
     const l = getLead(el.dataset.calldate); if(!l) return;
-    if(!el.value){ l.agendo = null; l.callDate = null; await persist(l); return; }
-    l.agendo = el.value; l.callDate = el.value; l.pendingBook = false;
+    if(!el.value){ l.agendo = null; l.callDate = null; l.pendingBook = true; await persist(l); return; }
+    l.agendo = el.value; l.callDate = el.value;
+    l.pendingBook = !(l.agendo && l.agendoHora);
     l.respondio = true; l.propuesta = true;
     await persist(l);
-    toast("Llamada para el "+fmtShort(el.value)+".");
+    if(l.agendoHora) toast("Agendada: "+fmtShort(el.value)+" a las "+fmtHora(l.agendoHora)+".");
+    else toast("Día puesto. Escribe la hora para confirmarla.");
     return;
   }
 
