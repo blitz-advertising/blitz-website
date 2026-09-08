@@ -105,10 +105,20 @@ button{cursor:pointer}
   display:flex; padding-bottom:env(safe-area-inset-bottom);
 }
 .nav button{
-  flex:1; border:0; background:transparent; color:var(--muted);
+  flex:1 0 auto; min-width:0; border:0; background:transparent; color:var(--muted);
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
-  font-size:10.5px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; padding:0;
+  font-size:10.5px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; padding:0 6px;
   border-top:2px solid transparent; margin-top:-1px;
+}
+/* Con 8 pestañas las etiquetas se pegan en un movil estrecho. Se recortan sin
+   deformar el icono, y por debajo de 400px la barra se desliza en horizontal. */
+.nav button span:not(.badge){
+  max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+@media (max-width:400px){
+  .nav{overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch}
+  .nav::-webkit-scrollbar{display:none}
+  .nav button{flex:0 0 auto; min-width:70px}
 }
 .nav button svg{width:19px; height:19px; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
 .nav button[aria-current="page"]{color:var(--brand-hi); border-top-color:var(--brand);
@@ -479,6 +489,30 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
 }
 @media (min-width:900px){.toast{bottom:20px}}
 
+/* ---------- calor y sugerencias ---------- */
+.heat{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; white-space:nowrap;
+  padding:3px 8px; border-radius:999px; background:var(--surface-2); border:1px solid var(--line);
+  color:var(--ink-2); letter-spacing:.01em}
+.heat.hot{background:rgba(240,120,60,.13); border-color:rgba(240,150,90,.42); color:#F6B98C}
+.heat.warm{background:var(--warn-soft); border-color:rgba(240,184,92,.32); color:var(--warn)}
+.heat.ice{background:rgba(95,178,236,.10); border-color:rgba(95,178,236,.28); color:#9CCDF0}
+td.crit{color:var(--crit)}
+.chiprow{display:flex; flex-wrap:wrap; gap:6px}
+.chip.done{background:var(--good-soft); border-color:rgba(79,214,154,.34); color:var(--good); cursor:pointer}
+.sugtable{display:flex; flex-direction:column; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:10px; overflow:hidden}
+.sugrow{display:grid; grid-template-columns:132px 1fr 120px 104px auto; gap:12px; align-items:center;
+  background:var(--surface); padding:9px 12px}
+.sugrow .linkish{text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sug-dias{font-size:12.5px; color:var(--muted); text-align:right}
+.sug-dias.crit{color:var(--crit)}
+@media (max-width:720px){
+  .sugrow{grid-template-columns:1fr auto; grid-template-areas:"h h" "n d" "b a"; gap:6px 10px; padding:11px 12px}
+  .sugrow .sug-heat{grid-area:h}
+  .sugrow .linkish{grid-area:n}
+  .sugrow .sug-dias{grid-area:d}
+  .sugrow .sug-bloc{grid-area:b}
+  .sugrow .btn{grid-area:a; justify-self:end}
+}
 .helptext{font-size:12.5px; color:var(--muted); line-height:1.5}
 .helptext code{font-family:"IBM Plex Mono",monospace; font-size:11.5px; background:var(--surface-2); padding:1px 4px; border-radius:3px}
 
@@ -669,6 +703,8 @@ const OBJECIONES = ["Dinero","Tiempo","Prioridad","Confianza en el proceso","Con
 const DEFAULT_CFG = {
   metaToques: 20,        // leads trabajados por día
   metaAgendasSem: 3,     // agendas por semana
+  diasFrio: 4,           // días sin tocar antes de marcarlo como frío — ajústalo probando
+  sugerencias: 15,       // cuántos sugerir en "Toca hoy"
   goal: 50000, aov: 1250, closeRate: 0.30, showRate: 0.70, bookRate: 0.02, workDays: 22
 };
 
@@ -836,46 +872,59 @@ function blockIdx(l){
 }
 function blockOf(l){ return BLOQUES[blockIdx(l)]; }
 
-/* ===================== demo (solo en memoria, nunca se guarda) ===================== */
-function demoLeads(){
-  const T = todayStr();
-  const mk = (o) => Object.assign(blankLead(), o);
-  return [
-    mk({id:"d1", handle:"edgardo.a.ortiz", nombre:"Edgardo Ortiz", fuente:"Referido", tags:["Tag Booked"], entry:addDays(T,-12),
-        blockFloor:"04 Pre-call", meta:"Pesa 270, quiere llegar a 200", dolor:"Hace 4 años estaba en 190. Camina 3x semana y no ve resultados.",
-        respondio:true, respondioAt:addDays(T,-12), propuesta:true, propuestaAt:addDays(T,-9),
-        agendo:addDays(T,4), agendoAt:addDays(T,-2), callDate:addDays(T,4), agendoHora:"14:00"}),
-    mk({id:"d2", handle:"marisol.fit", nombre:"Marisol Rivera", fuente:"Story reply", tags:["Tag Interest Buildup"], entry:addDays(T,-6),
-        blockFloor:"", meta:"Bajar 30 lbs antes de diciembre", dolor:"Se desmotiva a las 2 semanas",
-        respondio:true, respondioAt:addDays(T,-6)}),
-    mk({id:"d3", handle:"j.calderon22", nombre:"Jomar Calderón", fuente:"Comentario/Keyword", tags:["Tag Interest"], entry:addDays(T,-3),
-        blockFloor:"", respondio:true, respondioAt:addDays(T,-3)}),
-    mk({id:"d4", handle:"anaperez.pr", nombre:"Ana Pérez", fuente:"Bienvenida", tags:["Tag Interest"], entry:addDays(T,-1),
-        blockFloor:""}),
-    mk({id:"d5", handle:"kevin_lugo", nombre:"Kevin Lugo", fuente:"Outbound DM", tags:["Tag Client"], entry:addDays(T,-24),
-        blockFloor:"", respondio:true, respondioAt:addDays(T,-24), propuesta:true, propuestaAt:addDays(T,-21),
-        agendo:addDays(T,-14), agendoAt:addDays(T,-18), callDate:addDays(T,-14),
-        show:true, showAt:addDays(T,-14), cierre:true, cierreAt:addDays(T,-14),
-        oferta:"Foundation (3m)", importe:1250, estado:"cliente"}),
-    mk({id:"d6", handle:"yeriel.strong", nombre:"Yeriel Ortiz", fuente:"Referido", tags:["Tag Link","Tag Not Closed"], entry:addDays(T,-19),
-        blockFloor:"04 Pre-call", respondio:true, respondioAt:addDays(T,-19), propuesta:true, propuestaAt:addDays(T,-17),
-        agendo:addDays(T,-8), agendoAt:addDays(T,-12), callDate:addDays(T,-8),
-        show:true, showAt:addDays(T,-8), cierre:false, cierreAt:addDays(T,-8), objecion:"Dinero"}),
-    mk({id:"d7", handle:"luisa.moves", nombre:"Luisa Nieves", fuente:"Story reply", tags:["Tag Link"], entry:addDays(T,-9),
-        blockFloor:"", respondio:true, respondioAt:addDays(T,-9), propuesta:true, propuestaAt:addDays(T,-5)}),
-    mk({id:"d8", handle:"raulgym787", nombre:"Raúl Vega", fuente:"Inbound DM", tags:["Tag Lead"], entry:addDays(T,-2),
-        blockFloor:"", respondio:true, respondioAt:addDays(T,-2)}),
-    mk({id:"d9", handle:"carmen.dlc", nombre:"Carmen De León", fuente:"Bienvenida", tags:["Tag Not Interested"], entry:addDays(T,-31),
-        blockFloor:"", estado:"muerto"}),
-    mk({id:"d10", handle:"tito.perez", nombre:"Tito Pérez", fuente:"Comentario/Keyword", tags:["Tag Booked"], entry:addDays(T,-16),
-        blockFloor:"04 Pre-call", respondio:true, respondioAt:addDays(T,-16), propuesta:true, propuestaAt:addDays(T,-13),
-        agendo:addDays(T,-6), agendoAt:addDays(T,-10), callDate:addDays(T,-6), show:false, showAt:addDays(T,-6)}),
-    /* confirmada pero sin una sola nota: dispara la alerta de "sin munición" */
-    mk({id:"d11", handle:"nay.fitpr", nombre:"Nayra Colón", fuente:"Bienvenida", tags:["Tag Booked"], entry:addDays(T,-4),
-        blockFloor:"04 Pre-call", respondio:true, respondioAt:addDays(T,-4), propuesta:true, propuestaAt:addDays(T,-3),
-        agendo:addDays(T,2), agendoAt:addDays(T,-1), callDate:addDays(T,2), agendoHora:"09:30"})
-  ];
+/* ===================== segmentacion por calor =====================
+   Regla del negocio: el setter trabaja hasta que agendan. En cuanto hay
+   booking el lead deja de ser suyo y pasa al closer.
+   Los tags no se solapan salvo dos parejas (Interest/Interest Buildup y
+   Lead/Warming Lead). Cuando pasa, MANDA EL MAS CERCA DE LA LLAMADA. */
+const TAG_CALOR = {
+  "Tag Client":100, "Tag Booked":90, "Tag Link":80,
+  "Tag Lead":60, "Tag Warming Lead":50,
+  "Tag Interest":40, "Tag Interest Buildup":30, "Ta Interest Buildup":30,
+  "Tag Not Closed":10, "Tag Not Interested":0
+};
+function tieneTag(l, t){ return (l.tags||[]).indexOf(t) >= 0; }
+/* El tag mas caliente que lleva encima. Tag VSL no cuenta: es el canal, no la etapa. */
+function calor(l){
+  let max = -1;
+  (l.tags||[]).forEach(t => { const v = TAG_CALOR[t]; if(v !== undefined && v > max) max = v; });
+  return max;
 }
+function tagDominante(l){
+  let mejor = null, max = -1;
+  (l.tags||[]).forEach(t => { const v = TAG_CALOR[t]; if(v !== undefined && v > max){ max = v; mejor = t; } });
+  return mejor;
+}
+const esNoInteresado = l => tieneTag(l,"Tag Not Interested");
+const esNoCerro      = l => tieneTag(l,"Tag Not Closed");
+const yaAgendo       = l => l.pendingBook || !!l.agendo || !!l.callDate || tieneTag(l,"Tag Booked");
+
+/* Cada lead vive en UNA sola pestaña. El orden de estas preguntas es el orden
+   de mando: primero los estados terminales, luego el booking, luego el calor. */
+function segmento(l){
+  if(l.cierre === true || tieneTag(l,"Tag Client")) return "cliente";
+  if(esNoInteresado(l) || esNoCerro(l) || l.estado === "muerto") return "archivo";
+  if(yaAgendo(l)) return "llamadas";
+  const c = calor(l);
+  if(c === 40 || c === 30) return "interesados";   /* Interest / Interest Buildup */
+  return "leads";                                   /* Link, Lead, Warming y sin tags */
+}
+const enSegmento = (seg) => LEADS.filter(l => segmento(l) === seg);
+
+/* Dias sin tocar. Si nunca se toco, cuenta desde que entro. */
+function diasSinTocar(l){
+  const ref = l.touchedAt || l.entry;
+  if(!ref) return 999;
+  return Math.max(0, daysBetween(ref, todayStr()));
+}
+const tocadoHoy = l => l.touchedAt === todayStr() || manualEn(todayStr()).map(norm).indexOf(norm(l.handle)) >= 0;
+
+/* Prioridad para "toca hoy": manda el bloque (cuan cerca del booking) y
+   dentro del mismo bloque, el que lleva mas tiempo sin respuesta.
+   El umbral de "frio" es configurable porque es una regla de negocio que
+   solo se afina probando. */
+function prioridadToque(l){ return blockIdx(l) * 1000 + Math.min(diasSinTocar(l), 60); }
+function estaFrio(l){ return diasSinTocar(l) >= (CFG.diasFrio || DEFAULT_CFG.diasFrio); }
 
 /* ===================== persistencia ===================== */
 const LS_LEADS = "blueprint_leads_v1", LS_CFG = "blueprint_cfg_v1", LS_ROLE = "blueprint_role_v1", LS_MAN = "blueprint_manual_v1";
@@ -1153,7 +1202,9 @@ function goalMath(){
    Los más avanzados primero, que son los que más cerca están de agendar. */
 function queues(){
   const T = todayStr();
-  const active = LEADS.filter(l => l.estado === "activo" && l.cierre !== true);
+  /* Fuera los del archivo: un "Not Closed" ya tuvo su llamada y no cerro, asi
+     que no es trabajo de hoy del setter — su sitio es Archivo, para follow-up. */
+  const active = LEADS.filter(l => l.estado === "activo" && l.cierre !== true && segmento(l) !== "archivo");
   const pendientes = active.filter(l => l.pendingBook && !l.callDate);
   const agendados  = active.filter(l => !l.pendingBook && l.agendo && l.agendo >= T);
   const espera     = new Set(pendientes.concat(agendados).map(l => l.id));
@@ -1214,6 +1265,8 @@ const ICON = {
   hoy:'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h11M4 18h7"/></svg>',
   leads:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M17 8.5h4M19 6.5v4"/></svg>',
   llamadas:'<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.2"/><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3"/></svg>',
+  interesados:'<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-9.5A3.9 3.9 0 0 1 12 8a3.9 3.9 0 0 1 7 2.5c0 5-7 9.5-7 9.5z"/></svg>',
+  archivo:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V8M10 12h4"/></svg>',
   numeros:'<svg viewBox="0 0 24 24"><path d="M4 19V10M10 19V5M16 19v-6M22 19H2"/></svg>',
   importar:'<svg viewBox="0 0 24 24"><path d="M12 15V3m0 12-4-4m4 4 4-4"/><path d="M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17"/></svg>',
   exportar:'<svg viewBox="0 0 24 24"><path d="M12 3v12m0-12 4 4m-4-4-4 4"/><path d="M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17"/></svg>'
@@ -1221,6 +1274,8 @@ const ICON = {
 const NAVS = [
   {k:"hoy", lab:"Hoy", icon:"hoy"},
   {k:"leads", lab:"Leads", icon:"leads"},
+  {k:"interesados", lab:"Interesados", icon:"interesados"},
+  {k:"archivo", lab:"Archivo", icon:"archivo"},
   {k:"llamadas", lab:"Llamadas", icon:"llamadas"},
   {k:"numeros", lab:"Números", icon:"numeros"},
   {k:"importar", lab:"Importar", icon:"importar"},
@@ -1235,7 +1290,8 @@ function viewOk(v){ return navs().some(n => n.k === v); }
 /* ===================== render: shell ===================== */
 function navCounts(){
   const q = queues(), c = callQueue();
-  return { hoy: q.total, leads: LEADS.length,
+  return { hoy: q.total, leads: enSegmento("leads").length,
+    interesados: enSegmento("interesados").length, archivo: enSegmento("archivo").length,
     llamadas: c.sinFecha.length + c.porRegistrar.length + c.porVenir.length, numeros: 0, importar: 0, exportar: 0 };
 }
 function renderNav(){
@@ -1263,7 +1319,9 @@ function renderNav(){
 }
 
 function modeBanner(){
-  if(MODE === "demo") return '<div class="banner"><p><b>Modo ejemplo.</b> Estos 10 leads son inventados para que veas cómo funciona — nada de lo que hagas aquí se guarda.</p><span class="spacer"></span><button class="btn sm" data-act="startFresh">Empezar de cero</button></div>';
+  /* Ya no hay modo ejemplo: se quitaron los leads inventados. Mientras la base
+     responde, MODE sigue en "demo" un instante y no se pinta ningun aviso. */
+  if(MODE === "demo") return "";
   if(MODE === "local") return '<div class="banner"><p><b>Guardando solo en este navegador.</b> No pude conectar con la base de datos compartida, así que tu cliente no ve estos datos y se pierden si borras el historial.</p></div>';
   return "";
 }
@@ -1359,7 +1417,7 @@ function viewHoy(){
     '</p></div>' : "";
   let body = "";
   if(!LEADS.length){
-    body = '<div class="card empty"><h3>Todavía no hay leads</h3><p>La sincronización de ManyChat los trae cada mañana. También puedes importar el CSV del Sheet.</p>' +
+    body = '<div class="card empty"><h3>Todavía no hay leads</h3><p>La sincronización de ManyChat corre 4 veces al día y los trae sola. También puedes importar el CSVdel Sheet.</p>' +
       '<button class="btn primary" data-nav="importar">Ir a Importar</button></div>';
   } else if(q.total === 0){
     body = '<div class="card empty"><h3>Nadie en la cola</h3><p>Todos los activos están agendados o cerrados.</p></div>';
@@ -1377,61 +1435,173 @@ function viewHoy(){
   const faltanFechas = sinFechaGroup(q.pendientes);
   const extra = group("Llamada agendada", q.agendados, "booked", "Ya no son tuyos hasta la llamada.");
 
-  return modeBanner() + '<div class="section">' + meters + avisoTz + alerta + faltanFechas + body + extra + '</div>';
+  return modeBanner() + '<div class="section">' + meters + avisoTz + alerta +
+    tocadosHoyHTML() + sugerenciasHTML() + faltanFechas + body + extra + '</div>';
 }
 
-/* ===================== render: LEADS ===================== */
+/* ---- lo que ya trabajaste hoy: para no repetir con 500 en la lista ---- */
+function tocadosHoyHTML(){
+  const hechos = LEADS.filter(tocadoHoy);
+  if(!hechos.length) return "";
+  return '<section class="qgroup"><div class="qhead"><h3>Tocados hoy</h3>' +
+    '<span class="n">'+hechos.length+'</span><span class="rule"></span></div>' +
+    '<p class="helptext" style="margin:-4px 0 9px">Ya trabajados. No los repitas.</p>' +
+    '<div class="chiprow">' + hechos.map(l =>
+      '<button class="chip done" data-open="'+l.id+'">@'+esc(l.handle)+'</button>').join("") +
+    '</div></section>';
+}
+
+/* ---- a quien tocar hoy ----
+   Esta seccion SI se solapa con Leads e Interesados a proposito: es una vista
+   de trabajo, no un segmento. Ordena por bloque (cuan cerca del booking) y,
+   a igualdad, por quien lleva mas tiempo sin respuesta. Excluye a los que ya
+   agendaron, a los del archivo y a los tocados hoy. */
+function sugerenciasHTML(){
+  const n = CFG.sugerencias || DEFAULT_CFG.sugerencias;
+  const cand = LEADS.filter(l => {
+    const s = segmento(l);
+    return (s === "leads" || s === "interesados") && !tocadoHoy(l);
+  }).sort((a,b) => prioridadToque(b) - prioridadToque(a)).slice(0, n);
+  if(!cand.length) return "";
+  const filas = cand.map(l => {
+    const d = diasSinTocar(l);
+    const frio = estaFrio(l);
+    return '<div class="sugrow"><span class="sug-heat">'+calorChip(l)+'</span>' +
+      '<button class="linkish" data-open="'+l.id+'">@'+esc(l.handle)+'</button>' +
+      '<span class="sug-bloc">'+blockChip(l)+'</span>' +
+      '<span class="sug-dias mono'+(frio?' crit':'')+'">'+(d>=999?"nunca tocado":d===0?"hoy":"hace "+d+"d")+'</span>' +
+      '<a class="btn sm ghost" href="'+igUrl(l.handle)+'" target="_blank" rel="noopener">Abrir DM</a></div>';
+  }).join("");
+  return '<section class="qgroup"><div class="qhead"><h3>Toca hoy</h3>' +
+    '<span class="n">'+cand.length+'</span><span class="rule"></span></div>' +
+    '<p class="helptext" style="margin:-4px 0 9px">Ordenados por lo que más mueve la aguja: primero los que están cerca del booking, y dentro de esos, los que llevan más días sin respuesta. Se marcan en rojo a partir de '+(CFG.diasFrio||DEFAULT_CFG.diasFrio)+' días.</p>' +
+    '<div class="sugtable">'+filas+'</div></section>';
+}
+
+/* ===================== render: LEADS =====================
+   Solo los que todavia son trabajo del setter: Link, Lead, Warming y sin tags.
+   Ordenados por cercania al booking — arriba el que esta a un paso. */
 function viewLeads(){
   const f = FILTERS;
-  let list = LEADS.slice();
-  if(f.estado === "activo") list = list.filter(l => l.estado === "activo" && l.cierre !== true);
-  else if(f.estado === "cliente") list = list.filter(l => l.cierre === true);
-  else if(f.estado === "muerto") list = list.filter(l => l.estado === "muerto");
+  let list = enSegmento("leads");
   if(f.fuente) list = list.filter(l => l.fuente === f.fuente);
   if(f.bloque) list = list.filter(l => blockOf(l) === f.bloque);
   if(f.q){
     const s = f.q.toLowerCase();
     list = list.filter(l => (l.handle+" "+l.nombre+" "+l.meta+" "+l.dolor).toLowerCase().includes(s));
   }
-  list.sort((a,b) => (b.entry||"") < (a.entry||"") ? -1 : 1);
+  /* bloque primero, luego el tag mas caliente, y a igualdad el mas desatendido */
+  list.sort((a,b) =>
+    (blockIdx(b) - blockIdx(a)) ||
+    (calor(b) - calor(a)) ||
+    (diasSinTocar(b) - diasSinTocar(a))
+  );
 
   const opts = (arr, sel) => '<option value="">Todos</option>' + arr.map(o => '<option'+(o===sel?' selected':'')+'>'+esc(o)+'</option>').join("");
 
+  const total = enSegmento("leads").length;
   const filters =
     '<div class="filters">' +
       '<input type="text" id="fq" placeholder="Buscar handle, nombre, meta o dolor…" value="'+esc(f.q)+'">' +
-      '<select id="festado"><option value="activo"'+(f.estado==="activo"?" selected":"")+'>Activos</option>' +
-        '<option value="cliente"'+(f.estado==="cliente"?" selected":"")+'>Clientes</option>' +
-        '<option value="muerto"'+(f.estado==="muerto"?" selected":"")+'>Muertos</option>' +
-        '<option value=""'+(f.estado===""?" selected":"")+'>Todos</option></select>' +
       '<select id="ffuente">'+opts(FUENTES, f.fuente)+'</select>' +
       '<select id="fbloque">'+opts(BLOQUES, f.bloque)+'</select>' +
       '<button class="btn" data-nav="exportar">Exportar</button>' +
     '</div>';
 
   if(!list.length){
-    return modeBanner() + '<div class="section"><div class="h-row"><h2>Leads</h2><span class="sub">'+LEADS.length+' en total</span></div>' +
+    return modeBanner() + '<div class="section"><div class="h-row"><h2>Leads</h2><span class="sub">'+total+' en total</span></div>' +
       filters + '<div class="card empty"><h3>Nada con ese filtro</h3><p>Cambia la búsqueda o los filtros de arriba.</p></div></div>';
   }
 
-  const rows = list.map(l => {
-    const s = statusOf(l);
-    const cc = s.cls === "good" ? "good" : s.cls === "crit" ? "crit" : s.cls === "cool" ? "cool" : "";
-    const notas = [l.meta && "meta", l.dolor && "dolor", l.yaHace && "ya hace"].filter(Boolean);
-    return '<tr><td><button class="linkish" data-open="'+l.id+'">@'+esc(l.handle)+'</button></td>' +
-      '<td>'+esc(l.nombre||"—")+'</td><td>'+esc(l.fuente)+'</td><td>'+blockChip(l)+'</td>' +
-      '<td><span class="chip '+cc+'">'+esc(s.t)+'</span></td>' +
-      '<td class="mono" title="'+esc(entryTitle(l.entry, l.subscribedAt))+'">'+fmtShort(l.entry)+'</td>' +
-      '<td>'+(notas.length?esc(notas.join(" · ")):'<span style="color:var(--warn)">sin notas</span>')+'</td>' +
-      '<td class="mono">'+(l.agendo?fmtShort(l.agendo):"—")+'</td>' +
-      '<td class="r mono">'+(l.importe?money(l.importe):"—")+'</td></tr>';
-  }).join("");
-
   return modeBanner() + '<div class="section">' +
-    '<div class="h-row"><h2>Leads</h2><span class="sub">'+list.length+' de '+LEADS.length+'</span></div>' + filters +
-    '<div class="tablewrap"><table><thead><tr><th>Handle</th><th>Nombre</th><th>Fuente</th><th>Bloque</th><th>Estado</th>' +
-    '<th>Entró</th><th>Notas</th><th>Llamada</th><th class="r">Importe</th></tr></thead><tbody>' +
-    rows + '</tbody></table></div></div>';
+    '<div class="h-row"><h2>Leads</h2><span class="sub">'+list.length+' de '+total+'</span></div>' +
+    '<p class="helptext" style="margin:-4px 0 12px">Los que todavía son tuyos. Arriba, los que están a un paso del booking. En cuanto agendan pasan a Llamadas y dejan de ser tu trabajo.</p>' +
+    filters + tablaSegmento(list) + '</div>';
+}
+
+/* Tabla compartida por Leads, Interesados y Archivo. La columna "Calor" es la
+   que ordena: 🔥 el que esta a un paso, 🧊 el mas frio de todos. */
+function calorChip(l){
+  const t = tagDominante(l);
+  /* Los del archivo van primero: "Not Closed" arrastra blockFloor 04 Pre-call,
+     y sin esta salida saldria como 🔥 caliente — cuando en realidad ya tuvo su
+     llamada y no compro. Caliente significa "a un paso de agendar", no otra cosa. */
+  if(esNoCerro(l))      return '<span class="heat warm">no cerró</span>';
+  if(esNoInteresado(l)) return '<span class="heat ice">no interesado</span>';
+  if(blockIdx(l) >= 4 || tieneTag(l,"Tag Link")) return '<span class="heat hot">🔥 caliente</span>';
+  if(tieneTag(l,"Tag Interest Buildup") || tieneTag(l,"Ta Interest Buildup")) return '<span class="heat ice">🧊 frío</span>';
+  if(tieneTag(l,"Tag Warming Lead")) return '<span class="heat warm">templado</span>';
+  return '<span class="heat">'+esc(t ? tagName(t) : "sin tag")+'</span>';
+}
+function tablaSegmento(list){
+  const rows = list.map(l => {
+    const notas = [l.meta && "meta", l.dolor && "dolor", l.yaHace && "ya hace"].filter(Boolean);
+    const d = diasSinTocar(l);
+    const frio = estaFrio(l);
+    return '<tr><td>'+calorChip(l)+'</td>' +
+      '<td><button class="linkish" data-open="'+l.id+'">@'+esc(l.handle)+'</button></td>' +
+      '<td>'+esc(l.nombre||"—")+'</td>' +
+      '<td>'+blockChip(l)+'</td>' +
+      '<td class="mono'+(frio?' crit':'')+'" title="Días desde el último toque">'+(d>=999?"nunca":d===0?"hoy":d+"d")+'</td>' +
+      '<td>'+(notas.length?esc(notas.join(" · ")):'<span style="color:var(--warn)">sin notas</span>')+'</td>' +
+      '<td class="mono" title="'+esc(entryTitle(l.entry, l.subscribedAt))+'">'+fmtShort(l.entry)+'</td></tr>';
+  }).join("");
+  return '<div class="tablewrap"><table><thead><tr><th>Calor</th><th>Handle</th><th>Nombre</th>' +
+    '<th>Bloque</th><th>Sin tocar</th><th>Notas</th><th>Entró</th></tr></thead><tbody>' +
+    rows + '</tbody></table></div>';
+}
+
+/* ===================== render: INTERESADOS =====================
+   Los que mostraron interés pero todavía no son lead. Interest arriba;
+   Interest Buildup, que son los más fríos, al final con 🧊. */
+function viewInteresados(){
+  const f = FILTERS;
+  let list = enSegmento("interesados");
+  if(f.q){
+    const s = f.q.toLowerCase();
+    list = list.filter(l => (l.handle+" "+l.nombre+" "+l.meta+" "+l.dolor).toLowerCase().includes(s));
+  }
+  list.sort((a,b) => (calor(b) - calor(a)) || (diasSinTocar(b) - diasSinTocar(a)));
+  const total = enSegmento("interesados").length;
+  const filtro = '<div class="filters"><input type="text" id="fq" placeholder="Buscar handle o nombre…" value="'+esc(f.q)+'"></div>';
+  if(!list.length){
+    return modeBanner() + '<div class="section"><div class="h-row"><h2>Interesados</h2></div>' + filtro +
+      '<div class="card empty"><h3>Nadie aquí</h3><p>Cuando ManyChat marque Interest o Interest Buildup, aparecerán en esta lista.</p></div></div>';
+  }
+  return modeBanner() + '<div class="section">' +
+    '<div class="h-row"><h2>Interesados</h2><span class="sub">'+list.length+' de '+total+'</span></div>' +
+    '<p class="helptext" style="margin:-4px 0 12px">Mostraron interés pero todavía no son lead. Los 🧊 son los más fríos: van al final porque el interés fue solo un roce.</p>' +
+    filtro + tablaSegmento(list) + '</div>';
+}
+
+/* ===================== render: ARCHIVO =====================
+   No interesados y no cerraron. No se borran: en unos meses el momento
+   puede ser otro, y aqui es donde se busca a quien volver a escribir. */
+function viewArchivo(){
+  const f = FILTERS;
+  let list = enSegmento("archivo");
+  if(f.q){
+    const s = f.q.toLowerCase();
+    list = list.filter(l => (l.handle+" "+l.nombre+" "+l.meta+" "+l.dolor).toLowerCase().includes(s));
+  }
+  const noCerro = list.filter(esNoCerro).sort((a,b) => (b.cierreAt||"") < (a.cierreAt||"") ? -1 : 1);
+  const noInt   = list.filter(l => !esNoCerro(l)).sort((a,b) => (b.entry||"") < (a.entry||"") ? -1 : 1);
+  const total = enSegmento("archivo").length;
+  const filtro = '<div class="filters"><input type="text" id="fq" placeholder="Buscar handle o nombre…" value="'+esc(f.q)+'"></div>';
+  if(!list.length){
+    return modeBanner() + '<div class="section"><div class="h-row"><h2>Archivo</h2></div>' + filtro +
+      '<div class="card empty"><h3>Archivo vacío</h3><p>Aquí caen los que dijeron que no y los que no cerraron.</p></div></div>';
+  }
+  const bloque = (tit, arr, pista) => arr.length ?
+    '<div class="h-row" style="margin-top:22px"><h3>'+tit+'</h3><span class="sub">'+arr.length+'</span></div>' +
+    '<p class="helptext" style="margin:-4px 0 10px">'+pista+'</p>' + tablaSegmento(arr) : "";
+  return modeBanner() + '<div class="section">' +
+    '<div class="h-row"><h2>Archivo</h2><span class="sub">'+list.length+' de '+total+'</span></div>' +
+    '<p class="helptext" style="margin:-4px 0 12px">No se borran. Dentro de unos meses el momento puede ser otro — de aquí sale el follow-up frío.</p>' +
+    filtro +
+    bloque("No cerraron", noCerro, "Llegaron a la llamada y no compraron. Son los más cálidos del archivo: ya saben quién eres.") +
+    bloque("No interesados", noInt, "Dijeron que no antes de la llamada.") +
+    '</div>';
 }
 
 /* ===================== render: LLAMADAS ===================== */
@@ -1914,7 +2084,7 @@ function viewImportar(){
         '<div><label class="f" for="csvFile">CSV del Sheet</label>' +
         '<input type="file" id="csvFile" accept=".csv,text/csv,text/plain" style="font-size:13.5px"></div>' +
         '<div><label class="f" for="csvPaste">…o pega las celdas aquí</label>' +
-        '<textarea id="csvPaste" placeholder="username&#9;name&#9;Subscribed&#9;Tag Lead&#10;marisol.fit&#9;Marisol&#9;2026-09-01&#9;TRUE" style="min-height:110px" class="mono"></textarea></div>' +
+        '<textarea id="csvPaste" placeholder="username&#9;name&#9;Subscribed&#9;Tag Lead&#10;handle.ejemplo&#9;Nombre&#9;2026-09-01&#9;TRUE" style="min-height:110px" class="mono"></textarea></div>' +
         '<div><button class="btn primary" data-act="parseCsv">Leer columnas</button></div>' +
       '</div>';
   } else {
@@ -2485,6 +2655,8 @@ function render(){
   const v = document.getElementById("view");
   v.innerHTML = VIEW === "hoy" ? viewHoy()
     : VIEW === "leads" ? viewLeads()
+    : VIEW === "interesados" ? viewInteresados()
+    : VIEW === "archivo" ? viewArchivo()
     : VIEW === "llamadas" ? viewLlamadas()
     : VIEW === "numeros" ? viewNumeros()
     : VIEW === "exportar" ? viewExportar()
@@ -2927,8 +3099,12 @@ function mostrarLogin(){
 }
 
 /* ===================== arranque ===================== */
+/* Arranca vacio y en modo demo a proposito: los candados de persist() usan
+   MODE para no escribir nada antes de saber que la base respondio. En cuanto
+   conecta pasa a "db". Ya no hay leads de ejemplo — si la base viene vacia se
+   ve una pantalla que lo dice, en vez de gente inventada. */
 MODE = "demo";
-LEADS = demoLeads();
+LEADS = [];
 
 (async function boot(){
   const { data: { session } } = await SB.auth.getSession();
@@ -2965,8 +3141,7 @@ LEADS = demoLeads();
 
   DB.collection("leads").onSnapshot((snap) => {
     const docs = snap.docs.map(d => Object.assign({ id:d.id }, d.data()));
-    if(docs.length === 0 && MODE === "demo"){ LEADS = demoLeads(); }
-    else { MODE = "db"; LEADS = docs; }
+    MODE = "db"; LEADS = docs;
     render();
   }, (err) => { toast(dbMsg(err)); });
 
