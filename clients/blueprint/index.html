@@ -536,6 +536,27 @@ td.crit{color:var(--crit)}
   position:fixed; inset:0; z-index:200;
   display:grid; grid-template-columns:46% 54%;
   padding:0; background:#010205; overflow:hidden;
+  cursor:none;                 /* lo sustituye el punto + anillo de abajo */
+}
+.gate *{cursor:none}
+/* Mismas medidas y mezcla que adsbyblitz.com: punto de 6px que sigue al raton
+   al instante y anillo de 32px que llega con retraso. El mix-blend-mode los
+   mantiene visibles tanto sobre el fondo negro como sobre el card claro. */
+.gate-cur,.gate-ring{
+  position:fixed; top:0; left:0; z-index:10000; pointer-events:none;
+  border-radius:50%; transform:translate(-50%,-50%); mix-blend-mode:difference;
+}
+.gate-cur{width:6px; height:6px; background:#fff; transition:width .2s, height .2s}
+.gate-ring{
+  width:32px; height:32px; border:1px solid rgba(255,255,255,.45);
+  transition:width .3s cubic-bezier(.16,1,.3,1), height .3s cubic-bezier(.16,1,.3,1), border-color .3s;
+}
+.gate-cur.hover{width:10px; height:10px}
+.gate-ring.hover{width:50px; height:50px; border-color:#3a66e0}
+/* En tactil no hay raton: se esconde y vuelve el cursor normal. */
+@media (hover:none) and (pointer:coarse){
+  .gate,.gate *{cursor:auto}
+  .gate-cur,.gate-ring{display:none!important}
 }
 
 /* ---- panel de marca (izquierda) ---- */
@@ -672,6 +693,9 @@ td.crit{color:var(--crit)}
     </div>
     <span class="gate-eyebrow">Acceso restringido</span>
   </aside>
+  <!-- cursor de adsbyblitz.com — solo en esta pantalla, el dashboard usa el del sistema -->
+  <div class="gate-cur" id="gateCur" aria-hidden="true"></div>
+  <div class="gate-ring" id="gateRing" aria-hidden="true"></div>
 
   <form class="gate-card" id="gateForm">
     <div class="gate-fields">
@@ -3116,6 +3140,38 @@ function mostrarLogin(){
   gate.hidden = false;
   document.querySelector(".app").style.display = "none";
   document.getElementById("nav").style.display = "none";
+  cursorLogin();
+}
+
+/* Cursor de adsbyblitz.com. La web lo mueve con GSAP; aqui no hay GSAP, asi que
+   el punto va con transform directo y el anillo persigue con una interpolacion
+   en cada frame. Solo se enciende en el login y solo si hay raton de verdad. */
+function cursorLogin(){
+  if(cursorLogin.listo) return;
+  if(!window.matchMedia || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+  const pt = document.getElementById("gateCur"), ring = document.getElementById("gateRing");
+  if(!pt || !ring) return;
+  cursorLogin.listo = true;
+  let x = innerWidth/2, y = innerHeight/2, rx = x, ry = y, visto = false;
+  addEventListener("mousemove", (e) => {
+    x = e.clientX; y = e.clientY;
+    if(!visto){ visto = true; rx = x; ry = y; }
+    pt.style.transform = "translate("+x+"px,"+y+"px) translate(-50%,-50%)";
+  }, {passive:true});
+  (function frame(){
+    rx += (x - rx) * 0.10; ry += (y - ry) * 0.10;
+    ring.style.transform = "translate("+rx+"px,"+ry+"px) translate(-50%,-50%)";
+    requestAnimationFrame(frame);
+  })();
+  /* Delegado: los campos y el boton existen desde el principio, pero asi
+     tampoco importa si algo se repinta despues. */
+  const gateEl = document.getElementById("gate");
+  const marca = (on) => (e) => {
+    if(!e.target.closest || !e.target.closest("input,button,a")) return;
+    pt.classList.toggle("hover", on); ring.classList.toggle("hover", on);
+  };
+  gateEl.addEventListener("mouseover", marca(true));
+  gateEl.addEventListener("mouseout", marca(false));
 }
 
 /* ===================== arranque ===================== */
