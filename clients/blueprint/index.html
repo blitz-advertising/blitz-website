@@ -472,29 +472,126 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
 .helptext code{font-family:"IBM Plex Mono",monospace; font-size:11.5px; background:var(--surface-2); padding:1px 4px; border-radius:3px}
 
 
-/* ---------- login ---------- */
+/* ---------- login · pantalla partida ----------
+   Solo esta pantalla usa el lenguaje visual de adsbyblitz.com: marca a la
+   izquierda sobre la rejilla de puntos, formulario limpio a la derecha.
+   El dashboard de dentro conserva la marca del cliente, no se toca.
+   OJO: Padaloma solo trae a-z A-Z 0-9 y puntuacion basica — sin acentos.
+   Por eso el wordmark va en Padaloma y todo el texto con tildes en Inter. */
+@font-face{
+  font-family:'Padaloma';
+  src:url('/assets/padaloma.italic.ttf') format('truetype');
+  font-weight:normal; font-style:italic; font-display:swap;
+}
 .gate{
-  position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center;
-  padding:24px; background:var(--ground);
-  background-image:
-    radial-gradient(920px 540px at 14% -8%, rgba(95,178,236,.16), transparent 62%),
-    radial-gradient(780px 470px at 92% 3%, rgba(95,178,236,.09), transparent 58%);
+  position:fixed; inset:0; z-index:200;
+  display:grid; grid-template-columns:46% 54%;
+  padding:0; background:#010205; overflow:hidden;
 }
+
+/* ---- panel de marca (izquierda) ---- */
+.gate-brand{
+  position:relative; overflow:hidden;
+  border-right:1px solid rgba(255,255,255,.08);
+  padding:56px 52px;
+  display:flex; flex-direction:column; justify-content:space-between;
+}
+.gate-brand::before{           /* la misma rejilla de puntos que la web */
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background-image:radial-gradient(circle, rgba(255,255,255,.075) 1px, transparent 1px);
+  background-size:30px 30px;
+}
+.gate-brand::after{            /* resplandor contenido, sale desde abajo */
+  content:""; position:absolute; pointer-events:none;
+  width:620px; height:620px; left:-240px; bottom:-280px;
+  background:radial-gradient(circle, rgba(31,72,200,.32) 0%, rgba(31,72,200,.10) 42%, transparent 68%);
+  filter:blur(50px);
+}
+.gate-eyebrow{
+  position:relative; font-size:11px; font-weight:400;
+  letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.38);
+}
+.gate-wordmark{
+  position:relative; margin:0;
+  font-family:'Padaloma', Georgia, serif; font-style:italic; font-weight:normal;
+  font-size:clamp(34px,4.4vw,52px); line-height:1; letter-spacing:-.02em;
+  text-transform:lowercase; color:#fff;
+  background:none; -webkit-text-fill-color:#fff;
+}
+.gate-tag{
+  position:relative; margin:16px 0 0; max-width:300px;
+  font-size:13px; font-weight:300; line-height:1.65; color:rgba(255,255,255,.45);
+}
+
+/* ---- formulario (derecha) ---- */
 .gate-card{
-  width:100%; max-width:380px; background:var(--surface); border:1px solid var(--line);
-  border-radius:16px; padding:28px; box-shadow:var(--shadow), var(--glow-lg); position:relative; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+  padding:56px 48px; background:none; border:0; border-radius:0; box-shadow:none;
 }
-.gate-card::before{
-  content:""; position:absolute; inset:0 0 auto 0; height:1px;
-  background:linear-gradient(90deg, transparent, rgba(95,178,236,.6) 25%, rgba(95,178,236,.6) 75%, transparent);
+.gate-card::before{content:none}
+.gate-fields{width:100%; max-width:330px}
+.gate-card img{width:44px; height:44px; border-radius:50%; display:block; margin:0 0 28px}
+.gate-card h1{
+  font-size:15px; font-weight:500; letter-spacing:.01em; text-transform:none;
+  color:#fff; margin:0 0 6px;
+  background:none; -webkit-text-fill-color:#fff;
 }
-.gate-card img{width:44px; height:44px; border-radius:50%; display:block; margin-bottom:16px}
-.gate-card h1{font-size:21px; margin:0 0 4px;
-  background:var(--grad-text); -webkit-background-clip:text; background-clip:text;
-  color:transparent; -webkit-text-fill-color:transparent}
-.gate-card .sub{display:block; margin-bottom:20px}
-.gate-card label{display:block; margin-bottom:12px}
-.gate-err{color:var(--crit); font-size:13px; margin-top:12px; line-height:1.4}
+.gate-card .sub{
+  display:block; margin:0 0 30px;
+  font-size:13px; font-weight:300; line-height:1.6; color:rgba(255,255,255,.42);
+}
+.gate-card label{display:block; margin:0 0 18px}
+.gate-card label .f{
+  display:block; margin:0 0 9px;
+  font-size:11px; font-weight:400; letter-spacing:.14em; text-transform:uppercase;
+  color:rgba(255,255,255,.38);
+}
+.gate-card input{
+  display:block; width:100%; box-sizing:border-box; height:48px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:2px; padding:0 15px;
+  color:#fff; font-family:inherit; font-size:14px; font-weight:300;
+  outline:none; transition:border-color .25s, background .25s, box-shadow .25s;
+}
+.gate-card input::placeholder{color:rgba(255,255,255,.22)}
+.gate-card input:focus{        /* mismo resplandor azul que la web, mas contenido */
+  border-color:rgba(74,125,240,.75);
+  background:rgba(31,72,200,.07);
+  box-shadow:0 0 22px rgba(74,125,240,.30), inset 0 0 14px rgba(31,72,200,.14);
+}
+.gate-card #gBtn{
+  display:flex; align-items:center; justify-content:center;
+  width:100%; box-sizing:border-box; height:48px; margin:28px 0 0; padding:0;
+  background:none; border:1px solid rgba(31,72,200,.8); border-radius:2px;
+  color:#fff; font-family:inherit;
+  font-size:12px; font-weight:500; letter-spacing:.1em; text-transform:uppercase;
+  cursor:pointer; transition:background .25s, box-shadow .25s, border-color .25s;
+  box-shadow:0 0 32px rgba(74,125,240,.28);        /* glow en reposo, como tus CTA */
+}
+.gate-card #gBtn:hover:not(:disabled){
+  background:#1f48c8;
+  box-shadow:0 0 56px rgba(74,125,240,.70), 0 0 20px rgba(74,125,240,.55);
+}
+.gate-card #gBtn:disabled{opacity:.5; cursor:default; box-shadow:none}
+.gate-err{
+  color:#ff6b6b; font-size:12.5px; font-weight:300; line-height:1.5;
+  margin:18px 0 0; padding-top:18px; border-top:1px solid rgba(255,255,255,.08);
+}
+
+/* ---- movil: se apila, la marca pasa a ser cabecera ---- */
+@media (max-width:820px){
+  .gate{grid-template-columns:1fr; grid-template-rows:auto 1fr; overflow-y:auto}
+  .gate-brand{
+    border-right:0; border-bottom:1px solid rgba(255,255,255,.08);
+    padding:40px 28px 34px; gap:14px;
+  }
+  .gate-brand .gate-eyebrow:last-child{display:none}
+  .gate-brand::after{width:420px; height:420px; left:-160px; bottom:-220px}
+  .gate-tag{max-width:none}
+  .gate-card{padding:36px 28px 48px; align-items:flex-start}
+  .gate-fields{max-width:420px; margin:0 auto}
+}
 .logout{margin-left:8px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
 </style>
@@ -517,16 +614,28 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
 </div>
 <nav class="nav" id="nav"></nav>
 <div class="gate" id="gate" hidden>
+  <!-- panel de marca — Padaloma solo lleva letras, nada de acentos aqui -->
+  <aside class="gate-brand">
+    <span class="gate-eyebrow">Blitz Advertising</span>
+    <div>
+      <h2 class="gate-wordmark">blueprint</h2>
+      <p class="gate-tag">Acceso privado.<br>Entra tus credenciales para entrar al CRM.</p>
+    </div>
+    <span class="gate-eyebrow">Acceso restringido</span>
+  </aside>
+
   <form class="gate-card" id="gateForm">
-    <img id="gateLogo" alt="">
-    <h1>Blueprint CRM</h1>
-    <span class="sub">Entra con tu cuenta para continuar.</span>
-    <label><span class="f">Correo</span>
-      <input type="email" id="gEmail" autocomplete="username" required></label>
-    <label><span class="f">Contraseña</span>
-      <input type="password" id="gPass" autocomplete="current-password" required></label>
-    <button class="btn primary" type="submit" id="gBtn" style="width:100%;margin-top:6px">Entrar</button>
-    <p class="gate-err" id="gErr" hidden></p>
+    <div class="gate-fields">
+      <img id="gateLogo" alt="">
+      <h1>Entrar al CRM</h1>
+      <span class="sub">Usa el correo y la contrase&#241;a que te dieron.</span>
+      <label><span class="f">Correo</span>
+        <input type="email" id="gEmail" autocomplete="username" required></label>
+      <label><span class="f">Contrase&#241;a</span>
+        <input type="password" id="gPass" autocomplete="current-password" required></label>
+      <button class="btn primary" type="submit" id="gBtn">Entrar</button>
+      <p class="gate-err" id="gErr" hidden></p>
+    </div>
   </form>
 </div>
 <div id="drawerHost"></div>
