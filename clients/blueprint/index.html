@@ -2875,7 +2875,21 @@ document.getElementById("gateForm").addEventListener("submit", async (e) => {
 document.addEventListener("click", (e) => {
   const b = e.target.closest('[data-act="salir"]');
   if(!b) return;
-  SB.auth.signOut().then(() => location.reload());
+  /* signOut() solo no basta: llama al servidor, y si el token ya caduco
+     responde "Auth session missing" y DEJA el token en localStorage. Al
+     recargar lo encuentra y te vuelve a meter dentro. Por eso, pase lo que
+     pase, borramos el token a mano antes de recargar. */
+  const limpiar = () => {
+    try{
+      Object.keys(localStorage)
+        .filter(k => /^sb-.*-auth-token$/.test(k))
+        .forEach(k => localStorage.removeItem(k));
+    }catch(_){}
+    location.reload();
+  };
+  Promise.resolve(SB.auth.signOut({ scope: "local" }))
+    .catch(() => {})
+    .then(limpiar, limpiar);
 });
 
 function mostrarLogin(){
