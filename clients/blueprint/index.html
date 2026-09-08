@@ -209,6 +209,17 @@ input[type=text],input[type=date],input[type=number],input[type=time],select,tex
   transition:border-color .16s ease, box-shadow .16s ease;
 }
 input:hover,select:hover,textarea:hover{border-color:var(--accent-line)}
+/* Valor fijo: se ve como un campo pero no se puede tocar. La fecha de entrada
+   la fija ManyChat (Subscribed) o la sincronizacion — cambiarla a mano
+   descuadraria las cohortes y los conteos de "entraron hoy". */
+.fixedval{
+  background:var(--ground); border:1px solid var(--line); border-radius:8px;
+  color:var(--ink-2); padding:7px 9px; font-size:13.5px; width:100%;
+  font-family:"IBM Plex Mono", ui-monospace, monospace; letter-spacing:.01em;
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  cursor:default;
+}
+.fixedval .lock{font-size:11px; color:var(--muted); font-family:"IBM Plex Sans",sans-serif; letter-spacing:.04em}
 input[type=file]{background:var(--surface-2); border:1px dashed var(--line-2); padding:10px}
 input[type=file]::file-selector-button{
   background:var(--accent-soft); color:var(--brand); border:1px solid var(--accent-line);
@@ -687,6 +698,15 @@ function fmtLongDate(s){
   const m = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
   return dias[d.getDay()]+", "+m[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear();
 }
+/* Sin dia de la semana. Para la fecha de entrada: es un dato de referencia
+   (cuando ManyChat creo el perfil), no una cita — saber que cayo en jueves
+   no aporta nada. En las llamadas y citas si se usa fmtLongDate. */
+function fmtFecha(s){
+  if(!s) return "—";
+  const d = parseISO(s);
+  const m = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  return m[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear();
+}
 /* "14:30" -> "2:30 PM" */
 function fmtHora(h){
   const p = String(h||"").split(":");
@@ -733,7 +753,7 @@ function entryLabel(s){
 function entryTitle(s, exacto){
   if(!s) return "Sin fecha de entrada";
   const n = daysBetween(s, todayStr());
-  let t = fmtLongDate(s) + (n > 1 ? " · hace " + n + " días" : "");
+  let t = fmtFecha(s) + (n > 1 ? " · hace " + n + " días" : "");
   /* Si ManyChat nos dio el momento exacto de la suscripción, enséñalo */
   if(exacto){
     const m = String(exacto).match(/(\d{1,2}):(\d{2})/);
@@ -2412,7 +2432,13 @@ function drawer(){
         ) +
         '<div class="grid2">' +
           '<div><label class="f" for="d_fuente">Fuente</label><select id="d_fuente" data-f="fuente">'+opt(FUENTES,l.fuente)+'</select></div>' +
-          '<div><label class="f" for="d_entry">Fecha de entrada</label><input type="date" id="d_entry" data-f="entry" value="'+(l.entry||"")+'"></div>' +
+          /* La fecha de entrada NO se edita: la fija ManyChat. Si se pudiera
+             cambiar a mano, las cohortes y el conteo de "entraron hoy" mentirian. */
+          '<div><label class="f">Fecha de entrada</label>' +
+            '<div class="fixedval" title="'+esc(entryTitle(l.entry, l.subscribedAt))+'">' +
+              '<span>'+(l.entry ? esc(fmtFecha(l.entry)) : "sin fecha")+'</span>' +
+              '<span class="lock">fija</span>' +
+            '</div></div>' +
         '</div>' +
       '</div>' +
 
