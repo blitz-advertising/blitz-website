@@ -493,9 +493,13 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
 .heat{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; white-space:nowrap;
   padding:3px 8px; border-radius:999px; background:var(--surface-2); border:1px solid var(--line);
   color:var(--ink-2); letter-spacing:.01em}
+.heat .em{font-style:normal; font-size:12px; line-height:1}
 .heat.hot{background:rgba(240,120,60,.13); border-color:rgba(240,150,90,.42); color:#F6B98C}
 .heat.warm{background:var(--warn-soft); border-color:rgba(240,184,92,.32); color:var(--warn)}
-.heat.ice{background:rgba(95,178,236,.10); border-color:rgba(95,178,236,.28); color:#9CCDF0}
+.heat.cool{background:rgba(95,178,236,.09); border-color:rgba(95,178,236,.24); color:#8FC4EA}
+.heat.ice{background:rgba(140,190,235,.07); border-color:rgba(140,190,235,.20); color:#A9CCE6}
+.heat.client{background:var(--good-soft); border-color:rgba(79,214,154,.36); color:var(--good)}
+.heat.dead{background:transparent; border-color:var(--line); color:var(--muted)}
 td.crit{color:var(--crit)}
 .chiprow{display:flex; flex-wrap:wrap; gap:6px}
 .chip.done{background:var(--good-soft); border-color:rgba(79,214,154,.34); color:var(--good); cursor:pointer}
@@ -1521,17 +1525,33 @@ function viewLeads(){
 
 /* Tabla compartida por Leads, Interesados y Archivo. La columna "Calor" es la
    que ordena: 🔥 el que esta a un paso, 🧊 el mas frio de todos. */
+/* El emoji NO sustituye al tag: lo acompaña. El tag dice que es; el emoji dice
+   como de caliente, para poder escanear la columna sin leer palabra por palabra.
+   La escala va de fuego a hielo y es siempre la misma en todas las pestañas. */
 function calorChip(l){
   const t = tagDominante(l);
-  /* Los del archivo van primero: "Not Closed" arrastra blockFloor 04 Pre-call,
-     y sin esta salida saldria como 🔥 caliente — cuando en realidad ya tuvo su
-     llamada y no compro. Caliente significa "a un paso de agendar", no otra cosa. */
-  if(esNoCerro(l))      return '<span class="heat warm">no cerró</span>';
-  if(esNoInteresado(l)) return '<span class="heat ice">no interesado</span>';
-  if(blockIdx(l) >= 4 || tieneTag(l,"Tag Link")) return '<span class="heat hot">🔥 caliente</span>';
-  if(tieneTag(l,"Tag Interest Buildup") || tieneTag(l,"Ta Interest Buildup")) return '<span class="heat ice">🧊 frío</span>';
-  if(tieneTag(l,"Tag Warming Lead")) return '<span class="heat warm">templado</span>';
-  return '<span class="heat">'+esc(t ? tagName(t) : "sin tag")+'</span>';
+  const chip = (emoji, texto, cls) =>
+    '<span class="heat '+(cls||"")+'"><i class="em">'+emoji+'</i>'+esc(texto)+'</span>';
+
+  /* Archivo primero: "Not Closed" arrastra blockFloor 04 Pre-call y sin esta
+     salida saldria como 🔥 — cuando ya tuvo su llamada y no compro. */
+  /* Cliente primero: pago, y eso manda sobre cualquier otro tag que arrastre. */
+  if(l.cierre === true || tieneTag(l,"Tag Client")) return chip("💪🏼","Client","client");
+  if(esNoCerro(l))      return chip("👎🏼","No cerró","dead");
+  if(esNoInteresado(l)) return chip("🚫","No interesado","dead");
+
+  /* Un Lead ya pregunto por precio o por el programa: entra caliente de una.
+     Por eso el fuego empieza ahi y no mas arriba. */
+  if(tieneTag(l,"Tag Booked"))                    return chip("✅","Booked","hot");
+  if(tieneTag(l,"Tag Link") || blockIdx(l) >= 4)  return chip("🔥🔥", t ? tagName(t) : "Pre-call", "hot");
+  if(tieneTag(l,"Tag Lead"))                      return chip("🔥","Lead","hot");
+  if(tieneTag(l,"Tag Warming Lead"))              return chip("🧨","Warming Lead","warm");
+  if(tieneTag(l,"Tag Interest"))                  return chip("🧊","Interest","cool");
+  if(tieneTag(l,"Tag Interest Buildup") ||
+     tieneTag(l,"Ta Interest Buildup"))           return chip("🧊🧊","Interest Buildup","ice");
+  /* Sin tag de ManyChat: se situa por lo avanzado que va el guion. */
+  const b = blockIdx(l);
+  return chip(b >= 3 ? "🔥" : b >= 1 ? "🧊" : "⚪", BLOQUES[b].slice(3), b >= 3 ? "hot" : b >= 1 ? "cool" : "");
 }
 function tablaSegmento(list){
   const rows = list.map(l => {
