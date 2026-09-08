@@ -69,6 +69,14 @@ declare
     'estado','updatedAt'
   ];
 begin
+  -- El robot de sincronizacion entra con la service_role: no tiene usuario, asi
+  -- que auth.uid() es nulo y mi_rol() caeria en 'closer' por defecto. Sin esta
+  -- salida el guardia le rechaza escribir agendoAt, show o estado.
+  -- Ojo: la service_role SI se salta la RLS, pero NO se salta los triggers.
+  if coalesce(auth.role(), '') = 'service_role' then
+    return new;
+  end if;
+
   if rol = 'setter' then
     return new;                       -- el setter manda sobre todo
   end if;

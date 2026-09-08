@@ -502,8 +502,14 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
 .modal-f .btn{flex:1; min-width:120px; justify-content:center}
 .modal-f .btn.wide{flex:1 0 100%}
 /* Botones de resultado dentro de la ficha */
-.resultbtns{display:flex; gap:8px; margin-bottom:14px}
+.resultbtns{display:flex; gap:8px; margin-bottom:8px}
 .resultbtns .btn{flex:1; justify-content:center; padding:11px}
+/* Estado vacio dentro de un bloque que no se esconde */
+.nada{
+  font-size:13.5px; line-height:1.55; color:var(--muted); margin:0;
+  padding:18px 16px; text-align:center;
+  border:1px dashed var(--line-2); border-radius:10px; background:var(--ground);
+}
 .fieldset{display:flex; flex-direction:column; gap:11px}
 .fieldset > .eyebrow{margin:0}
 .steps{display:flex; gap:6px; flex-wrap:wrap}
@@ -895,11 +901,6 @@ let TOUCHDAYS = {};   // { "2026-09-07": 18, ... } — lo escribe la sincronizac
    no puede tocar (no sigue la cuenta, ventana cerrada) pero con la que sí hablaste. */
 let TOUCHMAN = {};
 let EDITID = false;   // handle y nombre van bloqueados hasta que se pida editarlos
-/* Confirmacion de archivar, en pantalla. No se usa confirm() del navegador
-   porque hay entornos que lo bloquean y devuelven false sin avisar: el boton
-   parecia roto. Guarda el ID del lead, no un booleano: asi cambiar de ficha
-   invalida la confirmacion sola, sin depender de acordarse de resetearla. */
-let ARCH_OK = null;
 
 /* ===================== lead ===================== */
 function blankLead(){
@@ -967,7 +968,10 @@ function tagDominante(l){
 }
 const esNoInteresado = l => tieneTag(l,"Tag Not Interested");
 const esNoCerro      = l => tieneTag(l,"Tag Not Closed");
-const yaAgendo       = l => l.pendingBook || !!l.agendo || !!l.callDate || tieneTag(l,"Tag Booked");
+/* Manda el estado del CRM, no el tag suelto: el sync ya traduce "Tag Booked" a
+   pendingBook. Mirar el tag ademas hacia que un lead devuelto a la cola rebotara
+   a Llamadas mientras el Sheet no se actualizara. */
+const yaAgendo       = l => l.pendingBook || !!l.agendo || !!l.callDate;
 
 /* Cada lead vive en UNA sola pestaña. El orden de estas preguntas es el orden
    de mando: primero los estados terminales, luego el booking, luego el calor. */
@@ -1930,12 +1934,23 @@ function viewLlamadas(){
       '</b> Sin el número, tu cash y tu ticket medio salen por debajo de lo real. ' +
       debenImporte.map(l => '<button class="linkish" data-askamount="'+l.id+'">@'+esc(l.handle)+'</button>').join(" · ") +
       '</p></div>' : "";
-  const proximas = c.proximas.length ?
+  /* Este bloque no desaparece nunca. Es lo primero que mira el closer al entrar,
+     y si un dia no hay nada debe decirlo — no dejar un hueco que parezca un
+     fallo de carga o que obligue a buscar la agenda en otro sitio. */
+  const proximas =
     '<section class="qgroup hero">' +
-      '<div class="qhead"><h3>Próximas llamadas</h3><span class="n">'+c.proximas.length+'</span><span class="rule"></span></div>' +
-      '<p class="helptext" style="margin:-4px 0 9px">Confirmadas: día y hora puestos. Estas son las que van a pasar.</p>' +
-      '<div class="rows">'+c.proximas.map(l => callRow(l, "proxima")).join("")+'</div>' +
-    '</section>' : "";
+      '<div class="qhead"><h3>Próximas llamadas</h3>' +
+        (c.proximas.length ? '<span class="n">'+c.proximas.length+'</span>' : "") +
+        '<span class="rule"></span></div>' +
+      (c.proximas.length
+        ? '<p class="helptext" style="margin:-4px 0 9px">Confirmadas: día y hora puestos. Estas son las que van a pasar.</p>' +
+          '<div class="rows">'+c.proximas.map(l => callRow(l, "proxima")).join("")+'</div>'
+        : '<p class="nada">Por el momento no hay llamadas confirmadas.' +
+          (c.sinFecha.length || c.sinHora.length
+            ? ' Hay '+(c.sinFecha.length + c.sinHora.length)+' sin confirmar más abajo.'
+            : ' Cuando el setter agende una con día y hora, aparecerá aquí.') +
+          '</p>') +
+    '</section>';
 
   const sinFecha = sinFechaGroup(c.sinFecha);
 
@@ -1944,9 +1959,13 @@ function viewLlamadas(){
     (hint ? '<p class="helptext" style="margin:-4px 0 9px">'+hint+'</p>' : "") +
     '<div class="rows">'+list.map(l => callRow(l, kind)).join("")+'</div></section>' : "";
 
+  /* Sin nada que enseñar se devuelve la MISMA estructura, no una pantalla
+     aparte: el bloque de Próximas llamadas es la referencia del closer y tiene
+     que estar siempre en el mismo sitio, aunque diga que está vacío. */
   if(!c.sinFecha.length && !c.sinHora.length && !c.porRegistrar.length && !c.porResultado.length && !c.proximas.length && !c.cerradas.length && !c.noCerraron.length){
-    return modeBanner() + '<div class="section"><div class="h-row"><h2>Llamadas</h2></div>' +
-      '<div class="card empty"><h3>No hay llamadas todavía</h3><p>Cuando el setter marque que alguien agendó, la llamada aparece aquí para registrar el resultado.</p></div></div>';
+    return modeBanner() + '<div class="section">' +
+      '<div class="h-row"><h2>Llamadas</h2><span class="sub">Show, cierre e importe</span></div>' +
+      head + proximas + '</div>';
   }
 
   return modeBanner() + '<div class="section">' +
@@ -2755,19 +2774,17 @@ function drawer(){
 
   const ventaBlock = l.agendo ?
     '<div class="fieldset"><p class="eyebrow">Llamada · lo llena el closer</p>' +
-      /* Botones grandes ademas de los desplegables: registrar el resultado es
-         lo que mas se hace aqui, y con los selectores hacian falta tres pasos.
+      /* Un solo grupo con las tres salidas reales de una llamada. No se pregunta
+         antes si vino: si cerro o no cerro, es que vino. Y "No vino" descarta
+         las otras dos. Asi se registra en un clic en vez de dos.
          "Cerró" abre el modal del importe, igual que desde la lista. */
-      (l.show === true && l.cierre === null ?
+      (l.cierre === null && l.show !== false ?
         '<div class="resultbtns">' +
           '<button class="btn good" data-close="'+l.id+'|1">Cerró</button>' +
           '<button class="btn crit" data-close="'+l.id+'|0">No cerró</button>' +
-        '</div>' : "") +
-      (l.show === null ?
-        '<div class="resultbtns">' +
-          '<button class="btn good" data-show="'+l.id+'|1">Vino</button>' +
-          '<button class="btn crit" data-show="'+l.id+'|0">No vino</button>' +
-        '</div>' : "") +
+        '</div>' +
+        '<button class="btn" style="width:100%;margin-bottom:14px" data-show="'+l.id+'|0">No vino</button>'
+      : "") +
       (l.cierre === true && !(+l.importe > 0) ?
         '<button class="btn primary" style="width:100%;margin-bottom:12px" data-askamount="'+l.id+'">' +
           'Falta el importe — escribirlo</button>' : "") +
@@ -2923,7 +2940,7 @@ document.addEventListener("click", async (e) => {
     VIEW = ROLE === "closer" ? "llamadas" : "hoy"; render(); return; }
   if(t.dataset.period !== undefined && t.dataset.period !== ""){ PERIOD = Number(t.dataset.period); render(); return; }
   if(t.dataset.countby){ COUNTBY = t.dataset.countby; render(); return; }
-  if(t.dataset.open){ OPEN = t.dataset.open; EDITID = false; ARCH_OK = null; drawer(); return; }
+  if(t.dataset.open){ OPEN = t.dataset.open; EDITID = false; drawer(); return; }
 
   if(t.dataset.show){
     const parts = t.dataset.show.split("|");
@@ -2974,7 +2991,7 @@ document.addEventListener("click", async (e) => {
   const act = t.dataset.act;
   if(!act) return;
 
-  if(act === "closeDrawer"){ OPEN = null; EDITID = false; ARCH_OK = null; drawer(); return; }
+  if(act === "closeDrawer"){ OPEN = null; EDITID = false; drawer(); return; }
   if(act === "editId"){
     if(ROLE !== "setter"){ toast("El @handle solo lo cambia el setter."); return; }
     EDITID = true; drawer(); setTimeout(() => { const el = document.getElementById("d_nombre"); if(el) el.focus(); }, 30); return;
@@ -3000,7 +3017,12 @@ document.addEventListener("click", async (e) => {
       if(!ok) return;
     }
     l.seed = !l.seed;
-    await persist(l); drawer(); render();
+    await persist(l);
+    /* Al archivar se cierra la ficha: el lead ya no pertenece a esta pestaña y
+       dejarla abierta sobre una lista donde ya no aparece confunde. Al sacarlo
+       del archivo se queda abierta, que ahi si sigues trabajandolo. */
+    if(l.seed) OPEN = null;
+    drawer(); render();
     toast(l.seed
       ? "@"+l.handle+" archivado. Fuera de las métricas y de las colas; sus datos siguen ahí."
       : "@"+l.handle+" vuelve a contar.");
@@ -3017,8 +3039,13 @@ document.addEventListener("click", async (e) => {
     const tenia = [l.cierre === true ? "cierre" : null, l.show !== null ? "show" : null,
                    (+l.importe > 0) ? money2(l.importe) : null, l.agendo ? "agenda" : null]
                   .filter(Boolean).join(", ");
-    if(!confirm("¿Devolver @"+l.handle+" a la cola?\n\nSe le quita: "+(tenia||"nada")+
-                "\n\nSus notas (meta, dolor, ya hace) NO se tocan.")) return;
+    const ok = await confirmar({
+      titulo: "¿Devolver @"+esc(l.handle)+" a la cola?",
+      texto: "Se le quita: <b>"+esc(tenia || "nada")+"</b>. " +
+             "Sus notas (meta, dolor, ya hace) no se tocan.",
+      ok: "Devolver a la cola", peligro: true
+    });
+    if(!ok) return;
     Object.assign(l, {
       agendo:null, agendoHora:"", agendoAt:null, callDate:null, pendingBook:false,
       show:null, showAt:null, cierre:null, cierreAt:null, importe:null,
@@ -3211,7 +3238,7 @@ document.addEventListener("input", (e) => {
 });
 
 document.addEventListener("keydown", (e) => {
-  if(e.key === "Escape" && OPEN){ OPEN = null; EDITID = false; ARCH_OK = null; drawer(); }
+  if(e.key === "Escape" && OPEN){ OPEN = null; EDITID = false; drawer(); }
 });
 
 /* ===================== Supabase ===================== */
