@@ -1,0 +1,2842 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>BLUEPRINT CRM</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+html{color-scheme:dark}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+
+:root{
+  /* Blueprint — tema oscuro único, construido sobre el negro y el azul del logo.
+     Un solo tema a propósito: el glow no existe sobre fondo claro. */
+  color-scheme:dark;   /* que los date/time nativos salgan oscuros, no blancos */
+  --brand:#5FB2EC; --brand-hi:#A8DBFF; --brand-dim:#2E6FA8;
+  --ground:#04070B; --surface:#111A24; --surface-2:#1A2532; --surface-3:#253444;
+  --ink:#F4F9FE; --ink-2:#C4D3E1; --muted:#8698A9;
+  --line:#26333F; --line-2:#3A4B5E;
+  --accent:#5FB2EC; --accent-ink:#03121D; --accent-soft:#132D45; --accent-line:#39709E;
+  --good:#4FD69A; --good-soft:#0B2D1F;
+  --warn:#F0B85C; --warn-soft:#302512;
+  --crit:#FF9280; --crit-soft:#361A16;
+  --cool:#8FCFF5; --cool-soft:#142C42;
+  --bar:#5FB2EC; --bar-track:#0B1219;
+  /* gradientes: una sola familia, siempre el azul del logo */
+  --grad-bar:linear-gradient(90deg,#2E6FA8 0%,#5FB2EC 55%,#A8DBFF 100%);
+  --grad-text:linear-gradient(96deg,#57ACE8 0%,#7FC6F4 45%,#A8DBFF 100%);
+  --grad-line:linear-gradient(90deg,#5FB2EC,rgba(95,178,236,0) 78%);
+  --r:12px;
+  --shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 2px 8px rgba(0,0,0,.5), 0 20px 40px -24px rgba(0,0,0,.9);
+  /* El glow: una sola familia, siempre el azul de marca */
+  --glow-sm:0 0 14px -2px rgba(95,178,236,.55);
+  --glow-md:0 0 26px -4px rgba(95,178,236,.65);
+  --glow-lg:0 0 48px -8px rgba(95,178,236,.5);
+  --nav-h:60px;
+  /* Los 5 bloques son una secuencia: una sola rampa de azul */
+  --blk0-bg:#1D2833; --blk0-fg:#93A5B5;
+  --blk1-bg:#122839; --blk1-fg:#8CC4EC;
+  --blk2-bg:#153650; --blk2-fg:#A2D3F4;
+  --blk3-bg:#194768; --blk3-fg:#BEE2FA;
+  --blk4-bg:#5FB2EC; --blk4-fg:#03121D;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--ground); color:var(--ink);
+  /* Dos luces azules muy tenues: le dan profundidad al negro en vez de dejarlo plano */
+  background-image:
+    radial-gradient(920px 540px at 14% -8%, rgba(95,178,236,.16), transparent 62%),
+    radial-gradient(780px 470px at 92% 3%, rgba(95,178,236,.09), transparent 58%),
+    linear-gradient(rgba(95,178,236,.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(95,178,236,.028) 1px, transparent 1px);
+  background-size:auto, auto, 44px 44px, 44px 44px;
+  background-attachment:fixed;
+  font-family:"IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size:15px; line-height:1.5; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:"Archivo", ui-sans-serif, system-ui, sans-serif; font-weight:700; margin:0; text-wrap:balance; letter-spacing:-.012em}
+button,input,select,textarea{font:inherit; color:inherit}
+button{cursor:pointer}
+.mono{font-family:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--brand); outline-offset:2px; border-radius:5px; box-shadow:var(--glow-sm)}
+
+/* ---------- shell ---------- */
+.app{display:flex; min-height:100vh}
+.rail{display:none}
+.main{flex:1; min-width:0; padding:0 0 calc(var(--nav-h) + 20px)}
+.wrap{max-width:1140px; margin:0 auto; padding:0 16px}
+
+.topbar{
+  position:sticky; top:0; z-index:30; border-bottom:1px solid var(--line);
+  background:rgba(7,10,14,.78); backdrop-filter:blur(14px);
+}
+.topbar-in{max-width:1140px; margin:0 auto; padding:12px 16px; display:flex; align-items:center; gap:12px}
+.brand{display:flex; align-items:center; gap:9px; min-width:0}
+.brand img, .rail-brand img{display:block; flex:none}
+.brand img{width:26px; height:26px; border-radius:50%}
+.rail-brand img{width:34px; height:34px; border-radius:50%; margin-bottom:9px}
+.brand b{font-family:"Archivo",sans-serif; font-weight:700; font-size:17px; letter-spacing:-.02em}
+.brand span{font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); white-space:nowrap}
+@media (min-width:900px){ .brand b{display:none} }
+.spacer{flex:1}
+
+.roleswitch{display:flex; background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:2px}
+.roleswitch button{
+  border:0; background:transparent; color:var(--muted); font-size:12.5px; font-weight:600;
+  padding:5px 12px; border-radius:999px; letter-spacing:.01em; white-space:nowrap;
+}
+.roleswitch button[aria-pressed="true"]{background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+/* bottom nav (mobile) */
+.nav{
+  position:fixed; bottom:0; left:0; right:0; z-index:40; height:var(--nav-h);
+  background:rgba(12,17,24,.92); backdrop-filter:blur(14px); border-top:1px solid var(--line);
+  display:flex; padding-bottom:env(safe-area-inset-bottom);
+}
+.nav button{
+  flex:1; border:0; background:transparent; color:var(--muted);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  font-size:10.5px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; padding:0;
+  border-top:2px solid transparent; margin-top:-1px;
+}
+.nav button svg{width:19px; height:19px; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+.nav button[aria-current="page"]{color:var(--brand-hi); border-top-color:var(--brand);
+  box-shadow:0 -8px 22px -12px rgba(107,175,224,.9)}
+.nav button[aria-current="page"] svg{filter:drop-shadow(0 0 6px rgba(107,175,224,.7))}
+.nav .badge{
+  position:absolute; transform:translate(14px,-11px); background:var(--crit); color:#fff;
+  border-radius:999px; font-size:9.5px; min-width:16px; height:16px; line-height:16px; padding:0 4px;
+  font-family:"IBM Plex Mono",monospace; font-weight:500;
+}
+
+@media (min-width:900px){
+  .nav{display:none}
+  .rail{
+    display:flex; flex-direction:column; gap:3px; width:204px; flex:none;
+    padding:18px 12px; border-right:1px solid var(--line); position:sticky; top:0; height:100vh;
+    background:linear-gradient(180deg, rgba(20,28,38,.92), rgba(10,14,20,.92));
+    backdrop-filter:blur(12px);
+  }
+  .rail .rail-brand{padding:6px 10px 18px}
+  .rail .rail-brand b{display:block; font-family:"Archivo",sans-serif; font-size:18px; letter-spacing:-.02em}
+  .rail .rail-brand span{font-size:10.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--muted)}
+  .rail button.railbtn{
+    display:flex; align-items:center; gap:10px; border:0; background:transparent; color:var(--ink-2);
+    padding:9px 10px; border-radius:var(--r); font-size:14px; font-weight:500; text-align:left; width:100%;
+  }
+  .rail button.railbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round; flex:none}
+  .rail button.railbtn:hover{background:var(--surface-2)}
+  .rail button.railbtn[aria-current="page"]{
+    background:linear-gradient(90deg, rgba(107,175,224,.20), rgba(107,175,224,.05));
+    color:var(--brand-hi); font-weight:600;
+    box-shadow:inset 2px 0 0 var(--brand), var(--glow-sm);
+  }
+  .rail button.railbtn[aria-current="page"] svg{filter:drop-shadow(0 0 6px rgba(107,175,224,.7))}
+  .rail .cnt{margin-left:auto; font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--muted)}
+  .rail button.railbtn[aria-current="page"] .cnt{color:var(--accent)}
+  .main{padding-bottom:40px}
+  .topbar{background:var(--ground)}
+}
+
+/* ---------- generic ---------- */
+.section{padding:20px 0 8px}
+.eyebrow{
+  font-size:10.5px; font-weight:600; letter-spacing:.15em; text-transform:uppercase;
+  color:var(--brand); margin:0 0 9px; display:flex; align-items:center; gap:8px;
+}
+.eyebrow::after{content:""; flex:1; height:1px; background:var(--grad-line); opacity:.4}
+.h-row{display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:14px}
+.h-row h2{
+  font-size:23px; letter-spacing:-.022em;
+  background:var(--grad-text); -webkit-background-clip:text; background-clip:text;
+  color:transparent; -webkit-text-fill-color:transparent;
+}
+.sub{color:var(--muted); font-size:13px}
+
+.card{
+  position:relative; overflow:hidden;
+  background:linear-gradient(180deg, rgba(95,178,236,.05), rgba(255,255,255,0) 130px), var(--surface);
+  border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow);
+}
+/* filo de luz en el borde de arriba: se apaga hacia los lados */
+.card::before, .meter::before, .stat::before{
+  content:""; position:absolute; inset:0 0 auto 0; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(95,178,236,.55) 25%, rgba(95,178,236,.55) 75%, transparent);
+}
+.pad{padding:16px}
+
+.btn{
+  border:1px solid var(--line-2); background:var(--surface-2); color:var(--ink);
+  padding:7px 13px; border-radius:8px; font-size:13.5px; font-weight:500;
+  transition:box-shadow .18s ease, background .18s ease, border-color .18s ease;
+}
+.btn:hover{background:var(--surface-3); border-color:var(--accent-line)}
+.btn.primary{background:linear-gradient(180deg, var(--brand-hi), var(--brand)); border-color:var(--brand);
+  color:var(--accent-ink); font-weight:600; box-shadow:var(--glow-sm)}
+.btn.primary:hover{box-shadow:var(--glow-md); filter:brightness(1.05)}
+.btn.ghost{border-color:transparent; background:transparent; color:var(--muted)}
+.btn.ghost:hover{background:var(--surface-2); color:var(--ink)}
+.btn.sm{padding:4px 9px; font-size:12.5px}
+.btn.danger{color:var(--crit); border-color:var(--crit-soft); background:var(--crit-soft)}
+.btn.good{background:linear-gradient(180deg,#6BE3AC,#4FD69A); border-color:#4FD69A; color:#04231A; font-weight:600;
+  box-shadow:0 0 14px -2px rgba(79,214,154,.6)}
+.btn.good:hover{box-shadow:0 0 24px -4px rgba(79,214,154,.75); filter:brightness(1.05)}
+.btn.crit{background:linear-gradient(180deg,#FFA795,#F5806B); border-color:#F5806B; color:#2B0C06; font-weight:600;
+  box-shadow:0 0 14px -2px rgba(245,128,107,.55)}
+.btn.crit:hover{box-shadow:0 0 24px -4px rgba(245,128,107,.7); filter:brightness(1.05)}
+.amountbox{display:flex; gap:6px; align-items:center; flex-wrap:nowrap}
+.amountbox input{width:118px; border-color:var(--good); box-shadow:0 0 14px -4px rgba(79,214,154,.6)}
+.touchadd{display:flex; gap:6px; align-items:center; margin-top:11px}
+.touchadd input{flex:1; min-width:0; font-size:13px; padding:6px 9px}
+.amountbox input:focus{border-color:var(--good); box-shadow:0 0 20px -3px rgba(79,214,154,.8)}
+.btn[disabled]{opacity:.45; cursor:not-allowed}
+
+input[type=text],input[type=date],input[type=number],input[type=time],select,textarea{
+  background:var(--surface-2); border:1px solid var(--line-2); border-radius:8px;
+  color-scheme:dark; color:var(--ink);
+  padding:7px 9px; font-size:14px; width:100%;
+  transition:border-color .16s ease, box-shadow .16s ease;
+}
+input:hover,select:hover,textarea:hover{border-color:var(--accent-line)}
+input[type=file]{background:var(--surface-2); border:1px dashed var(--line-2); padding:10px}
+input[type=file]::file-selector-button{
+  background:var(--accent-soft); color:var(--brand); border:1px solid var(--accent-line);
+  border-radius:7px; padding:5px 12px; margin-right:12px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+}
+input[type=file]::file-selector-button:hover{background:var(--surface-3); box-shadow:var(--glow-sm)}
+input:focus,select:focus,textarea:focus{outline:none; border-color:var(--brand); box-shadow:var(--glow-sm)}
+/* El calendario nativo venía blanco sobre azul: lo pintamos del color de marca */
+input[type=date],input[type=time]{font-family:"IBM Plex Mono",monospace; font-size:13.5px; letter-spacing:.01em}
+input[type=date]::-webkit-calendar-picker-indicator,
+input[type=time]::-webkit-calendar-picker-indicator{
+  filter:invert(72%) sepia(38%) saturate(1100%) hue-rotate(174deg) brightness(102%);
+  opacity:.85; cursor:pointer;
+}
+input[type=date]::-webkit-calendar-picker-indicator:hover,
+input[type=time]::-webkit-calendar-picker-indicator:hover{opacity:1}
+input[type=date]::-webkit-datetime-edit,
+input[type=time]::-webkit-datetime-edit{color:var(--ink)}
+input[type=date]::-webkit-datetime-edit-text{color:var(--muted); padding:0 1px}
+input[type=date]::-webkit-datetime-edit-fields-wrapper{padding:0}
+textarea{resize:vertical; min-height:62px; line-height:1.45}
+label.f{display:block; font-size:11px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin:0 0 4px}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+.grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+@media (max-width:640px){.grid3{grid-template-columns:1fr 1fr}}
+
+.chip{
+  display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:999px;
+  font-size:11.5px; font-weight:600; letter-spacing:.01em; white-space:nowrap;
+  background:var(--surface-2); color:var(--ink-2); border:1px solid var(--line);
+}
+.chip.b0{background:var(--blk0-bg); color:var(--blk0-fg); border-color:transparent}
+.chip.b1{background:var(--blk1-bg); color:var(--blk1-fg); border-color:transparent}
+.chip.b2{background:var(--blk2-bg); color:var(--blk2-fg); border-color:transparent}
+.chip.b3{background:var(--blk3-bg); color:var(--blk3-fg); border-color:transparent}
+.chip.b4{background:var(--blk4-bg); color:var(--blk4-fg); border-color:transparent; box-shadow:var(--glow-sm)}
+.chip.crit{background:var(--crit-soft); color:var(--crit); border-color:transparent}
+.chip.cool{background:var(--cool-soft); color:var(--cool); border-color:transparent}
+.chip.good{background:var(--good-soft); color:var(--good); border-color:transparent}
+.chip.warn{background:var(--warn-soft); color:var(--warn); border-color:transparent}
+
+.banner{
+  display:flex; gap:10px; align-items:flex-start; padding:11px 14px; border-radius:var(--r);
+  background:var(--warn-soft); color:var(--warn); font-size:13.5px; margin:14px 0; line-height:1.45;
+}
+.banner.info{background:var(--accent-soft); color:var(--accent)}
+.banner.crit{background:var(--crit-soft); color:var(--crit); box-shadow:inset 0 0 22px -6px rgba(255,146,128,.5)}
+.banner b{font-weight:600}
+.banner p{margin:0}
+.banner .spacer{flex:1}
+
+.empty{text-align:center; padding:44px 20px; color:var(--muted)}
+.empty h3{font-size:17px; color:var(--ink); margin-bottom:6px}
+.empty p{margin:0 auto 16px; max-width:38ch; font-size:14px}
+
+/* ---------- meters ---------- */
+.meters{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px}
+.meter{
+  position:relative; overflow:hidden;
+  background:linear-gradient(180deg, rgba(95,178,236,.06), rgba(255,255,255,0) 70%), var(--surface);
+  border:1px solid var(--line); border-radius:var(--r); padding:15px 17px; box-shadow:var(--shadow);
+}
+.meter-top{display:flex; align-items:baseline; gap:7px; margin-bottom:9px}
+.meter-top .lab{font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.meter-top .val{
+  font-family:"Archivo",sans-serif; font-weight:700; font-size:24px; letter-spacing:-.03em;
+  margin-left:auto; font-variant-numeric:tabular-nums;
+  color:var(--brand-hi); text-shadow:0 0 20px rgba(95,178,236,.55);
+}
+.meter-top .val small{font-size:13px; color:var(--muted); font-weight:600}
+.track{
+  height:9px; border-radius:99px; background:var(--bar-track); overflow:hidden;
+  border:1px solid var(--line); box-shadow:inset 0 1px 3px rgba(0,0,0,.7);
+}
+.track i{
+  display:block; height:100%; border-radius:99px; min-width:3px;
+  background:var(--grad-bar); background-size:200% 100%;
+  transition:width .5s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 0 12px rgba(95,178,236,.9), 0 0 26px rgba(95,178,236,.45), inset 0 1px 0 rgba(255,255,255,.35);
+}
+.track i.done{
+  background:linear-gradient(90deg,#1F8A5C 0%,#4FD69A 55%,#B6F5D8 100%);
+  box-shadow:0 0 12px rgba(79,214,154,.9), 0 0 26px rgba(79,214,154,.4), inset 0 1px 0 rgba(255,255,255,.35);
+}
+
+/* ---------- queue ---------- */
+.qgroup{margin-bottom:26px}
+/* La cola del closer: lo primero que tiene que ver, y que no se confunda con lo demás */
+.qgroup.hero{
+  margin-bottom:30px; padding:16px 16px 18px; border-radius:14px;
+  background:linear-gradient(180deg, rgba(95,178,236,.10), rgba(95,178,236,.02) 60%), var(--surface);
+  border:1px solid var(--accent-line);
+  box-shadow:inset 0 0 44px -10px rgba(95,178,236,.30), var(--shadow), 0 0 40px -18px rgba(95,178,236,.75);
+}
+.qgroup.hero .qhead h3{font-size:16px}
+.qgroup.hero .qhead .rule{opacity:.8}
+.qgroup.hero .row{background:var(--surface-2); border-color:var(--line-2)}
+.qhead{display:flex; align-items:center; gap:9px; margin:0 0 9px; padding:0 2px}
+.qhead h3{
+  font-size:13.5px; letter-spacing:.005em;
+  background:var(--grad-text); -webkit-background-clip:text; background-clip:text;
+  color:transparent; -webkit-text-fill-color:transparent;
+}
+.qhead .n{
+  font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--brand);
+  background:var(--accent-soft); border:1px solid var(--accent-line);
+  padding:1px 7px; border-radius:99px; line-height:1.5;
+}
+.qhead .rule{flex:1; height:1px; background:var(--grad-line); opacity:.55}
+
+.rows{display:flex; flex-direction:column; gap:6px}
+.row{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+  padding:12px 14px; display:flex; align-items:center; gap:12px; text-align:left; width:100%;
+  border-left:3px solid var(--line-2);
+  transition:border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.row:hover{background:var(--surface-2); border-color:var(--line-2)}
+.row.booked{box-shadow:inset 3px 0 0 var(--brand), 0 0 20px -12px rgba(107,175,224,.8)}
+.row.late{border-left-color:var(--crit)}
+.row.due{border-left-color:var(--accent)}
+.row.cold{border-left-color:var(--warn)}
+.row.booked{border-left-color:var(--cool)}
+.row.done{opacity:.62}
+.row-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; background:none; border:0; padding:0; cursor:pointer}
+.row-l1{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+.row-l1 .h{font-family:"IBM Plex Mono",monospace; font-size:14px; font-weight:500; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%}
+.row-l1 .n{font-size:13px; color:var(--muted)}
+.row-l2{display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:12px; color:var(--muted)}
+.row-acts{display:flex; gap:5px; flex:none}
+.row-acts .btn{padding:5px 10px; font-size:12.5px}
+@media (max-width:700px){
+  .row{flex-wrap:wrap}
+  .row-acts{width:100%; padding-top:2px}
+  .row-acts .btn{flex:1}
+}
+.stepdots{display:inline-flex; gap:3px; align-items:center}
+.stepdots i{width:6px; height:6px; border-radius:50%; background:var(--line-2); display:block}
+.stepdots i.on{background:var(--brand); box-shadow:0 0 7px rgba(95,178,236,.9)}
+
+/* ---------- table ---------- */
+.tablewrap{overflow-x:auto; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); box-shadow:var(--shadow)}
+table{border-collapse:collapse; width:100%; font-size:13.5px}
+th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--line); white-space:nowrap}
+th{font-size:10.5px; font-weight:600; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-2); background:var(--surface-2); position:sticky; top:0; border-bottom:1px solid var(--line-2)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--surface-2)}
+td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
+.linkish{background:none;border:0;padding:0;color:var(--accent);font-weight:500;font-family:"IBM Plex Mono",monospace;font-size:13.5px}
+.linkish:hover{text-decoration:underline}
+.iglink{
+  font-family:"IBM Plex Mono",monospace; color:var(--brand); text-decoration:none;
+  border-bottom:1px dashed rgba(95,178,236,.45); transition:color .15s ease, text-shadow .15s ease;
+}
+.iglink:hover{color:var(--brand-hi); border-bottom-style:solid; text-shadow:0 0 12px rgba(95,178,236,.7)}
+.iglink::after{content:" ↗"; font-size:.8em; opacity:.6; border:0}
+
+/* ---------- filters ---------- */
+.filters{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center}
+.filters input[type=text]{width:auto; min-width:180px; flex:1}
+.filters select{width:auto}
+
+/* ---------- charts ---------- */
+.chartrow{display:grid; gap:10px}
+.bar{display:grid; grid-template-columns:132px 1fr 54px; align-items:center; gap:10px; font-size:13px}
+.bar .lab{color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.bar .tr{height:14px; background:var(--bar-track); border-radius:0 5px 5px 0; overflow:hidden;
+  border:1px solid var(--line); border-left:0; box-shadow:inset 0 1px 3px rgba(0,0,0,.6)}
+.bar .tr i{display:block; height:100%; border-radius:0 5px 5px 0; min-width:2px;
+  background:var(--grad-bar);
+  box-shadow:0 0 12px rgba(95,178,236,.75), inset 0 1px 0 rgba(255,255,255,.3)}
+.bar .v{text-align:right; font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink); font-variant-numeric:tabular-nums}
+.bar.crit .tr i{background:linear-gradient(90deg,#A9463A 0%,#FF9280 60%,#FFC2B5 100%); box-shadow:0 0 12px rgba(255,146,128,.7), inset 0 1px 0 rgba(255,255,255,.28)}
+.bar:hover .lab{color:var(--ink)}
+@media (max-width:560px){.bar{grid-template-columns:96px 1fr 46px; gap:8px; font-size:12.5px}}
+
+.funnel{display:flex; flex-direction:column; gap:2px}
+.fstep{display:flex; align-items:center; gap:10px}
+.fstep .fhere{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--muted); white-space:nowrap}
+.fstep .fbar{
+  display:flex; align-items:center; gap:10px; padding:10px 13px; border-radius:8px; min-width:104px; flex:none;
+  background:linear-gradient(90deg, rgba(95,178,236,.32), rgba(95,178,236,.08));
+  color:var(--brand-hi); box-shadow:inset 0 0 0 1px rgba(95,178,236,.28), 0 0 20px -10px rgba(95,178,236,.9);
+}
+.fstep .fbar .fn{font-family:"Archivo",sans-serif; font-weight:700; font-size:17px; font-variant-numeric:tabular-nums}
+.fstep .fbar .fl{font-size:12.5px; font-weight:600; color:var(--ink-2)}
+.fdrop{display:flex; align-items:center; gap:7px; padding:3px 12px; font-size:11.5px; color:var(--muted); font-family:"IBM Plex Mono",monospace}
+.fdrop .pct{color:var(--ink-2); font-weight:500}
+.fdrop.bad .pct{color:var(--crit)}
+.fdrop.ok .pct{color:var(--good)}
+
+.stats{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
+@media (max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{
+  position:relative; overflow:hidden;
+  background:linear-gradient(180deg, rgba(95,178,236,.06), rgba(255,255,255,0) 70%), var(--surface);
+  border:1px solid var(--line); border-radius:var(--r); padding:15px 17px; box-shadow:var(--shadow);
+}
+.stat .k{font-size:10.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.stat .v{
+  font-family:"Archivo",sans-serif; font-weight:700; font-size:28px; letter-spacing:-.032em;
+  margin-top:6px; font-variant-numeric:tabular-nums;
+  color:var(--brand-hi); text-shadow:0 0 22px rgba(95,178,236,.5);
+}
+.stat .d{font-size:11.5px; color:var(--muted); margin-top:3px; font-family:"IBM Plex Mono",monospace}
+.stat.good .v{color:var(--good)} .stat.crit .v{color:var(--crit)} .stat.warn .v{color:var(--warn)}
+/* El cash es el único número que paga las cuentas: se ilumina en verde por dentro */
+.stat.good{
+  border-color:#2E7A57;
+  background:linear-gradient(180deg, rgba(79,214,154,.10), rgba(79,214,154,.02) 70%), var(--surface);
+  box-shadow:inset 0 0 26px -4px rgba(79,214,154,.45), inset 0 0 1px 1px rgba(79,214,154,.14), var(--shadow);
+}
+.stat.good::before{background:linear-gradient(90deg, transparent, rgba(79,214,154,.7) 25%, rgba(79,214,154,.7) 75%, transparent)}
+.stat.good .k{color:#7FE0B4}
+.stat.good .v{text-shadow:0 0 22px rgba(79,214,154,.6); font-variant-numeric:tabular-nums}
+
+.formula{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted); letter-spacing:-.01em}
+
+.verdict{border-left:3px solid var(--crit); background:var(--crit-soft); padding:14px 16px; border-radius:0 var(--r) var(--r) 0}
+.verdict.ok{border-left-color:var(--good); background:var(--good-soft)}
+.verdict .t{font-size:10.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; opacity:.75; margin-bottom:5px}
+.verdict .m{font-family:"Archivo",sans-serif; font-weight:700; font-size:16.5px; line-height:1.32; letter-spacing:-.015em}
+.verdict .s{font-size:13px; margin-top:6px; line-height:1.45; opacity:.9}
+.verdict.crit{color:var(--crit)} .verdict.ok{color:var(--good)}
+
+/* ---------- drawer ---------- */
+.scrim{position:fixed; inset:0; background:rgba(3,6,10,.68); z-index:50; backdrop-filter:blur(4px)}
+.drawer{
+  position:fixed; z-index:51; background:var(--surface); box-shadow:var(--shadow);
+  inset:auto 0 0 0; max-height:92vh; border-radius:14px 14px 0 0; display:flex; flex-direction:column;
+}
+@media (min-width:760px){
+  .drawer{inset:0 0 0 auto; width:min(520px,100%); max-height:none; border-radius:0; border-left:1px solid var(--line)}
+}
+.drawer-head{display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--line); flex:none}
+.drawer-head h3{font-size:16px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.drawer-body{overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:16px}
+.drawer-foot{display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--line); flex:none; background:var(--surface)}
+.fieldset{display:flex; flex-direction:column; gap:11px}
+.fieldset > .eyebrow{margin:0}
+.steps{display:flex; gap:6px; flex-wrap:wrap}
+.step{
+  flex:1; min-width:74px; border:1px solid var(--line-2); background:var(--surface); border-radius:7px;
+  padding:8px 6px; text-align:center; font-size:12px; font-weight:600; color:var(--muted); line-height:1.25;
+}
+.step small{display:block; font-weight:400; font-size:10.5px; opacity:.8; margin-top:2px}
+.step[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+.tl{display:flex; flex-direction:column; gap:8px; font-size:13px}
+.tl .t{display:flex; gap:9px; align-items:flex-start}
+.tl .d{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--muted); flex:none; padding-top:1px; width:52px}
+.tl .n{color:var(--ink-2); line-height:1.4}
+
+.toast{
+  position:fixed; left:50%; bottom:calc(var(--nav-h) + 16px); transform:translateX(-50%);
+  background:var(--surface-3); color:var(--ink); border:1px solid var(--accent-line); padding:10px 18px; border-radius:999px;
+  font-size:13.5px; font-weight:500; z-index:80; box-shadow:var(--shadow), var(--glow-md); max-width:90vw; text-align:center;
+}
+@media (min-width:900px){.toast{bottom:20px}}
+
+.helptext{font-size:12.5px; color:var(--muted); line-height:1.5}
+.helptext code{font-family:"IBM Plex Mono",monospace; font-size:11.5px; background:var(--surface-2); padding:1px 4px; border-radius:3px}
+
+
+/* ---------- login ---------- */
+.gate{
+  position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center;
+  padding:24px; background:var(--ground);
+  background-image:
+    radial-gradient(920px 540px at 14% -8%, rgba(95,178,236,.16), transparent 62%),
+    radial-gradient(780px 470px at 92% 3%, rgba(95,178,236,.09), transparent 58%);
+}
+.gate-card{
+  width:100%; max-width:380px; background:var(--surface); border:1px solid var(--line);
+  border-radius:16px; padding:28px; box-shadow:var(--shadow), var(--glow-lg); position:relative; overflow:hidden;
+}
+.gate-card::before{
+  content:""; position:absolute; inset:0 0 auto 0; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(95,178,236,.6) 25%, rgba(95,178,236,.6) 75%, transparent);
+}
+.gate-card img{width:44px; height:44px; border-radius:50%; display:block; margin-bottom:16px}
+.gate-card h1{font-size:21px; margin:0 0 4px;
+  background:var(--grad-text); -webkit-background-clip:text; background-clip:text;
+  color:transparent; -webkit-text-fill-color:transparent}
+.gate-card .sub{display:block; margin-bottom:20px}
+.gate-card label{display:block; margin-bottom:12px}
+.gate-err{color:var(--crit); font-size:13px; margin-top:12px; line-height:1.4}
+.logout{margin-left:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="app" data-logo="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAYAAABV7bNHAAAN3klEQVR42u2ce3Bc1X3HP+c+96HV08i2/H4ibAM2xjUPMxAG13Eae6ZOYNxpM3HJTFsS0j/aDtNpDNM0mQ6Tof2jIUkhTaiH0DKFmikvlzJTAjZgjw24GEvGcTDGtvySbEkr7eM+zq9/3F15V7uSZSwZS/CbudLs3T33d8/3fH+P8zv3XPhChhV1uRXOW7laGmcspG7aXFKTphGra8SJp7AcF2VaAEgYEHh5vGyaXM9Z0p3H6Tn+EWePHuS3u15VEw6g5Rv+TKZfdytNcxaTbGjGcmOAQnSIaB0dogEZuC2lDJRRPExACPI5+s+dpuvwfo69/ybvbP1nNW4BuuaODTL/tvW0LF5JvG4SIIS+hw78AhgF9aoAyKD2Uvwr5z8pZWBYNqbtAIpsTycd+3dxaPvztP96qxoXAF239huyaM0f0rzgegzDIvCy6CAodFCBukSVIohEgBmWheXE0Trg9G/+j7ZXnuL9bU+qKxKghavWybIN9zGl9UYQjZ/PgsjogHIhsJTCduOgDE4e2MN7W3/GwR0vqCsGoC//1aOy4PbfxzBM/FwmshxlXFbnL6JBwI4l0DrkN68/x38/cr/6TAG6etU6ueXeB6lrmYufSSMiKOPyAlMBlNYopbATKXo6PuKtX/6ADy+BTZ+64c1/9IDceM+fg1KEXq4Qaa4cER1iOjEQYc9//BNv/+pH6rIBtOYvfyzXrN6In+1HRF92c7oYs1PKwI4naX/1aV75h++qMQdo3YP/KvNXrSPf1x0BoxRXtIggonFr6jm04wVe+MEmNWYArX9oi8y79ffIpXswTJPxJDoMiaXq+O2bL/H8331zxP0esW2sfeCnMu/Wr45LcAAM0ySX7mHerV9l7QM/lVEFaNWmzdJ65z3k+7rHJTilIOX7umm98x5WbdosowLQojvvlhu+/m28TPozD+GjkvgZBl4mzQ1f/zaL7rxbLhmgWzZ9L5pMIp/F5H9MZleCIFpzy6bvXRqD1m1+QmqapxH6+Ss2lH8qiJRB6OepaZ7Gus1PyKcCaMnqjTL35rV4/ekrLgkcHVMz8frTzL15LUtWb5SLBmjphvui+Y1i4oqKksmlG+67OAatuPt+mTRnMUE+O6FMq5qpBfksk+YsZsXd98uIAbrmro1o34MJDE6JraF9j2vu2jgyBi1dd680zlxI4GWjWs5Ex0cpAi9L48yFLF13r1wQoPmr1hVKohMfnLLQL5r5q9YNz6BZ16+S5gVLCfK5CZEUXkzyGORzNC9YyqzrV8mQAM1YdjtuMoXocBhKgqHUKB5gDCKrMeo6KnUO9h6iQ9xkihnLbi87b5V+aFlyU6HAPrR55QMh0Hp050hKEbMinVqEjC9jblKuqbBMEDl/TgcBLUtuGhqghukLCH2vqnNWCvxQmD/JZnqdQ6jl0ktBAoah6M4G7D+ZR4uiNmZw25w4wWhcvyo0ilALH57O0ZXR2JYiqvsrQt+jYfqC6gAtXr1RYrX1+LnMELmPItQh66+pp7U5Oeo3vu3DTrbu66PfE66bGmfx5Jox5VBXJscjr5+kOwuWAaIUWgfEautZvHqj7H/1aVXmg5pmt2KYVinnyiTUQq1rclWNjRYINWg5fwRaLniU/r54hDpSuXxaipgtBFrxL7vOcKo3V1XP+XYX1hdKdZ2BhqZEjHlNcbxQn2eqCIZp0TS7tdJJ17fMRXT1GbuhwNfCVTUGjQkLQ4FpMOBgDQWWoS54lP6+eBSXzc5lNX6gcE1Ie4on93aiJRz4fnA7cwT6TFVdp2lEa7W9OY2hFFIa7rVQ3zK30sRqmqaidTCEf47Ma059AoWBlvLIE0jIy23d9OR0RNdBNd1QQ13M4Mut9dimWbVwcqwni6c1DhZJW7H/pMd/7e/ia9c2o4sLkJHbQgGHOvt58+M+HNMcWGktdZhhqLljfi0z6mMFH0NZ+3Q+z6l0HstQ541GgdYBNU1TKwFyU/WIHj5BnN3kUqqmqPhMn8/z7T14oarIPJUCLxSmJBVrrq4f8todvcHACn0oQso1ebGth+aUw22z6wd0Ff/vPtrPtg/TpFyTUCoZn/FDlkyNRwCV9KrY/lRfQE9eYxvmIAZp3FR9JUB2LIHosCo8WoSEDdPq3IFIUDoanf0etY4i5lSOplKKrK+5ZXYSxzLLRrMIoKA53u1hGgqFkAs0105x+dLcRt443MOsepeZ9TFEVIG5wol0QEPCJmapCrcpQK2rmNHgDrB4sBzr9vBChWOqgXtWhXzIjiXKAWppXS6m7RbgrRbeYUrKYnLKHjhXHCmAq69K8v01iWEnJ0nHLGtbOpqn+3w60iG2GTkcrWFGnc11LSkWT6mhJ+eVXasn73P4XI6cr/DD8rhiKMgFwvwmi4aYVaGzKB+f80uGucQfiGDaLi2ty6XjwDvKAjAKz+FI9ZIJfqiZVhuL6CiVCh3TxDEvOgUCBf1ewK/eOUM+EBwrGk1DwcwGt+DrFI0Jt6yjljL45vImFFbFPUc+L2RanY1Z6JMaZH6hCMe7C/6nyn0pw8AoTLWsQRgOMZETZhfoOpqV6eIInsuGA044FIg7ipZaG0NFYXmwmSQdixun141oEFSZqygwMOvTmQnLHXS1ASwCdLxtt9JBIJYTMaT0qoLgmIrZjfGqF8r6IR29XlUaq4LDnZSwqY/bFd+JRJ2dnHI40ZfHNRWeFpqTBk0Jp8yMKzogDMl4KbBNVUlXAHZ9kiadFxKOgS5FqGAdYRBwvG23KnPSoZ/HcuOALlMWFEL0lNpyey6G+vdP9PH4zk7irlExGoaCvlzImoUpNi6bXJYeFDuRC0JOpQMso5hOaFpqbVyrujlH4OgCO6qbSCWAggKygbDzSJqXDvTi2oPAKSmghX6+Mop52X5itY3o8DzySkEQCFNSNinHqmpe+09lyPpgGOcpXDoJ9UJFc8quygCl4FTaoysbYBXCrdbCrAanwkSKv+/sz/P4ztOEYgywZaSLPRlfc7o/xLUMjCptpeCPvWx/JUC53i7qp84mLLstRSghsxrdsrynlK4rptcwvzGGaVZmiCKCZSiub0lWiSaCoDjWE5D3IelGZyxDMbPeGdKfnEz7HOzyiVlVEsQRVA/jtjGkeYJgGCa53q5KgNJnjjN10cqKUG8qmNPgDqn02qmpi3TKRUZEOc0n3bmyjLvGNWipHTp/OXIuj6nAtVQFY0fitYfFVARlWqTPHK8EqPvYoQp7D0VI2Ippdc6QNzySmxzsaIVoPtTvB+w/kcGxDATB18L0pEV9vDJ/UQMA+SgVRVYZg7KRUhEWFQB1Hm4n9PIDKxlKgR8I0xocJiUthGiNTKpccEQ5T9lACSfTPk/vPcvpfnALLirQwqxGB0MpQtFlwCqlyAYBHb15LMMYE3BQBqGXp/Nwe1XW860n90qitgkdBlFGK5CwIyerZfTyHy3C6bRHvye49vnOahEa4iZ1catMnxQrCqFwotcfmwJRodSR6e3iF99YqqpWFLsOt5FacRdhJqJxNOkTDp3Jj/oih20oYna5HzGU4mwm5ExfWFWfgmg6Mib4CKbj0nW4beiS67G9O5j9O6vLjMJQ4NpqLAasqv+yjKhWPFy7MaIQKMWxvTuGDCwA/Mm/t4mTqCmsbHxe1sYkepgh08fjf7BIDbtw2PHB21hOvFBd/JzAowXLidPxwdvDLxwCHHz9OXTgfS6WnUsjpA48Dr7+3AgA2vGiOtG+B8tNFCqME509GstNcKJ9Dwd3vKguCBDAB9u2RHnP58YDaT7YtqV6klvtZPtrW9XR997ATtRMaBaJ1tiJGo6+9wbtr1XfbzbkEwrvPvsofrZvYLffRI1cfraPd599dOhp0lBfHNm7Xe17aQtOIomegCzSWuMkkux7aQtH9m5XI5lgV5WN//iyTG5dXsKmiWBaIXa8hlMH3uHpv/jKsBhc8CGg7T9/iFzvWUzLKdlrOo7BEY1pOeR6z7L95w9duBJxoR8cb9+jtj/2IKhoJ7KIjGNwZGCH0vbHHuR4+x51yQABtL32rNr55MPYbjyyyfEIkkR1aduNs/PJh2l77dkRZcIjfs5u9zOPql1PPYIVSw6MxnhiDoAVS7LrqUfY/cyjI54mXJTXPbbvre8r0X87c9ntIHpgf+iVnusYponlxNj11I/Y+W+PjN2GuqIsW/8tueWPN2NabvS48BUa3USHWE6cMMjz1hM/5L3nfzH2WzKLMv+mNXLbn/6Quqmz8frTBSeurhyTEsFJpug58THbH9vMoZ2vXL5NvaWy/qEtMuemtejAO78r6LMCqrA/1bRdDMvh8M5tF7X9ckwAgujp/Bu+9h3qpszCz2XQoX95gSoAY5g2dixBz8kjvPufP2HvC7/8bF8sMFi+dN/fy8I7NpCom4Sfz6IDr8T0RhssGTAlw3Kw3TiZnk4O/norr/3sb0ZN2ZgM8Z3feVjm3vwVaia1IDogyOcRXXj++hJ8VRGQaKJpYbkuyrDo6+zgo7df5n9/8tej3p8xtYEVd39X5qz8XSbNWYSTrAPRhIEfvSJHl78vaCiWFL9XRuHVOJYNysDr76HzcBuHd/0Pu5/58Zj147I4iRnX3iwti1cypfVGGmYuJNlwFZabwCikB1JgxcCjcAWTLDJN65Agn6H/3BnOfXKQkwf20LF/F0f3vT1+X7A0nMxaepvUTplF7eQZJBqaiaUasGNJDCtaYtWBj5/rJ5c+R+bcaXpPHaX35JFhyxJfyBfyhYxL+X/cq11JBXZjNwAAAABJRU5ErkJggg==">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <div class="topbar"><div class="topbar-in">
+      <div class="brand"><img id="brandLogo" alt=""><b>Blueprint</b><span id="topDate"></span></div>
+      <div class="spacer"></div>
+      <div class="roleswitch" id="roleSwitch">
+        <button data-role="setter" aria-pressed="true">Setter</button>
+        <button data-role="closer" aria-pressed="false">Closer</button>
+      </div>
+    </div></div>
+    <div class="wrap" id="view"></div>
+  </div>
+</div>
+<nav class="nav" id="nav"></nav>
+<div class="gate" id="gate" hidden>
+  <form class="gate-card" id="gateForm">
+    <img id="gateLogo" alt="">
+    <h1>Blueprint CRM</h1>
+    <span class="sub">Entra con tu cuenta para continuar.</span>
+    <label><span class="f">Correo</span>
+      <input type="email" id="gEmail" autocomplete="username" required></label>
+    <label><span class="f">Contraseña</span>
+      <input type="password" id="gPass" autocomplete="current-password" required></label>
+    <button class="btn primary" type="submit" id="gBtn" style="width:100%;margin-top:6px">Entrar</button>
+    <p class="gate-err" id="gErr" hidden></p>
+  </form>
+</div>
+<div id="drawerHost"></div>
+<div id="toastHost"></div>
+
+<script>
+"use strict";
+
+/* El logo va incrustado como data URI: los artifacts no cargan imágenes externas */
+const LOGO = (document.querySelector(".app") || {}).dataset
+  ? document.querySelector(".app").dataset.logo : "";
+
+/* ===================== constantes del negocio ===================== */
+const BLOQUES = ["00 Apertura","01 Meta","02 Dolor","03 Filtro","04 Pre-call"];
+const FUENTES = ["Bienvenida","Story reply","Comentario/Keyword","Referido","Inbound DM","Outbound DM"];
+const OFERTAS = ["Foundation (3m)","System (6m)","Mastery (12m)","Select"];
+const OBJECIONES = ["Dinero","Tiempo","Prioridad","Confianza en el proceso","Confianza en uno mismo",
+  "Comparación","Decisión aplazada","Terceros","Adecuación al caso concreto","Urgencia baja","Otros"];
+
+const DEFAULT_CFG = {
+  metaToques: 20,        // leads trabajados por día
+  metaAgendasSem: 3,     // agendas por semana
+  goal: 50000, aov: 1250, closeRate: 0.30, showRate: 0.70, bookRate: 0.02, workDays: 22
+};
+
+/* ===================== utilidades de fecha ===================== */
+const pad = n => String(n).padStart(2,"0");
+function iso(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function todayStr(){ return iso(new Date()); }
+function parseISO(s){ const p=String(s).split("-").map(Number); return new Date(p[0],p[1]-1,p[2]); }
+function addDays(s,n){ const d=parseISO(s); d.setDate(d.getDate()+n); return iso(d); }
+function daysBetween(a,b){ return Math.round((parseISO(b)-parseISO(a))/86400000); }
+function fmtShort(s){
+  if(!s) return "—";
+  const d=parseISO(s), m=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  return d.getDate()+" "+m[d.getMonth()];
+}
+function fmtLong(s){
+  const d=parseISO(s);
+  const dias=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+  const m=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  return dias[d.getDay()]+", "+d.getDate()+" de "+m[d.getMonth()];
+}
+/* "Martes, Sep 8, 2026" */
+function fmtLongDate(s){
+  if(!s) return "—";
+  const d = parseISO(s);
+  const dias = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+  const m = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  return dias[d.getDay()]+", "+m[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear();
+}
+/* "14:30" -> "2:30 PM" */
+function fmtHora(h){
+  const p = String(h||"").split(":");
+  if(p.length < 2) return "";
+  let H = parseInt(p[0], 10);
+  if(isNaN(H)) return "";
+  const ap = H >= 12 ? "PM" : "AM";
+  H = H % 12; if(H === 0) H = 12;
+  return H + ":" + p[1] + " " + ap;
+}
+/* Fecha y hora de la llamada, juntas */
+function fmtCita(l){
+  if(!l.agendo) return "—";
+  const h = fmtHora(l.agendoHora);
+  return fmtLongDate(l.agendo) + (h ? " · " + h : "");
+}
+/* El estado sale de los tags y de lo que registró el closer. Nadie lo escribe. */
+function statusOf(l){
+  if(l.cierre === true)  return {t:"Cliente", d:l.importe?("Pagó "+money(l.importe)):"Pagó · falta el importe", cls:"good"};
+  if(l.show === false)   return {t:"No se presentó", d:"Se cayó la llamada del "+fmtLongDate(l.callDate), cls:"crit"};
+  if(l.cierre === false) return {t:"No cerró", d:l.objecion?("Objeción: "+l.objecion):"Falta registrar la objeción", cls:"crit"};
+  if(l.show === true)    return {t:"Vino a la llamada", d:"Falta saber si cerró", cls:"warn"};
+  if(l.agendo)           return {t:"Agendó", d:"Llamada el "+fmtCita(l), cls:"cool"};
+  if(l.pendingBook)      return {t:"Agendó", d:"Falta poner la fecha de la llamada", cls:"warn"};
+  if(l.propuesta)        return {t:"Le mandaste el link", d:"Todavía no agenda", cls:"accent"};
+  if(l.estado === "muerto") return {t:"No interesado", d:"Marcado en ManyChat", cls:""};
+  if(l.via === "VSL")    return {t:"Vía VSL", d:"No va por llamada", cls:"warn"};
+  if(l.respondio)        return {t:"Conversación viva", d:"Va por "+blockOf(l), cls:"accent"};
+  return {t:"Sin contestar", d:"Todavía no hay conversación", cls:""};
+}
+/* Lo reciente se lee mejor en palabras; lo viejo, con fecha.
+   El día de la semana ayuda a ubicarse dentro de la semana en curso. */
+function entryLabel(s){
+  if(!s) return "sin fecha";
+  const n = daysBetween(s, todayStr());
+  if(n <= 0) return "hoy";
+  if(n === 1) return "ayer";
+  if(n < 7){
+    const dias = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+    return "el " + dias[parseISO(s).getDay()];
+  }
+  return "el " + fmtShort(s);
+}
+function entryTitle(s, exacto){
+  if(!s) return "Sin fecha de entrada";
+  const n = daysBetween(s, todayStr());
+  let t = fmtLongDate(s) + (n > 1 ? " · hace " + n + " días" : "");
+  /* Si ManyChat nos dio el momento exacto de la suscripción, enséñalo */
+  if(exacto){
+    const m = String(exacto).match(/(\d{1,2}):(\d{2})/);
+    if(m) t += " · se suscribió a las " + fmtHora(m[1].padStart(2,"0") + ":" + m[2]);
+  }
+  return t;
+}
+function agoLabel(s){
+  if(!s) return "sin toques";
+  const n = daysBetween(s, todayStr());
+  if(n<=0) return "hoy";
+  if(n===1) return "ayer";
+  return "hace "+n+" días";
+}
+const money = n => "$"+Math.round(+n||0).toLocaleString("en-US");
+/* El cash del mes va con centavos: es plata cobrada, no una estimación */
+const money2 = n => "$"+(+n||0).toLocaleString("en-US",{minimumFractionDigits:2, maximumFractionDigits:2});
+const pct = (n,d) => d>0 ? Math.round(n/d*1000)/10 : null;
+const pctStr = v => v===null ? "—" : v.toFixed(v>=10?0:1).replace(".0","")+"%";
+function uid(){ return "l"+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm = h => String(h||"").trim().replace(/^@+/,"").toLowerCase();
+
+/* ===================== estado ===================== */
+let MODE = "demo";            // 'db' | 'local' | 'demo'
+let DB = null;
+let LEADS = [];
+let CFG = Object.assign({}, DEFAULT_CFG);
+let VIEW = "hoy";
+let ROLE = "setter";
+let OPEN = null;              // lead id abierto en el drawer
+let FILTERS = { q:"", fuente:"", bloque:"", estado:"activo" };
+let PERIOD = 30;
+let COUNTBY = "cohorte";
+let IMPORT = null;
+let TOUCHDAYS = {};   // { "2026-09-07": 18, ... } — lo escribe la sincronización
+/* Toques a mano: { "2026-09-07": ["handle", ...] }. Para la gente que ManyChat
+   no puede tocar (no sigue la cuenta, ventana cerrada) pero con la que sí hablaste. */
+let TOUCHMAN = {};
+let EDITID = false;   // handle y nombre van bloqueados hasta que se pida editarlos
+
+/* ===================== lead ===================== */
+function blankLead(){
+  return {
+    id: uid(), handle:"", nombre:"", fuente:"Bienvenida", entry: todayStr(),
+    block:"00 Apertura", blockLock:false, blockFloor:"",
+    meta:"", dolor:"", yaHace:"",
+    respondio:false, respondioAt:null,
+    propuesta:false, propuestaAt:null,
+    agendo:null, agendoAt:null,
+    callDate:null, show:null, showAt:null,
+    cierre:null, cierreAt:null,
+    oferta:"", importe:null, objecion:"", comentarios:"",
+    estado:"activo",
+    agendoHora:"", contactId:"", subscribedAt:"",
+    seed:false, via:"", pendingBook:false, tags:[], touchedAt:null,
+    createdAt: new Date().toISOString()
+  };
+}
+function stage(l){
+  if(l.cierre===true) return 6;
+  if(l.show===true) return 5;
+  if(l.agendo) return 4;
+  if(l.propuesta) return 3;
+  if(l.respondio) return 2;
+  return 1;
+}
+/* El bloque NO se escribe: se deduce de lo que el setter ya anotó.
+   Nunca baja, solo sube. `blockFloor` es el piso que trajeron los tags de ManyChat.
+   Con `blockLock` el setter lo fija a mano y deja de moverse. */
+function blockIdx(l){
+  if(l.blockLock){ const i = BLOQUES.indexOf(l.block); return i < 0 ? 0 : i; }
+  let i = 0;
+  if(l.blockFloor){ const f = BLOQUES.indexOf(l.blockFloor); if(f > i) i = f; }
+  if(String(l.meta   || "").trim()) i = Math.max(i, 1);
+  if(String(l.dolor  || "").trim()) i = Math.max(i, 2);
+  if(String(l.yaHace || "").trim()) i = Math.max(i, 3);
+  if(l.propuesta || l.agendo || l.pendingBook) i = Math.max(i, 4);
+  return i;
+}
+function blockOf(l){ return BLOQUES[blockIdx(l)]; }
+
+/* ===================== demo (solo en memoria, nunca se guarda) ===================== */
+function demoLeads(){
+  const T = todayStr();
+  const mk = (o) => Object.assign(blankLead(), o);
+  return [
+    mk({id:"d1", handle:"edgardo.a.ortiz", nombre:"Edgardo Ortiz", fuente:"Referido", tags:["Tag Booked"], entry:addDays(T,-12),
+        blockFloor:"04 Pre-call", meta:"Pesa 270, quiere llegar a 200", dolor:"Hace 4 años estaba en 190. Camina 3x semana y no ve resultados.",
+        respondio:true, respondioAt:addDays(T,-12), propuesta:true, propuestaAt:addDays(T,-9),
+        agendo:addDays(T,4), agendoAt:addDays(T,-2), callDate:addDays(T,4), agendoHora:"14:00"}),
+    mk({id:"d2", handle:"marisol.fit", nombre:"Marisol Rivera", fuente:"Story reply", tags:["Tag Interest Buildup"], entry:addDays(T,-6),
+        blockFloor:"", meta:"Bajar 30 lbs antes de diciembre", dolor:"Se desmotiva a las 2 semanas",
+        respondio:true, respondioAt:addDays(T,-6)}),
+    mk({id:"d3", handle:"j.calderon22", nombre:"Jomar Calderón", fuente:"Comentario/Keyword", tags:["Tag Interest"], entry:addDays(T,-3),
+        blockFloor:"", respondio:true, respondioAt:addDays(T,-3)}),
+    mk({id:"d4", handle:"anaperez.pr", nombre:"Ana Pérez", fuente:"Bienvenida", tags:["Tag Interest"], entry:addDays(T,-1),
+        blockFloor:""}),
+    mk({id:"d5", handle:"kevin_lugo", nombre:"Kevin Lugo", fuente:"Outbound DM", tags:["Tag Client"], entry:addDays(T,-24),
+        blockFloor:"", respondio:true, respondioAt:addDays(T,-24), propuesta:true, propuestaAt:addDays(T,-21),
+        agendo:addDays(T,-14), agendoAt:addDays(T,-18), callDate:addDays(T,-14),
+        show:true, showAt:addDays(T,-14), cierre:true, cierreAt:addDays(T,-14),
+        oferta:"Foundation (3m)", importe:1250, estado:"cliente"}),
+    mk({id:"d6", handle:"yeriel.strong", nombre:"Yeriel Ortiz", fuente:"Referido", tags:["Tag Link","Tag Not Closed"], entry:addDays(T,-19),
+        blockFloor:"04 Pre-call", respondio:true, respondioAt:addDays(T,-19), propuesta:true, propuestaAt:addDays(T,-17),
+        agendo:addDays(T,-8), agendoAt:addDays(T,-12), callDate:addDays(T,-8),
+        show:true, showAt:addDays(T,-8), cierre:false, cierreAt:addDays(T,-8), objecion:"Dinero"}),
+    mk({id:"d7", handle:"luisa.moves", nombre:"Luisa Nieves", fuente:"Story reply", tags:["Tag Link"], entry:addDays(T,-9),
+        blockFloor:"", respondio:true, respondioAt:addDays(T,-9), propuesta:true, propuestaAt:addDays(T,-5)}),
+    mk({id:"d8", handle:"raulgym787", nombre:"Raúl Vega", fuente:"Inbound DM", tags:["Tag Lead"], entry:addDays(T,-2),
+        blockFloor:"", respondio:true, respondioAt:addDays(T,-2)}),
+    mk({id:"d9", handle:"carmen.dlc", nombre:"Carmen De León", fuente:"Bienvenida", tags:["Tag Not Interested"], entry:addDays(T,-31),
+        blockFloor:"", estado:"muerto"}),
+    mk({id:"d10", handle:"tito.perez", nombre:"Tito Pérez", fuente:"Comentario/Keyword", tags:["Tag Booked"], entry:addDays(T,-16),
+        blockFloor:"04 Pre-call", respondio:true, respondioAt:addDays(T,-16), propuesta:true, propuestaAt:addDays(T,-13),
+        agendo:addDays(T,-6), agendoAt:addDays(T,-10), callDate:addDays(T,-6), show:false, showAt:addDays(T,-6)}),
+    /* confirmada pero sin una sola nota: dispara la alerta de "sin munición" */
+    mk({id:"d11", handle:"nay.fitpr", nombre:"Nayra Colón", fuente:"Bienvenida", tags:["Tag Booked"], entry:addDays(T,-4),
+        blockFloor:"04 Pre-call", respondio:true, respondioAt:addDays(T,-4), propuesta:true, propuestaAt:addDays(T,-3),
+        agendo:addDays(T,2), agendoAt:addDays(T,-1), callDate:addDays(T,2), agendoHora:"09:30"})
+  ];
+}
+
+/* ===================== persistencia ===================== */
+const LS_LEADS = "blueprint_leads_v1", LS_CFG = "blueprint_cfg_v1", LS_ROLE = "blueprint_role_v1", LS_MAN = "blueprint_manual_v1";
+
+function loadLocal(){
+  try{
+    const raw = localStorage.getItem(LS_LEADS);
+    LEADS = raw ? JSON.parse(raw) : [];
+    const c = localStorage.getItem(LS_CFG);
+    if(c) CFG = Object.assign({}, DEFAULT_CFG, JSON.parse(c));
+    const m = localStorage.getItem(LS_MAN);
+    if(m) TOUCHMAN = JSON.parse(m) || {};
+  }catch(e){ LEADS = []; }
+}
+function saveLocal(){
+  try{
+    localStorage.setItem(LS_LEADS, JSON.stringify(LEADS));
+    localStorage.setItem(LS_CFG, JSON.stringify(CFG));
+    localStorage.setItem(LS_MAN, JSON.stringify(TOUCHMAN));
+  }catch(e){ toast("No se pudo guardar en este navegador."); }
+}
+
+async function persist(lead){
+  lead.updatedAt = new Date().toISOString();
+  /* Un toque es una conversación del setter. Que el closer registre un cierre
+     no es un toque suyo, así que no infla el contador del día. */
+  if(ROLE === "setter") lead.touchedAt = todayStr();
+  const i = LEADS.findIndex(l => l.id === lead.id);
+  if(i < 0) LEADS.push(lead); else LEADS[i] = lead;
+  render();
+  if(MODE === "demo") return;
+  if(MODE === "db"){
+    try{ await DB.collection("leads").doc(lead.id).set(lead); }
+    catch(e){ toast(dbMsg(e)); }
+  } else saveLocal();
+}
+async function persistMany(list){
+  list.forEach(lead => {
+    lead.updatedAt = new Date().toISOString();
+    const i = LEADS.findIndex(l => l.id === lead.id);
+    if(i < 0) LEADS.push(lead); else LEADS[i] = lead;
+  });
+  render();
+  if(MODE === "demo") return;
+  if(MODE === "db"){
+    for(const lead of list){
+      try{ await DB.collection("leads").doc(lead.id).set(lead); }
+      catch(e){ toast(dbMsg(e)); break; }
+    }
+  } else saveLocal();
+}
+async function removeLead(id){
+  LEADS = LEADS.filter(l => l.id !== id);
+  render();
+  if(MODE === "demo") return;
+  if(MODE === "db"){ try{ await DB.collection("leads").doc(id).delete(); }catch(e){ toast(dbMsg(e)); } }
+  else saveLocal();
+}
+async function persistMan(){
+  render();
+  if(MODE === "demo") return;
+  if(MODE === "db"){ try{ await DB.doc("metrics/manual").set({ dias:TOUCHMAN }); }catch(e){ toast(dbMsg(e)); } }
+  else saveLocal();
+}
+/* Un toque es una conversación, no un lead. Puede ser cualquier @handle. */
+async function registrarToque(handle){
+  const h = norm(handle);
+  if(!h) return { ok:false, msg:"Escribe un @handle." };
+  const T = todayStr();
+  const lead = LEADS.find(l => norm(l.handle) === h);
+  if(lead){
+    if(lead.touchedAt === T) return { ok:false, msg:"@"+h+" ya cuenta como toque de hoy." };
+    lead.touchedAt = T;
+    await persist(lead);
+    return { ok:true, msg:"@"+h+" registrado. Ya estaba en el CRM." };
+  }
+  const hoy = manualEn(T);
+  if(hoy.map(norm).indexOf(h) >= 0) return { ok:false, msg:"@"+h+" ya cuenta como toque de hoy." };
+  TOUCHMAN = Object.assign({}, TOUCHMAN); TOUCHMAN[T] = hoy.concat([h]);
+  await persistMan();
+  return { ok:true, msg:"@"+h+" registrado como toque." };
+}
+async function persistCfg(){
+  render();
+  if(MODE === "demo") return;
+  if(MODE === "db"){ try{ await DB.doc("config/settings").set(CFG); }catch(e){ toast(dbMsg(e)); } }
+  else saveLocal();
+}
+function dbMsg(e){
+  const c = e && e.code;
+  if(c === "quota_exceeded") return "La base de datos está llena. Borra leads viejos para seguir añadiendo.";
+  if(c === "resource_exhausted") return "Vas muy rápido. Espera unos segundos y vuelve a intentar.";
+  if(c === "revoked" || c === "not_granted") return "Perdiste el acceso a los datos. Recarga la página.";
+  if(c === "invalid_argument") return "Ese dato no se pudo guardar. Revisa el formulario.";
+  return "No se pudo guardar. Intenta otra vez.";
+}
+function exitDemo(){
+  if(MODE !== "demo") return;
+  LEADS = [];
+  MODE = DB ? "db" : "local";
+}
+
+/* ===================== acciones ===================== */
+function markRespondio(lead){
+  if(!lead.respondio){ lead.respondio = true; lead.respondioAt = todayStr(); }
+}
+function markPropuesta(lead){
+  markRespondio(lead);
+  if(!lead.propuesta){ lead.propuesta = true; lead.propuestaAt = todayStr(); }
+}
+function markAgendo(lead, fecha){
+  markPropuesta(lead);
+  lead.agendo = fecha;
+  lead.agendoAt = todayStr();
+  lead.callDate = fecha;
+}
+
+/* ===================== métricas ===================== */
+function windowFrom(days){ return days === 0 ? "0000-01-01" : addDays(todayStr(), -(days-1)); }
+/* Leads que corrieron el embudo dentro de la app (sin el arrastre importado) */
+function REAL(){ return LEADS.filter(l => !l.seed); }
+function seedCount(){ return LEADS.filter(l => l.seed).length; }
+
+function metrics(days, countBy){
+  const from = windowFrom(days), to = todayStr(), T = todayStr();
+  const inW = d => !!d && d >= from && d <= to;
+  const m = { leads:0, resp:0, prop:0, agen:0, callsDone:0, shows:0, cierres:0, cash:0, pendReg:0, futuras:0 };
+  const TODOS = LEADS;
+
+  if(countBy === "cohorte"){
+    /* Cohorte agrupa por fecha de entrada, y la del arrastre es la de importación —
+       inventada. Por eso el arrastre queda fuera de este modo por completo. */
+    const LEADS = REAL();
+    const set = LEADS.filter(l => inW(l.entry));
+    m.leads = set.length;
+    m.resp = set.filter(l => l.respondio).length;
+    m.prop = set.filter(l => l.propuesta).length;
+    m.agen = set.filter(l => !!l.agendo).length;
+    const done = set.filter(l => l.callDate && l.callDate <= T);
+    m.callsDone = done.filter(l => l.show !== null).length;
+    m.pendReg   = done.filter(l => l.show === null).length;
+    m.futuras   = set.filter(l => l.callDate && l.callDate > T).length;
+    m.shows   = set.filter(l => l.show === true).length;
+    m.cierres = set.filter(l => l.cierre === true).length;
+    m.cash    = set.filter(l => l.cierre === true).reduce((a,l) => a + (+l.importe||0), 0);
+  } else {
+    /* Actividad cuenta cada evento por SU propia fecha. El arrastre entra aquí:
+       lo que le pase de hoy en adelante tiene fecha real y sí cuenta. Sus fechas
+       viejas están en null, así que se excluyen solas. La única excepción es
+       `leads`, que sale de `entry` — y esa sí es inventada para el arrastre. */
+    m.leads = REAL().filter(l => inW(l.entry)).length;
+    m.resp  = TODOS.filter(l => inW(l.respondioAt)).length;
+    m.prop  = TODOS.filter(l => inW(l.propuestaAt)).length;
+    m.agen  = TODOS.filter(l => inW(l.agendoAt)).length;
+    const done = TODOS.filter(l => l.callDate && inW(l.callDate) && l.callDate <= T);
+    m.callsDone = done.filter(l => l.show !== null).length;
+    m.pendReg   = done.filter(l => l.show === null).length;
+    m.futuras   = TODOS.filter(l => l.callDate && l.callDate > T).length;
+    m.shows   = TODOS.filter(l => l.show === true && inW(l.showAt)).length;
+    m.cierres = TODOS.filter(l => l.cierre === true && inW(l.cierreAt)).length;
+    m.cash    = TODOS.filter(l => l.cierre === true && inW(l.cierreAt)).reduce((a,l) => a + (+l.importe||0), 0);
+  }
+  m.rResp  = pct(m.resp, m.leads);
+  m.rProp  = pct(m.prop, m.resp);
+  m.rAgen  = pct(m.agen, m.prop);
+  m.rBook  = pct(m.agen, m.leads);
+  m.rShow  = pct(m.shows, m.callsDone);
+  m.rClose = pct(m.cierres, m.shows);
+  m.aov    = m.cierres > 0 ? m.cash / m.cierres : null;
+  return m;
+}
+
+function agendasOn(day){ return LEADS.filter(l => l.agendoAt === day).length; }
+/* Semana de lunes a domingo */
+function weekStart(s){
+  const d = parseISO(s), off = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - off);
+  return iso(d);
+}
+function agendasSemana(){
+  const w = weekStart(todayStr());
+  return LEADS.filter(l => l.agendoAt && l.agendoAt >= w).length;
+}
+/* Un toque = cualquier interacción por DM, sea lead o no.
+   La cuenta buena viene del log de ManyChat (Daily Touch), que la sincronización
+   resume en `metrics/touches`. Los toques hechos dentro de la app son el respaldo
+   mientras la sincronización no ha corrido hoy. */
+/* Si ManyChat está en otra zona horaria, un toque de las 9pm en Puerto Rico se
+   graba con la fecha de MAÑANA. No se puede adivinar el offset, pero sí se puede
+   detectar: si hay conteos con fecha futura, algo está corrido. */
+function toquesFuturos(){
+  const src = (TOUCHDAYS && TOUCHDAYS.dias && typeof TOUCHDAYS.dias === "object") ? TOUCHDAYS.dias : (TOUCHDAYS || {});
+  const T = todayStr();
+  return Object.keys(src).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d) && d > T && Number(src[d]) > 0).sort();
+}
+function manualEn(dia){
+  const arr = (TOUCHMAN && TOUCHMAN[dia]) || [];
+  return Array.isArray(arr) ? arr : [];
+}
+function toquesEn(dia){
+  /* Tolera las dos formas en que la sincronización puede guardarlo:
+     {"2026-09-07":18}  o  {dias:{"2026-09-07":18}} */
+  const src = (TOUCHDAYS && TOUCHDAYS.dias && typeof TOUCHDAYS.dias === "object") ? TOUCHDAYS.dias : (TOUCHDAYS || {});
+  const log = Number(src[dia] || 0);
+  const tocados = LEADS.filter(l => l.touchedAt === dia).map(l => norm(l.handle));
+  /* ManyChat y la app ven a la misma gente, así que ahí se toma el mayor, no la
+     suma. Los de a mano son justamente los que ManyChat NO puede ver, así que
+     esos sí suman — descontando a los que ya cuentan como lead trabajado. */
+  const man = manualEn(dia).filter(h => tocados.indexOf(norm(h)) < 0).length;
+  return Math.max(log, tocados.length) + man;
+}
+function toquesHoy(){ return toquesEn(todayStr()); }
+/* Nombre limpio del tag: "Tag Lead" -> "Lead", "Ta Interest Buildup" -> "Interest Buildup" */
+function tagName(t){ return String(t||"").replace(/^ta?g?\s+/i, ""); }
+/* El handle es la llave de ManyChat y también la URL del perfil. Un click y ya. */
+const igUrl = h => "https://www.instagram.com/" + encodeURIComponent(String(h||"").replace(/^@/,""));
+const igLink = h => h
+  ? '<a class="iglink" href="'+igUrl(h)+'" target="_blank" rel="noopener noreferrer" title="Abrir en Instagram">@'+esc(h)+'</a>'
+  : '<span class="mono">—</span>';
+
+function bottleneck(m){
+  const b = [];
+  if(m.leads >= 20) b.push({k:"book",  lab:"BOOK RATE", real:m.rBook,  bench:CFG.bookRate*100,  n:m.leads,
+    msg:"El problema está en el DM. De cada 100 conversaciones estás agendando "+ (m.rBook===null?"0":m.rBook) +", y el benchmark es "+(CFG.bookRate*100)+".",
+    fix:"Mira la sección Dónde se mueren: el bloque con más gente atascada es el guion que hay que cambiar."});
+  if(m.callsDone >= 8) b.push({k:"show", lab:"SHOW RATE", real:m.rShow, bench:CFG.showRate*100, n:m.callsDone,
+    msg:"Agendan y no se presentan. Show rate en "+pctStr(m.rShow)+" contra un benchmark de "+(CFG.showRate*100)+"%.",
+    fix:"El problema es el pre-call: recordatorio el día antes y la mañana de, y agendar más cerca de la fecha."});
+  if(m.shows >= 8) b.push({k:"close", lab:"CIERRE", real:m.rClose, bench:CFG.closeRate*100, n:m.shows,
+    msg:"Llegan a la llamada y no cierran. Close rate en "+pctStr(m.rClose)+" contra un benchmark de "+(CFG.closeRate*100)+"%.",
+    fix:"No es problema de leads, es de la llamada. Mira qué objeción se repite más abajo."});
+  const failing = b.filter(x => x.real !== null && x.real < x.bench)
+                   .sort((a,b2) => (a.real/a.bench) - (b2.real/b2.bench));
+  if(!b.length) return {none:true, msg:"Todavía no hay suficiente data en este período para decir dónde está el cuello de botella.",
+    fix:"Hacen falta al menos 20 leads para juzgar el book rate, 8 llamadas para el show rate y 8 shows para el cierre."};
+  if(!failing.length) return {ok:true, lab:"NINGUNO", msg:"Las tres tasas están en o sobre el benchmark. El límite ahora es volumen, no conversión.",
+    fix:"Sube toques por día — la conversión ya está donde tiene que estar."};
+  return failing[0];
+}
+
+function byBlock(){
+  const alive = LEADS.filter(l => l.cierre !== true && l.estado !== "muerto");
+  return BLOQUES.map((b,i) => ({ lab:b, n: alive.filter(l => blockIdx(l) === i).length }));
+}
+function byObjection(){
+  const perdidos = LEADS.filter(l => l.show === true && l.cierre === false && l.objecion);
+  const map = {};
+  perdidos.forEach(l => { map[l.objecion] = (map[l.objecion]||0)+1; });
+  return Object.keys(map).map(k => ({lab:k, n:map[k]})).sort((a,b) => b.n - a.n);
+}
+function bySource(){
+  const LEADS = REAL();
+  return FUENTES.map(f => {
+    const set = LEADS.filter(l => l.fuente === f);
+    const cierres = set.filter(l => l.cierre === true);
+    return { lab:f, leads:set.length, agen:set.filter(l => !!l.agendo).length,
+      cierres:cierres.length, cash:cierres.reduce((a,l) => a + (+l.importe||0), 0) };
+  }).filter(r => r.leads > 0).sort((a,b) => b.cash - a.cash || b.leads - a.leads);
+}
+
+function goalMath(){
+  const c = CFG;
+  const cierres = c.aov > 0 ? c.goal / c.aov : 0;
+  const llamadas = c.closeRate > 0 ? cierres / c.closeRate : 0;
+  const agendas = c.showRate > 0 ? llamadas / c.showRate : 0;
+  const leads = c.bookRate > 0 ? agendas / c.bookRate : 0;
+  const dias = c.workDays > 0 ? c.workDays : 1;
+  return { cierres, llamadas, agendas, leads,
+    agendasDia: agendas/dias, agendasSem: agendas/4.3, leadsDia: leads/dias,
+    gapAgendas: c.metaAgendasSem > 0 ? (agendas/4.3)/c.metaAgendasSem : null };
+}
+
+/* ===================== colas ===================== */
+/* Sin fecha de seguimiento: la cola se ordena por dónde está cada quien en el embudo.
+   Los más avanzados primero, que son los que más cerca están de agendar. */
+function queues(){
+  const T = todayStr();
+  const active = LEADS.filter(l => l.estado === "activo" && l.cierre !== true);
+  const pendientes = active.filter(l => l.pendingBook && !l.callDate);
+  const agendados  = active.filter(l => !l.pendingBook && l.agendo && l.agendo >= T);
+  const espera     = new Set(pendientes.concat(agendados).map(l => l.id));
+  const pool       = active.filter(l => !espera.has(l.id));
+  const porBloque = BLOQUES.map((b,i) => ({
+    lab: b, i,
+    list: pool.filter(l => blockIdx(l) === i).sort((a,b2) => (a.entry||"") < (b2.entry||"") ? -1 : 1)
+  })).reverse();
+  return { pendientes, agendados, porBloque, total: pool.length };
+}
+/* Las tres notas son la munición del closer. Si falta UNA sola, se avisa:
+   entrar a una llamada sin saber la meta, o sin el dolor, o sin qué ya intentó,
+   es entrar cojo. Aplica desde que hay fecha, con o sin hora. */
+const MUNICION = [
+  {k:"meta",   lab:"meta"},
+  {k:"dolor",  lab:"dolor"},
+  {k:"yaHace", lab:"ya hace"}
+];
+function municionFaltante(l){
+  if(!l.callDate) return [];
+  if(l.show !== null) return [];          /* la llamada ya pasó y se registró */
+  return MUNICION.filter(m => !String(l[m.k]||"").trim()).map(m => m.lab);
+}
+function faltaMunicion(l){ return municionFaltante(l).length > 0; }
+function callQueue(){
+  const T = todayStr();
+  const asc = (a,b) => (a.callDate||"") < (b.callDate||"") ? -1 : 1;
+  const desc = (a,b) => (a.callDate||"") > (b.callDate||"") ? -1 : 1;
+  return {
+    /* falta la fecha de la llamada */
+    sinFecha:     LEADS.filter(l => l.pendingBook && !l.callDate),
+    /* CONFIRMADAS: fecha Y hora, todavía sin resultado. Es la cola del closer. */
+    proximas:     LEADS.filter(l => l.callDate && l.callDate >= T && l.show === null && !!l.agendoHora).sort(asc),
+    /* tienen día pero nadie puso la hora */
+    sinHora:      LEADS.filter(l => l.callDate && l.callDate >= T && l.show === null && !l.agendoHora).sort(asc),
+    /* ya pasó el día y nadie dijo si vino */
+    porRegistrar: LEADS.filter(l => l.callDate && l.callDate < T && l.show === null).sort(asc),
+    /* vino: falta decir si cerró, o cerró y falta el dinero — todo en una fila */
+    porResultado: LEADS.filter(l => l.show === true &&
+                    (l.cierre === null || (l.cierre === true && !(+l.importe > 0)))).sort(asc),
+    /* vino, falta decir si cerró */
+    porCerrar:    LEADS.filter(l => l.show === true && l.cierre === null).sort(asc),
+    /* cerró, falta el dinero */
+    sinImporte:   LEADS.filter(l => l.cierre === true && !(+l.importe > 0)).sort(desc),
+    /* todavía no pasa */
+    porVenir:     LEADS.filter(l => l.callDate && l.callDate > T).sort(asc),
+    /* cerradas — con o sin el importe puesto */
+    cerradas:     LEADS.filter(l => l.cierre === true).sort(desc),
+    /* no cerraron — no compró, o ni se presentó */
+    noCerraron:   LEADS.filter(l => l.cierre === false || l.show === false).sort(desc),
+    /* completadas (se mantiene para las tasas) */
+    hechas:       LEADS.filter(l => l.show === false || (l.cierre !== null && (+l.importe > 0 || l.cierre === false))).sort(desc)
+  };
+}
+
+/* ===================== iconos ===================== */
+const ICON = {
+  hoy:'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h11M4 18h7"/></svg>',
+  leads:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M17 8.5h4M19 6.5v4"/></svg>',
+  llamadas:'<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.2"/><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3"/></svg>',
+  numeros:'<svg viewBox="0 0 24 24"><path d="M4 19V10M10 19V5M16 19v-6M22 19H2"/></svg>',
+  importar:'<svg viewBox="0 0 24 24"><path d="M12 15V3m0 12-4-4m4 4 4-4"/><path d="M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17"/></svg>',
+  exportar:'<svg viewBox="0 0 24 24"><path d="M12 3v12m0-12 4 4m-4-4-4 4"/><path d="M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17"/></svg>'
+};
+const NAVS = [
+  {k:"hoy", lab:"Hoy", icon:"hoy"},
+  {k:"leads", lab:"Leads", icon:"leads"},
+  {k:"llamadas", lab:"Llamadas", icon:"llamadas"},
+  {k:"numeros", lab:"Números", icon:"numeros"},
+  {k:"importar", lab:"Importar", icon:"importar"},
+  {k:"exportar", lab:"Exportar", icon:"exportar"}
+];
+/* El closer entra a registrar el resultado de sus llamadas y a ver los números.
+   Las colas del setter y la importación no son suyas. */
+const NAVS_CLOSER = ["llamadas","numeros"];
+function navs(){ return ROLE === "closer" ? NAVS.filter(n => NAVS_CLOSER.indexOf(n.k) >= 0) : NAVS; }
+function viewOk(v){ return navs().some(n => n.k === v); }
+
+/* ===================== render: shell ===================== */
+function navCounts(){
+  const q = queues(), c = callQueue();
+  return { hoy: q.total, leads: LEADS.length,
+    llamadas: c.sinFecha.length + c.porRegistrar.length + c.porVenir.length, numeros: 0, importar: 0, exportar: 0 };
+}
+function renderNav(){
+  const counts = navCounts();
+  document.getElementById("nav").innerHTML = navs().map(n => {
+    const badge = (n.k === "hoy" && counts.hoy) ? '<span class="badge num">'+counts.hoy+'</span>'
+                : (n.k === "llamadas" && ROLE === "closer" && counts.llamadas) ? '<span class="badge num">'+counts.llamadas+'</span>' : "";
+    return '<button data-nav="'+n.k+'"'+(VIEW===n.k?' aria-current="page"':'')+'>'+ICON[n.icon]+badge+'<span>'+n.lab+'</span></button>';
+  }).join("");
+  document.getElementById("rail").innerHTML =
+    '<div class="rail-brand"><img src="'+LOGO+'" alt=""><b>Blueprint</b><span>CRM</span></div>' +
+    navs().map(n => {
+      const c = counts[n.k];
+      return '<button class="railbtn" data-nav="'+n.k+'"'+(VIEW===n.k?' aria-current="page"':'')+'>'+ICON[n.icon]+
+        '<span>'+n.lab+'</span>'+(c?'<span class="cnt num">'+c+'</span>':"")+'</button>';
+    }).join("");
+  const d = parseISO(todayStr());
+  const dd = ["dom","lun","mar","mié","jue","vie","sáb"][d.getDay()];
+  const mm = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"][d.getMonth()];
+  document.getElementById("topDate").textContent = dd+" "+d.getDate()+" "+mm;
+  const bl = document.getElementById("brandLogo");
+  if(bl && !bl.src && LOGO) bl.src = LOGO;
+  document.querySelectorAll("#roleSwitch button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.role === ROLE)));
+}
+
+function modeBanner(){
+  if(MODE === "demo") return '<div class="banner"><p><b>Modo ejemplo.</b> Estos 10 leads son inventados para que veas cómo funciona — nada de lo que hagas aquí se guarda.</p><span class="spacer"></span><button class="btn sm" data-act="startFresh">Empezar de cero</button></div>';
+  if(MODE === "local") return '<div class="banner"><p><b>Guardando solo en este navegador.</b> No pude conectar con la base de datos compartida, así que tu cliente no ve estos datos y se pierden si borras el historial.</p></div>';
+  return "";
+}
+
+/* ===================== render: HOY ===================== */
+function stepDots(l){
+  const s = stage(l);
+  return '<span class="stepdots" title="'+["","Abierto","Respondió","Propuesta","Agendó","Show","Cerró"][s]+'">' +
+    [1,2,3,4].map(i => '<i class="'+(s>i?"on":"")+'"></i>').join("") + '</span>';
+}
+function blockChip(l){
+  const i = blockIdx(l);
+  return '<span class="chip b'+i+'"'+(l.blockLock?' title="Fijado a mano"':'')+'>'+esc(BLOQUES[i])+(l.blockLock?' ·':'')+'</span>';
+}
+function rowHTML(l, variant){
+  const cls = variant === "booked" ? "booked" : variant === "late" ? "late" : "";
+  let meta = "";
+  if(variant === "booked"){
+    meta = '<span class="chip cool">'+fmtCita(l)+'</span>';
+    const falta = municionFaltante(l);
+    if(falta.length) meta += '<span class="chip crit" title="El closer entra sin esto">falta: '+esc(falta.join(", "))+'</span>';
+  }
+  if(l.via === "VSL") meta += '<span class="chip b2">VSL</span>';
+  if(l.seed) meta += '<span class="chip" title="Entró en la importación inicial. No se sabe cuánto tardó en cada paso, así que no cuenta en las tasas de cohorte.">sin historial</span>';
+  const notas = [l.meta && "meta", l.dolor && "dolor", l.yaHace && "ya hace"].filter(Boolean);
+  const notaChip = notas.length
+    ? '<span class="chip good" title="Notas escritas">'+notas.join(" · ")+'</span>'
+    : '<span class="chip warn" title="Sin nada anotado">sin notas</span>';
+  /* El tag más avanzado de ManyChat, que es info distinta al bloque */
+  const topTag = (l.tags && l.tags.length)
+    ? l.tags.slice().sort((a,b) => etapaRank(guessStage(b)) - etapaRank(guessStage(a)))[0] : "";
+  const tagChip = topTag ? '<span class="chip cool" title="Tag en ManyChat">'+esc(tagName(topTag))+'</span>' : "";
+  return '<div class="row '+cls+'">' +
+    '<button class="row-main" data-open="'+l.id+'">' +
+      '<span class="row-l1"><span class="h">@'+esc(l.handle)+'</span>'+(l.nombre && norm(l.nombre)!==norm(l.handle)?'<span class="n">'+esc(l.nombre)+'</span>':"")+'</span>' +
+      '<span class="row-l2">'+stepDots(l)+tagChip+notaChip+'<span title="'+esc(entryTitle(l.entry, l.subscribedAt))+'">entró '+entryLabel(l.entry)+'</span>'+meta+'</span>' +
+    '</button>' +
+    '<span class="row-acts"><button class="btn sm ghost" data-open="'+l.id+'">Abrir</button></span>' +
+  '</div>';
+}
+function group(title, list, variant, hint){
+  if(!list.length) return "";
+  return '<section class="qgroup"><div class="qhead"><h3>'+title+'</h3><span class="n">'+list.length+'</span><span class="rule"></span></div>' +
+    (hint ? '<p class="helptext" style="margin:-4px 0 9px">'+hint+'</p>' : "") +
+    '<div class="rows">'+list.map(l => rowHTML(l, variant)).join("")+'</div></section>';
+}
+
+/* Los dos números que se manejan a diario. Salen en Hoy y arriba de Números. */
+function metersHTML(){
+  const T = todayStr();
+  const t = toquesHoy(), mt = CFG.metaToques || 1;
+  const a = agendasSemana(), ma = CFG.metaAgendasSem || 1;
+  const nuevos = LEADS.filter(l => l.entry === T && !l.seed).length;
+  const dias = ["dom","lun","mar","mié","jue","vie","sáb"];
+  const wd = weekStart(T);
+  const meter = (lab, sub, val, meta, pct, ok, extra) =>
+    '<div class="meter"><div class="meter-top"><span class="lab">'+lab+'</span>' +
+      '<span class="val num">'+val+'<small>/'+meta+'</small></span></div>' +
+      '<div class="track"><i class="'+(ok?"done":"")+'" style="width:'+pct+'%"></i></div>' +
+      '<p class="helptext" style="margin-top:7px">'+sub+'</p>'+(extra||"")+'</div>';
+  /* ManyChat no puede tocar a quien no sigue la cuenta o tiene la ventana cerrada.
+     Esos toques son reales, así que se anotan aquí a mano. */
+  const man = manualEn(T);
+  const addBox = ROLE !== "setter" ? "" :
+    '<div class="touchadd">' +
+      '<input type="text" id="tqHandle" placeholder="@handle que tocaste" class="mono" autocomplete="off">' +
+      '<button class="btn sm primary" data-act="addToque">+ toque</button>' +
+    '</div>' +
+    (man.length ? '<p class="helptext" style="margin-top:8px">A mano hoy: ' +
+      man.map(h => '<span class="chip">@'+esc(h)+'</span>').join(" ") + '</p>' : "");
+  return '<div class="meters">' +
+    meter("Toques hoy", "Conversaciones que tocaste hoy" + (nuevos ? " · "+nuevos+" leads nuevos" : ""),
+          t, mt, Math.min(100, t/mt*100), t >= mt, addBox) +
+    meter("Agendas esta semana", "Desde el "+dias[parseISO(wd).getDay()]+" "+fmtShort(wd),
+          a, ma, Math.min(100, a/ma*100), a >= ma) +
+  '</div>';
+}
+
+function viewHoy(){
+  const q = queues();
+  const meters = metersHTML();
+  /* Toques fechados en el futuro = la zona horaria de ManyChat no es la tuya. */
+  const fut = toquesFuturos();
+  const avisoTz = fut.length ? '<div class="banner"><p><b>Hay toques con fecha futura ('+esc(fut.join(", "))+').</b> ' +
+    'Eso pasa cuando la zona horaria de tu cuenta de ManyChat no es la de Puerto Rico: un toque de la noche se graba con la fecha de mañana. ' +
+    'Revísalo en ManyChat → Settings → Time Zone.</p></div>' : "";
+  /* Lo que el closer va a necesitar y todavía no está escrito. */
+  const ciegas = LEADS.filter(l => municionFaltante(l).length);
+  const alerta = ciegas.length ? '<div class="banner crit"><p><b>' +
+    (ciegas.length === 1 ? 'Una llamada agendada va incompleta.' : ciegas.length+' llamadas agendadas van incompletas.') +
+    '</b> El closer necesita meta, dolor y qué ya hace. Ábrelas y escribe lo que te dijeron: ' +
+    ciegas.map(l => '@'+esc(l.handle)+' <span style="opacity:.75">(falta '+esc(municionFaltante(l).join(", "))+')</span>').join(" · ") +
+    '</p></div>' : "";
+  let body = "";
+  if(!LEADS.length){
+    body = '<div class="card empty"><h3>Todavía no hay leads</h3><p>La sincronización de ManyChat los trae cada mañana. También puedes importar el CSV del Sheet.</p>' +
+      '<button class="btn primary" data-nav="importar">Ir a Importar</button></div>';
+  } else if(q.total === 0){
+    body = '<div class="card empty"><h3>Nadie en la cola</h3><p>Todos los activos están agendados o cerrados.</p></div>';
+  } else {
+    const hints = {
+      4:"Ya tienen el link. Estos son los que están a un paso.",
+      3:"Ya sabes qué hacen. Falta llevarlos al link.",
+      2:"Te soltaron el dolor. Falta el filtro.",
+      1:"Te dijeron la meta. Falta el dolor.",
+      0:"Hablaste con ellos y todavía no anotaste nada. Aquí es donde está el trabajo."
+    };
+    body = q.porBloque.filter(g => g.list.length)
+      .map(g => group(g.lab, g.list, "", hints[g.i])).join("");
+  }
+  const faltanFechas = sinFechaGroup(q.pendientes);
+  const extra = group("Llamada agendada", q.agendados, "booked", "Ya no son tuyos hasta la llamada.");
+
+  return modeBanner() + '<div class="section">' + meters + avisoTz + alerta + faltanFechas + body + extra + '</div>';
+}
+
+/* ===================== render: LEADS ===================== */
+function viewLeads(){
+  const f = FILTERS;
+  let list = LEADS.slice();
+  if(f.estado === "activo") list = list.filter(l => l.estado === "activo" && l.cierre !== true);
+  else if(f.estado === "cliente") list = list.filter(l => l.cierre === true);
+  else if(f.estado === "muerto") list = list.filter(l => l.estado === "muerto");
+  if(f.fuente) list = list.filter(l => l.fuente === f.fuente);
+  if(f.bloque) list = list.filter(l => blockOf(l) === f.bloque);
+  if(f.q){
+    const s = f.q.toLowerCase();
+    list = list.filter(l => (l.handle+" "+l.nombre+" "+l.meta+" "+l.dolor).toLowerCase().includes(s));
+  }
+  list.sort((a,b) => (b.entry||"") < (a.entry||"") ? -1 : 1);
+
+  const opts = (arr, sel) => '<option value="">Todos</option>' + arr.map(o => '<option'+(o===sel?' selected':'')+'>'+esc(o)+'</option>').join("");
+
+  const filters =
+    '<div class="filters">' +
+      '<input type="text" id="fq" placeholder="Buscar handle, nombre, meta o dolor…" value="'+esc(f.q)+'">' +
+      '<select id="festado"><option value="activo"'+(f.estado==="activo"?" selected":"")+'>Activos</option>' +
+        '<option value="cliente"'+(f.estado==="cliente"?" selected":"")+'>Clientes</option>' +
+        '<option value="muerto"'+(f.estado==="muerto"?" selected":"")+'>Muertos</option>' +
+        '<option value=""'+(f.estado===""?" selected":"")+'>Todos</option></select>' +
+      '<select id="ffuente">'+opts(FUENTES, f.fuente)+'</select>' +
+      '<select id="fbloque">'+opts(BLOQUES, f.bloque)+'</select>' +
+      '<button class="btn" data-nav="exportar">Exportar</button>' +
+    '</div>';
+
+  if(!list.length){
+    return modeBanner() + '<div class="section"><div class="h-row"><h2>Leads</h2><span class="sub">'+LEADS.length+' en total</span></div>' +
+      filters + '<div class="card empty"><h3>Nada con ese filtro</h3><p>Cambia la búsqueda o los filtros de arriba.</p></div></div>';
+  }
+
+  const rows = list.map(l => {
+    const s = statusOf(l);
+    const cc = s.cls === "good" ? "good" : s.cls === "crit" ? "crit" : s.cls === "cool" ? "cool" : "";
+    const notas = [l.meta && "meta", l.dolor && "dolor", l.yaHace && "ya hace"].filter(Boolean);
+    return '<tr><td><button class="linkish" data-open="'+l.id+'">@'+esc(l.handle)+'</button></td>' +
+      '<td>'+esc(l.nombre||"—")+'</td><td>'+esc(l.fuente)+'</td><td>'+blockChip(l)+'</td>' +
+      '<td><span class="chip '+cc+'">'+esc(s.t)+'</span></td>' +
+      '<td class="mono" title="'+esc(entryTitle(l.entry, l.subscribedAt))+'">'+fmtShort(l.entry)+'</td>' +
+      '<td>'+(notas.length?esc(notas.join(" · ")):'<span style="color:var(--warn)">sin notas</span>')+'</td>' +
+      '<td class="mono">'+(l.agendo?fmtShort(l.agendo):"—")+'</td>' +
+      '<td class="r mono">'+(l.importe?money(l.importe):"—")+'</td></tr>';
+  }).join("");
+
+  return modeBanner() + '<div class="section">' +
+    '<div class="h-row"><h2>Leads</h2><span class="sub">'+list.length+' de '+LEADS.length+'</span></div>' + filters +
+    '<div class="tablewrap"><table><thead><tr><th>Handle</th><th>Nombre</th><th>Fuente</th><th>Bloque</th><th>Estado</th>' +
+    '<th>Entró</th><th>Notas</th><th>Llamada</th><th class="r">Importe</th></tr></thead><tbody>' +
+    rows + '</tbody></table></div></div>';
+}
+
+/* ===================== render: LLAMADAS ===================== */
+/* El closer decide en un solo paso, y los botones están siempre a la vista:
+   verde cierra, rojo no cierra, Ver abre la ficha (ahí adentro está "no vino",
+   que es un caso raro y no merece un botón en la tarjeta). */
+function resultadoBtns(l){
+  return '<button class="btn sm good" data-close="'+l.id+'|1">Cerró</button>' +
+         '<button class="btn sm crit" data-close="'+l.id+'|0">No cerró</button>' +
+         '<button class="btn sm ghost" data-open="'+l.id+'">Ver</button>';
+}
+function callRow(l, kind){
+  const when = l.agendo ? fmtCita(l) : (l.callDate ? fmtLongDate(l.callDate) : "sin fecha");
+  let right = "", tone = "done", tags = "";
+
+  if(kind === "reg"){
+    tone = "late";
+    right = resultadoBtns(l);
+  } else if(kind === "cerrada"){
+    tone = "done";
+    tags = '<span class="chip good">Cerró</span>';
+    right = (+l.importe > 0)
+      ? '<span class="chip good">'+money2(l.importe)+'</span>' +
+        '<button class="btn sm ghost" data-open="'+l.id+'">Editar</button>'
+      : '<span class="amountbox">' +
+        '<input type="number" data-amount="'+l.id+'" placeholder="¿Cuánto?" min="0" step="25" inputmode="decimal" class="mono">' +
+        '<button class="btn sm primary" data-saveamount="'+l.id+'">Guardar</button>' +
+        '<button class="btn sm ghost" data-close="'+l.id+'|x" title="Deshacer">↩</button></span>';
+  } else if(kind === "nocerro"){
+    tone = "done";
+    tags = l.show === false
+      ? '<span class="chip crit">No vino</span>'
+      : '<span class="chip">No cerró'+(l.objecion?" · "+esc(l.objecion):" · falta la objeción")+'</span>';
+    right = '<button class="btn sm ghost" data-open="'+l.id+'">Editar</button>';
+  } else if(kind === "resultado"){
+    /* Un solo paso: Cerró / No cerró, y si cerró el importe se abre aquí mismo. */
+    tone = "late";
+    tags = '<span class="chip good">Vino</span>';
+    if(l.cierre === true){
+      tags += '<span class="chip good">Cerró</span>';
+      right = '<span class="amountbox">' +
+              '<input type="number" data-amount="'+l.id+'" placeholder="¿Cuánto?" min="0" step="25" ' +
+              'inputmode="decimal" class="mono">' +
+              '<button class="btn sm primary" data-saveamount="'+l.id+'">Guardar</button>' +
+              '<button class="btn sm ghost" data-close="'+l.id+'|x" title="Deshacer">↩</button></span>';
+    } else {
+      right = '<button class="btn sm good" data-close="'+l.id+'|1">Cerró</button>' +
+              '<button class="btn sm" data-close="'+l.id+'|0">No cerró</button>';
+    }
+  } else if(kind === "cerrar"){
+    tone = "late";
+    tags = '<span class="chip good">Vino</span>';
+    right = '<button class="btn sm good" data-close="'+l.id+'|1">Cerró</button>' +
+            '<button class="btn sm" data-close="'+l.id+'|0">No cerró</button>';
+  } else if(kind === "importe"){
+    tone = "late";
+    tags = '<span class="chip good">Cerró</span>';
+    right = '<span class="amountbox">' +
+            '<input type="number" data-amount="'+l.id+'" placeholder="¿Cuánto?" min="0" step="25" ' +
+            'inputmode="decimal" class="mono">' +
+            '<button class="btn sm primary" data-saveamount="'+l.id+'">Guardar</button></span>';
+  } else if(kind === "proxima"){
+    tone = "booked";
+    const falta = municionFaltante(l);
+    if(falta.length) tags = '<span class="chip crit" title="El closer entra sin esto">falta: '+esc(falta.join(", "))+'</span>';
+    right = resultadoBtns(l);
+  } else if(kind === "next"){
+    tone = "booked";
+    const falta2 = municionFaltante(l);
+    if(falta2.length) tags = '<span class="chip crit">falta: '+esc(falta2.join(", "))+'</span>';
+    right = '<button class="btn sm ghost" data-open="'+l.id+'">Ver</button>';
+  } else {
+    right = '<button class="btn sm ghost" data-open="'+l.id+'">Editar</button>';
+    tags = l.show === false ? '<span class="chip crit">No vino</span>'
+      : l.cierre === true ? '<span class="chip good">Cerró · '+money(l.importe)+'</span>'
+      : '<span class="chip">No cerró'+(l.objecion?" · "+esc(l.objecion):"")+'</span>';
+  }
+  if(l.seed) tags += '<span class="chip" title="Entró en la importación inicial.">sin historial</span>';
+
+  return '<div class="row '+tone+'">' +
+    '<button class="row-main" data-open="'+l.id+'">' +
+      '<span class="row-l1"><span class="h">@'+esc(l.handle)+'</span>'+(l.nombre && norm(l.nombre)!==norm(l.handle)?'<span class="n">'+esc(l.nombre)+'</span>':"")+'</span>' +
+      '<span class="row-l2"><span class="mono">'+when+'</span>'+tags+'</span>' +
+    '</button><span class="row-acts">'+right+'</span></div>';
+}
+/* Las dos fechas de agenda las pone el SETTER. El closer solo las ve. */
+function sinFechaGroup(list){
+  if(!list.length) return "";
+  const mine = ROLE === "setter";
+  const ro = mine ? "" : " disabled";
+  return '<section class="qgroup"><div class="qhead"><h3>Agendaron · falta la fecha</h3>' +
+    '<span class="n">'+list.length+'</span><span class="rule"></span></div>' +
+    '<p class="helptext" style="margin:-4px 0 9px">' +
+      (mine ? 'Los tags de ManyChat dicen que agendó pero no para cuándo. Pon las dos fechas y pasa a la vista de llamadas.'
+            : 'El setter todavía no ha puesto la fecha de estas llamadas. Aquí solo las ves.') + '</p>' +
+    '<div class="rows">'+list.map(l =>
+      '<div class="row late" style="flex-wrap:wrap"><button class="row-main" data-open="'+l.id+'">' +
+        '<span class="row-l1"><span class="h">@'+esc(l.handle)+'</span>'+(l.nombre && norm(l.nombre)!==norm(l.handle)?'<span class="n">'+esc(l.nombre)+'</span>':"")+'</span>' +
+        '<span class="row-l2"><span class="chip crit">falta la fecha</span>'+(l.seed?'<span class="chip">sin historial</span>':'')+'</span></button>' +
+        '<span style="display:flex;gap:8px;flex:none;flex-wrap:wrap">' +
+          '<span><label class="f" for="bc_'+l.id+'">Fecha de la llamada</label>' +
+            '<input type="date" id="bc_'+l.id+'" data-calldate="'+l.id+'" value="'+(l.agendo||"")+'" style="width:auto"'+ro+'></span>' +
+          '<span><label class="f" for="bh_'+l.id+'">Hora</label>' +
+            '<input type="time" id="bh_'+l.id+'" data-callhora="'+l.id+'" value="'+(l.agendoHora||"")+'" style="width:auto"'+ro+'></span>' +
+        '</span></div>').join("") +
+    '</div></section>';
+}
+
+function viewLlamadas(){
+  const c = callQueue();
+  const T = todayStr();
+  const money30 = LEADS.filter(l => l.cierre === true && l.cierreAt && l.cierreAt >= addDays(T,-29))
+                        .reduce((a,l) => a + (+l.importe||0), 0);
+  const head =
+    '<div class="stats" style="margin-bottom:18px">' +
+      '<div class="stat'+(c.proximas.length?" cool":"")+'"><div class="k">Confirmadas</div><div class="v">'+c.proximas.length+'</div><div class="d">con fecha y hora</div></div>' +
+      '<div class="stat'+(c.sinFecha.length+c.sinHora.length?" crit":"")+'"><div class="k">Sin confirmar</div><div class="v">'+(c.sinFecha.length+c.sinHora.length)+'</div><div class="d">falta fecha u hora</div></div>' +
+      '<div class="stat'+(c.porRegistrar.length+c.porResultado.length?" warn":"")+'"><div class="k">Pendientes</div><div class="v">'+(c.porRegistrar.length+c.porResultado.length)+'</div><div class="d">resultado o $</div></div>' +
+      '<div class="stat good"><div class="k">Cash 30 días</div><div class="v">'+money2(money30)+'</div><div class="d">por fecha de cobro</div></div>' +
+    '</div>';
+
+  /* La alerta cubre TODA llamada pendiente, tenga hora o no. */
+  const ciegas = LEADS.filter(l => municionFaltante(l).length);
+  const alerta = ciegas.length ? '<div class="banner crit"><p><b>' +
+      (ciegas.length === 1 ? 'Una llamada agendada va incompleta.' : ciegas.length+' llamadas agendadas van incompletas.') +
+      '</b> ' + (ROLE === "setter"
+        ? 'El closer necesita meta, dolor y qué ya hace. Ábrelas y escribe lo que te dijeron: '
+        : 'Pídeselas al setter antes de la llamada: ') +
+      ciegas.map(l => '@'+esc(l.handle)+' <span style="opacity:.75">(falta '+esc(municionFaltante(l).join(", "))+')</span>').join(" · ") +
+      '</p></div>' : "";
+  const proximas = c.proximas.length ?
+    '<section class="qgroup hero">' +
+      '<div class="qhead"><h3>Próximas llamadas</h3><span class="n">'+c.proximas.length+'</span><span class="rule"></span></div>' +
+      '<p class="helptext" style="margin:-4px 0 9px">Confirmadas: día y hora puestos. Estas son las que van a pasar.</p>' +
+      '<div class="rows">'+c.proximas.map(l => callRow(l, "proxima")).join("")+'</div>' +
+    '</section>' : "";
+
+  const sinFecha = sinFechaGroup(c.sinFecha);
+
+  const grp = (titulo, list, kind, hint) => list.length ?
+    '<section class="qgroup"><div class="qhead"><h3>'+titulo+'</h3><span class="n">'+list.length+'</span><span class="rule"></span></div>' +
+    (hint ? '<p class="helptext" style="margin:-4px 0 9px">'+hint+'</p>' : "") +
+    '<div class="rows">'+list.map(l => callRow(l, kind)).join("")+'</div></section>' : "";
+
+  if(!c.sinFecha.length && !c.sinHora.length && !c.porRegistrar.length && !c.porResultado.length && !c.proximas.length && !c.cerradas.length && !c.noCerraron.length){
+    return modeBanner() + '<div class="section"><div class="h-row"><h2>Llamadas</h2></div>' +
+      '<div class="card empty"><h3>No hay llamadas todavía</h3><p>Cuando el setter marque que alguien agendó, la llamada aparece aquí para registrar el resultado.</p></div></div>';
+  }
+
+  return modeBanner() + '<div class="section">' +
+    '<div class="h-row"><h2>Llamadas</h2><span class="sub">Show, cierre e importe</span></div>' + head + alerta +
+    proximas +
+    grp("Por registrar", c.porRegistrar, "reg", "Ya pasó el día y nadie marcó el resultado. Mientras estén aquí, el show rate está incompleto.") +
+    grp("Vinieron · falta el resultado", c.porResultado.filter(l => l.cierre === null), "resultado", "Se presentaron. ¿Cerró o no cerró?") +
+    sinFecha +
+    grp("Agendadas · falta la hora", c.sinHora, "next", "Tienen día pero no hora, así que todavía no están confirmadas.") +
+    grp("Cerradas", c.cerradas.slice(0,40), "cerrada", "Las que pagaron. Si falta el importe, escríbelo aquí — sin él, el cash y el AOV están incompletos.") +
+    grp("No cerraron", c.noCerraron.slice(0,40), "nocerro", "No compraron o no se presentaron. Con la objeción marcada alimentan \"qué mata los deals\".") +
+    '</div>';
+}
+
+/* ===================== render: NÚMEROS ===================== */
+function barsHTML(rows, opts){
+  opts = opts || {};
+  const max = Math.max(1, ...rows.map(r => r.n));
+  return '<div class="chartrow">' + rows.map(r =>
+    '<div class="bar'+(opts.critTop && r.n === max && max > 0 ? " crit" : "")+'" title="'+esc(r.lab)+': '+r.n+'">' +
+      '<span class="lab">'+esc(r.lab)+'</span>' +
+      '<span class="tr"><i style="width:'+(r.n/max*100)+'%"></i></span>' +
+      '<span class="v">'+r.n+'</span></div>').join("") + '</div>';
+}
+function funnelHTML(m){
+  const steps = [
+    {lab:"Leads", n:m.leads},
+    {lab:"Respondió", n:m.resp, rate:m.rResp, bench:null},
+    {lab:"Propuesta", n:m.prop, rate:m.rProp, bench:null},
+    {lab:"Agendó", n:m.agen, rate:m.rAgen, bench:null},
+    {lab:"Llamada hecha", n:m.callsDone, rate:pct(m.callsDone, m.agen), bench:null},
+    {lab:"Show", n:m.shows, rate:m.rShow, bench:CFG.showRate*100},
+    {lab:"Cierre", n:m.cierres, rate:m.rClose, bench:CFG.closeRate*100}
+  ];
+  const max = Math.max(1, m.leads);
+  let out = '<div class="funnel">';
+  steps.forEach((s,i) => {
+    if(i > 0){
+      const good = s.bench !== null && s.rate !== null ? (s.rate >= s.bench ? "ok" : "bad") : "";
+      out += '<div class="fdrop '+good+'"><span>↓</span><span class="pct">'+pctStr(s.rate)+'</span>' +
+             (s.bench !== null ? '<span>vs '+s.bench+'% benchmark</span>' : '') + '</div>';
+    }
+    const w = Math.max(14, s.n/max*100);
+    out += '<div class="fstep"><div class="fbar" style="width:'+w+'%"><span class="fn">'+s.n+'</span><span class="fl">'+s.lab+'</span></div></div>';
+  });
+  return out + '</div>';
+}
+/* --- Embudo por tags de ManyChat ------------------------------------------
+   Este es el embudo que mira el cliente: dónde está parada la gente HOY según
+   los tags. No usa fechas ni período — es una foto de toda la base. */
+const LADDER = [
+  {k:"contesto",   lab:"Interest",  hint:"contestó, hay conversación"},
+  {k:"calificado", lab:"Lead",      hint:"califica para la llamada"},
+  {k:"propuesta",  lab:"Link",      hint:"le mandaste el link"},
+  {k:"agendo",     lab:"Booked",    hint:"agendó la llamada"},
+  {k:"cliente",    lab:"Client",    hint:"pagó"}
+];
+function tagStages(l){ return (l.tags||[]).map(t => guessStage(tagName(t))).filter(Boolean); }
+/* La etapa más alta que prueban sus tags. null = no tiene ningún tag de etapa. */
+function topTagRank(l){
+  const r = tagStages(l).filter(k => k !== "muerto" && k !== "vsl").map(etapaRank);
+  return r.length ? Math.max.apply(null, r) : null;
+}
+function tagFunnel(){
+  const conRank = LEADS.map(l => ({ l, r:topTagRank(l), st:tagStages(l) }));
+  const pasos = LADDER.map((p, i) => {
+    const rk = etapaRank(p.k);
+    /* "parados aquí" = llegó a este escalón pero no al siguiente. Así los tags
+       que no tienen escalón propio (Interest Buildup) cuentan en el de abajo
+       en vez de desaparecer. */
+    const sig = LADDER[i+1] ? etapaRank(LADDER[i+1].k) : Infinity;
+    return {
+      lab:p.lab, hint:p.hint,
+      alcanzaron: conRank.filter(x => x.r !== null && x.r >= rk).length,
+      aqui:       conRank.filter(x => x.r !== null && x.r >= rk && x.r < sig).length
+    };
+  });
+  return {
+    pasos,
+    muertos: conRank.filter(x => x.st.indexOf("muerto") >= 0).length,
+    vsl:     conRank.filter(x => x.st.indexOf("vsl") >= 0).length,
+    /* sin tag de verdad: ni escalón, ni VSL, ni "no interesado" */
+    sinTag:  conRank.filter(x => x.r === null && x.st.length === 0).length,
+    total:   LEADS.length
+  };
+}
+function funnelTagsHTML(){
+  const f = tagFunnel();
+  if(!f.pasos[0].alcanzaron)
+    return '<p class="helptext">' + (f.total
+      ? 'Tus '+f.total+' contactos no traen tags de etapa de ManyChat. En cuanto la sincronización los traiga con tags, el embudo se llena solo.'
+      : 'Todavía no hay contactos.') + '</p>';
+  const max = Math.max(1, f.pasos[0].alcanzaron);
+  let out = '<div class="funnel">';
+  f.pasos.forEach((p, i) => {
+    if(i > 0){
+      const prev = f.pasos[i-1].alcanzaron;
+      out += '<div class="fdrop"><span>↓</span><span class="pct">'+pctStr(pct(p.alcanzaron, prev))+'</span></div>';
+    }
+    /* tope 80% para que "N parados aquí" siempre quepa al lado */
+    const w = Math.max(12, p.alcanzaron / max * 80);
+    out += '<div class="fstep"><div class="fbar" style="width:'+w+'%">' +
+      '<span class="fn">'+p.alcanzaron+'</span><span class="fl">'+esc(p.lab)+'</span></div>' +
+      '<span class="fhere">'+(p.aqui ? p.aqui+' parados aquí' : '—')+'</span></div>';
+  });
+  out += '</div>';
+  const chip = (n, lab, cls) => n ? '<span class="chip '+cls+'">'+n+' · '+lab+'</span>' : "";
+  const fuera = chip(f.vsl, "VSL", "b2") + chip(f.muertos, "No interesado", "crit") + chip(f.sinTag, "sin tag", "");
+  if(fuera) out += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px">'+fuera+'</div>';
+  return out;
+}
+function viewNumeros(){
+  const m = metrics(PERIOD, COUNTBY);
+  const bn = bottleneck(m);
+  const g = goalMath();
+  const objs = byObjection();
+  const srcs = bySource();
+
+  const periodBtns = [[7,"7 días"],[30,"30 días"],[90,"90 días"],[0,"Todo"]].map(p =>
+    '<button class="btn sm'+(PERIOD===p[0]?" primary":"")+'" data-period="'+p[0]+'">'+p[1]+'</button>').join(" ");
+  const countBtns = [["cohorte","Por cohorte"],["actividad","Por actividad"]].map(c =>
+    '<button class="btn sm'+(COUNTBY===c[0]?" primary":"")+'" data-countby="'+c[0]+'">'+c[1]+'</button>').join(" ");
+
+  const countExplain = COUNTBY === "cohorte"
+    ? "Agrupa por <b>fecha de entrada del lead</b>. Un lead de agosto que cierra en octubre cuenta en agosto. Mide la calidad de la fuente."
+    : "Agrupa por <b>la fecha de cada evento</b>. Una venta cobrada hoy cuenta hoy, aunque el lead entrara hace tres meses. Mide el mes que estás viviendo.";
+
+  const sc = seedCount();
+  const seedNote = sc ? '<div class="banner info"><p><b>'+sc+' leads marcados «sin historial».</b> Son los que entraron en la importación inicial, ya empezados. Sus tags dicen dónde estaban, no cuándo llegaron ahí, así que no se puede reconstruir cuánto tardó cada paso.<br>Quedan fuera del modo <b>Cohorte</b>, que agrupa por fecha de entrada. Pero <b>en modo Actividad sí cuentan</b>: si uno de ellos agenda o cierra de hoy en adelante, eso tiene fecha real y entra en las tasas.</p></div>' : "";
+
+  const pend = m.pendReg ? '<div class="banner"><p><b>'+m.pendReg+' llamada'+(m.pendReg>1?"s":"")+' sin registrar.</b> Ya pasaron y nadie marcó si la persona vino. El show rate de abajo las excluye — no cuentan en contra tuya, pero el número está incompleto hasta que se registren.</p><span class="spacer"></span><button class="btn sm" data-nav="llamadas">Registrar</button></div>' : "";
+
+  const stats =
+    '<div class="stats">' +
+      '<div class="stat"><div class="k">DM → Book</div><div class="v">'+pctStr(m.rBook)+'</div><div class="d formula">agendó ÷ leads</div></div>' +
+      '<div class="stat"><div class="k">Show rate</div><div class="v">'+pctStr(m.rShow)+'</div><div class="d formula">show ÷ llamadas ya ocurridas</div></div>' +
+      '<div class="stat"><div class="k">Close rate</div><div class="v">'+pctStr(m.rClose)+'</div><div class="d formula">cierres ÷ shows</div></div>' +
+      '<div class="stat good"><div class="k">Cash</div><div class="v">'+money2(m.cash)+'</div><div class="d formula">AOV '+(m.aov?money2(m.aov):"—")+'</div></div>' +
+    '</div>';
+
+  const verdict = '<div class="verdict '+(bn.ok?"ok":bn.none?"":"crit")+'" style="'+(bn.none?"border-left-color:var(--line-2);background:var(--surface-2);color:var(--ink-2)":"")+'">' +
+    '<div class="t">Cuello de botella'+(bn.lab?" · "+bn.lab:"")+'</div>' +
+    '<div class="m">'+bn.msg+'</div><div class="s">'+bn.fix+'</div></div>';
+
+  /* --- objetivo --- */
+  const gapBad = g.gapAgendas !== null && g.gapAgendas > 1.2;
+  const objetivo =
+    '<div class="card pad">' +
+      '<p class="eyebrow">Ingeniería inversa</p>' +
+      '<div class="grid3" style="margin-bottom:14px">' +
+        cfgInput("goal","Meta mensual","number") + cfgInput("aov","AOV","number") + cfgInput("workDays","Días de trabajo","number") +
+        cfgInput("closeRate","Close rate %","pct") + cfgInput("showRate","Show rate %","pct") + cfgInput("bookRate","Book rate %","pct") +
+      '</div>' +
+      '<div class="tablewrap"><table><tbody>' +
+        gRow("Cierres necesarios", Math.ceil(g.cierres)) +
+        gRow("Llamadas completadas", Math.ceil(g.llamadas)) +
+        gRow("Llamadas agendadas", Math.ceil(g.agendas)) +
+        gRow("Leads al mes", Math.ceil(g.leads)) +
+        gRow("Agendas por semana", (Math.round(g.agendasSem*10)/10)) +
+        gRow("Leads por día", Math.ceil(g.leadsDia)) +
+      '</tbody></table></div>' +
+      (g.gapAgendas !== null ?
+        '<div class="verdict '+(gapBad?"crit":"ok")+'" style="margin-top:14px">' +
+          '<div class="t">Chequeo de realidad</div>' +
+          '<div class="m">'+(gapBad
+            ? "Tu meta pide "+ (Math.round(g.agendasSem*10)/10) +" agendas por semana y estás persiguiendo "+CFG.metaAgendasSem+". Es "+ (Math.round(g.gapAgendas*10)/10) +"× lo que tienes puesto."
+            : "La meta semanal alcanza para el objetivo del mes: hacen falta "+ (Math.round(g.agendasSem*10)/10) +" agendas por semana y persigues "+CFG.metaAgendasSem+".")+'</div>' +
+          '<div class="s">'+(gapBad
+            ? "O el objetivo mensual baja, o las tasas mejoran, o la meta semanal sube. Ahora mismo las dos cifras viven en pantallas distintas y no cuadran."
+            : "Las dos cifras cuadran. Si cambias el objetivo o alguna tasa, vuelve a mirar aquí.")+'</div></div>' : "") +
+      '<div class="grid2" style="margin-top:14px">' +
+        cfgInput("metaToques","Meta toques/día","number") + cfgInput("metaAgendasSem","Meta agendas/semana","number") +
+      '</div>' +
+      '<div class="tablewrap" style="margin-top:14px"><table><thead><tr><th>Tasa</th><th class="r">Supuesto</th><th class="r">Real</th></tr></thead><tbody>' +
+        cmpRow("Book rate", CFG.bookRate*100, m.rBook) +
+        cmpRow("Show rate", CFG.showRate*100, m.rShow) +
+        cmpRow("Close rate", CFG.closeRate*100, m.rClose) +
+        '<tr><td>AOV</td><td class="r mono">'+money(CFG.aov)+'</td><td class="r mono">'+(m.aov?money(m.aov):"—")+'</td></tr>' +
+      '</tbody></table></div>' +
+    '</div>';
+
+  const srcTable = srcs.length ? '<div class="tablewrap"><table><thead><tr><th>Fuente</th><th class="r">Leads</th><th class="r">Agendó</th><th class="r">Cierres</th><th class="r">% Cierre</th><th class="r">Cash</th></tr></thead><tbody>' +
+    srcs.map(r => '<tr><td>'+esc(r.lab)+'</td><td class="r mono">'+r.leads+'</td><td class="r mono">'+r.agen+'</td><td class="r mono">'+r.cierres+'</td>' +
+      '<td class="r mono">'+pctStr(pct(r.cierres,r.leads))+'</td><td class="r mono">'+money(r.cash)+'</td></tr>').join("") +
+    '</tbody></table></div>' : '<p class="helptext">Sin leads todavía.</p>';
+
+  return modeBanner() + '<div class="section">' +
+    '<div class="h-row"><h2>Números</h2><span class="sub">'+(PERIOD===0?"Todo el histórico":"Últimos "+PERIOD+" días")+'</span></div>' +
+    '<div class="filters">'+periodBtns+'<span style="width:10px"></span>'+countBtns+'</div>' +
+    '<p class="helptext" style="margin:-4px 0 14px">'+countExplain+'</p>' +
+    seedNote + pend + stats +
+    '<div style="height:18px"></div>' + verdict +
+    '<div style="height:22px"></div>' +
+    '<p class="eyebrow">Embudo · tags de ManyChat</p><div class="card pad">'+funnelTagsHTML() +
+      '<p class="helptext" style="margin-top:12px">Dónde está parada toda tu base <b>ahora mismo</b>, según los tags. La barra es cuántos <b>llegaron al menos</b> hasta ahí; debajo, cuántos se quedaron <b>parados</b> en ese escalón. No filtra por período — es una foto completa.</p></div>' +
+    '<div style="height:22px"></div>' +
+    '<div class="grid2" style="align-items:start">' +
+      '<div><p class="eyebrow">Dónde se mueren</p><div class="card pad">'+barsHTML(byBlock(), {critTop:true}) +
+        '<p class="helptext" style="margin-top:11px">Último bloque alcanzado por los que siguen vivos y no han cerrado. El bloque más alto es el guion que hay que arreglar.</p></div></div>' +
+      '<div><p class="eyebrow">Qué mata los deals</p><div class="card pad">' +
+        (objs.length ? barsHTML(objs, {critTop:true}) : '<p class="helptext">Todavía no hay llamadas perdidas con objeción registrada.</p>') +
+        '<p class="helptext" style="margin-top:11px">Solo cuenta quien llegó a la llamada, se presentó y no cerró. Los que nunca llegaron no ensucian este número.</p></div></div>' +
+    '</div>' +
+    '<div style="height:22px"></div>' +
+    '<p class="eyebrow">Atribución por fuente</p>'+srcTable +
+    '<div style="height:22px"></div>' + objetivo +
+    '</div>';
+}
+function gRow(k,v){ return '<tr><td>'+k+'</td><td class="r mono">'+(isFinite(v)?v.toLocaleString("en-US"):"—")+'</td></tr>'; }
+function cmpRow(k, sup, real){
+  const bad = real !== null && real < sup;
+  return '<tr><td>'+k+'</td><td class="r mono">'+sup.toFixed(sup<10?1:0)+'%</td>' +
+    '<td class="r mono" style="'+(real===null?"":bad?"color:var(--crit)":"color:var(--good)")+'">'+pctStr(real)+'</td></tr>';
+}
+function cfgInput(key, lab, kind){
+  const v = kind === "pct" ? Math.round(CFG[key]*1000)/10 : CFG[key];
+  return '<div><label class="f" for="cfg_'+key+'">'+lab+'</label>' +
+    '<input type="number" id="cfg_'+key+'" data-cfg="'+key+'" data-kind="'+kind+'" value="'+v+'" step="'+(kind==="pct"?"0.1":"1")+'" min="0"></div>';
+}
+
+/* ===================== render: IMPORTAR ===================== */
+const FIELDS = [
+  {k:"handle", lab:"@Handle", req:true},
+  {k:"fuente", lab:"Fuente"},
+  {k:"nombre", lab:"Nombre"},
+  {k:"meta", lab:"Meta (sus palabras)"},
+  {k:"dolor", lab:"Dolor (sus palabras)"},
+  {k:"yaHace", lab:"Ya hace"}
+];
+
+/* --- etapas del embudo a las que se puede mapear un tag --- */
+const ETAPAS = [
+  {k:"",           lab:"— no usar —",              rank:-1},
+  {k:"muerto",     lab:"No interesado",            rank:0.5},
+  {k:"contesto",   lab:"Contestó · hay conversación", rank:1},
+  {k:"dolor",      lab:"Ya soltó el dolor",        rank:2},
+  {k:"calificado", lab:"Calificado",               rank:3},
+  {k:"vsl",        lab:"VSL · vía alterna",        rank:3.5},
+  {k:"propuesta",  lab:"Le mandé el link",         rank:4},
+  {k:"agendo",     lab:"Agendó",                   rank:5},
+  {k:"cliente",    lab:"Cliente · pagó",           rank:6}
+];
+const etapaRank = k => (ETAPAS.find(e => e.k === k) || {rank:-1}).rank;
+
+function guessStage(h){
+  const s = String(h||"").toLowerCase();
+  if(/no\s*inter|not\s*inter/.test(s)) return "muerto";
+  /* "Not Closed" = estuvo en la llamada y no cerró. Llegó hasta agendó, no es un muerto. */
+  if(/not\s*clos|no\s*cerr/.test(s))     return "agendo";
+  if(/build\s*up|buildup/.test(s))     return "dolor";
+  if(/vsl/.test(s))                    return "vsl";
+  if(/link/.test(s))                   return "propuesta";
+  if(/book/.test(s))                   return "agendo";
+  if(/client|cliente/.test(s))         return "cliente";
+  if(/warm/.test(s))                   return "calificado";
+  if(/lead/.test(s))                   return "calificado";
+  if(/interes|interest/.test(s))       return "contesto";
+  return "";
+}
+
+const TRUEW = ["true","verdadero","1","sí","si","yes","x","v"];
+const BOOLW = TRUEW.concat(["false","falso","0","no","n","-"]);
+function isTrue(v){ return TRUEW.indexOf(String(v==null?"":v).trim().toLowerCase()) >= 0; }
+function isTagCol(rows, i){
+  let seen = 0;
+  for(const r of rows){
+    const v = String(r[i]==null?"":r[i]).trim().toLowerCase();
+    if(v === "") continue;
+    if(BOOLW.indexOf(v) < 0) return false;
+    seen++;
+  }
+  return seen > 0;
+}
+
+/* Un contacto puede traer VARIOS tags de ManyChat — se aplican todos, no gana uno solo.
+   Lo que sí manda el más avanzado es el bloque alcanzado.
+   No se ponen fechas: lo que pasó antes de importar no tiene fecha real, así que
+   estos leads quedan marcados como arrastre y fuera de las tasas. */
+/* Un tag "Src ..." / "Fuente ..." no es una etapa: dice por dónde entró la persona.
+   ManyChat no guarda el punto de entrada por su cuenta, así que esto solo funciona
+   si el flow de cada trigger le pone su tag al contacto. */
+const SRC_RE = /^(src|source|fuente|entrada|origen)\b[\s:_-]*/i;
+const SRC_MAP = [
+  [/coment|comment|keyword|palabra/i, "Comentario/Keyword"],
+  [/story|historia|stories/i,         "Story reply"],
+  [/refer|referral|referido/i,        "Referido"],
+  [/outbound|out\b|frio|cold/i,       "Outbound DM"],
+  [/inbound|dm|mensaje|in\b/i,        "Inbound DM"],
+  [/bienven|welcome|ad\b|anuncio/i,   "Bienvenida"]
+];
+function srcFromTag(t){
+  const limpio = tagName(t);          /* "Tag Src Story" -> "Src Story" */
+  if(!SRC_RE.test(limpio)) return "";
+  const resto = limpio.replace(SRC_RE,"").trim();
+  if(!resto) return "";
+  for(const [re, val] of SRC_MAP) if(re.test(resto)) return val;
+  return resto;   /* no lo reconozco: lo guardo tal cual en vez de inventar */
+}
+function applyTags(l, stages, tagNames){
+  if(!stages.length && !(tagNames||[]).some(srcFromTag)) return;
+  l.seed = true;
+  l.tags = tagNames || [];
+  l.respondio = true;
+  (tagNames || []).forEach(t => { const f = srcFromTag(t); if(f) l.fuente = f; });
+  if(!stages.length) return;
+
+  let top = 1;
+  /* de menor a mayor: si alguien viene con "No interesado" Y "Cliente", gana Cliente */
+  stages.slice().sort((a,b) => etapaRank(a) - etapaRank(b)).forEach(st => {
+    const rk = etapaRank(st);
+    if(rk > top && st !== "vsl" && st !== "muerto") top = rk;
+    if(st === "vsl"){ l.via = "VSL"; if(top < 3) top = 3; }  /* el VSL ya es filtro, pero nunca sube más */
+    else if(st === "muerto"){ l.estado = "muerto"; }
+    else if(st === "propuesta"){ l.propuesta = true; }
+    else if(st === "agendo"){ l.propuesta = true; l.pendingBook = true; l.estado = "activo"; }
+    else if(st === "cliente"){
+      l.propuesta = true; l.show = true; l.cierre = true;
+      l.estado = "cliente"; l.pendingBook = false;
+    }
+  });
+  /* Un tag NO prueba que corriste un bloque del guion. "Interest" o "Lead" dicen
+     qué tan caliente está la persona, no que le sacaste la meta o el dolor —
+     eso solo lo prueban tus notas. Lo único que un tag sí prueba es que el link
+     salió (Link, Booked, Not Closed, Client), y eso es Pre-call de verdad. */
+  l.blockFloor = top >= 4 ? BLOQUES[4] : "";
+}
+function viewImportar(){
+  let body;
+  if(!IMPORT){
+    body =
+      '<div class="banner info"><p>Los leads entran <b>solo desde el Sheet</b> de ManyChat. Descarga la pestaña de Instagram como CSV (Archivo → Descargar → .csv) o copia y pega las celdas.</p></div>' +
+      '<div class="card pad" style="display:flex;flex-direction:column;gap:14px">' +
+        '<div><label class="f" for="csvFile">CSV del Sheet</label>' +
+        '<input type="file" id="csvFile" accept=".csv,text/csv,text/plain" style="font-size:13.5px"></div>' +
+        '<div><label class="f" for="csvPaste">…o pega las celdas aquí</label>' +
+        '<textarea id="csvPaste" placeholder="username&#9;name&#9;Subscribed&#9;Tag Lead&#10;marisol.fit&#9;Marisol&#9;2026-09-01&#9;TRUE" style="min-height:110px" class="mono"></textarea></div>' +
+        '<div><button class="btn primary" data-act="parseCsv">Leer columnas</button></div>' +
+      '</div>';
+  } else {
+    const { headers, rows, map, tags } = IMPORT;
+    const sel = k => '<select data-map="'+k+'"><option value="">— ninguna —</option>' +
+      headers.map((h,i) => '<option value="'+i+'"'+(map[k]===String(i)?" selected":"")+'>'+esc(h)+'</option>').join("") + '</select>';
+    const mapping = FIELDS.map(f =>
+      '<div><label class="f">'+f.lab+(f.req?' *':'')+'</label>'+sel(f.k)+'</div>').join("");
+
+    const tagRows = tags.length ? tags.map(t => {
+      const n = rows.reduce((a,r) => a + (isTrue(r[t.i]) ? 1 : 0), 0);
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)'+(n?'':';opacity:.5')+'">' +
+        '<span class="mono" style="flex:1;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(t.header)+'</span>' +
+        '<span class="chip num">'+n+'</span>' +
+        '<select data-tag="'+t.i+'" style="width:auto;max-width:220px;flex:none">' +
+          ETAPAS.map(e => '<option value="'+e.k+'"'+(e.k===t.stage?" selected":"")+'>'+esc(e.lab)+'</option>').join("") +
+        '</select></div>';
+    }).join("") : '<p class="helptext">No detecté columnas de TRUE/FALSE en este archivo. Los leads entran todos en el primer bloque.</p>';
+
+    const hIdx = map.handle === "" ? -1 : Number(map.handle);
+    let preview = "", dupes = 0, blanks = 0, nuevos = 0;
+    const porEtapa = {};
+    if(hIdx >= 0){
+      const existing = new Set(LEADS.map(l => norm(l.handle)));
+      const seen = new Set();
+      rows.forEach(r => {
+        const h = norm(r[hIdx]);
+        if(!h){ blanks++; return; }
+        if(existing.has(h) || seen.has(h)){ dupes++; return; }
+        seen.add(h); nuevos++;
+        const st = rowStage(r) || "(sin tag)";
+        porEtapa[st] = (porEtapa[st]||0) + 1;
+      });
+      const nIdx = map.nombre === "" ? -1 : Number(map.nombre);
+      const sample = rows.slice(0,6).map(r => {
+        const st = rowStage(r);
+        const lab = st ? (ETAPAS.find(e => e.k === st)||{}).lab : "—";
+        const nm = nIdx >= 0 ? String(r[nIdx]||"").trim() : "";
+        return '<tr><td class="mono">@'+esc(norm(r[hIdx]))+'</td><td>'+esc(nm || norm(r[hIdx]))+'</td><td>'+esc(lab)+'</td></tr>';
+      }).join("");
+      preview = '<div class="tablewrap"><table><thead><tr><th>Handle</th><th>Nombre</th><th>Entra como</th></tr></thead><tbody>'+sample+'</tbody></table></div>';
+    }
+    const resumen = Object.keys(porEtapa).length ? '<div class="chartrow" style="margin-top:12px">' +
+      Object.keys(porEtapa).sort((a,b) => porEtapa[b]-porEtapa[a]).map(k => {
+        const lab = k === "(sin tag)" ? "Sin tag · entran en Apertura" : (ETAPAS.find(e => e.k === k)||{lab:k}).lab;
+        const max = Math.max.apply(null, Object.keys(porEtapa).map(x => porEtapa[x]));
+        return '<div class="bar"><span class="lab">'+esc(lab)+'</span><span class="tr"><i style="width:'+(porEtapa[k]/max*100)+'%"></i></span><span class="v">'+porEtapa[k]+'</span></div>';
+      }).join("") + '</div>' : "";
+
+    body =
+      '<div class="banner info"><p><b>'+rows.length+' filas leídas</b> con '+headers.length+' columnas'+(tags.length?', '+tags.length+' de ellas son tags':'')+'.</p></div>' +
+      '<div class="card pad"><p class="eyebrow">Columnas de texto</p><div class="grid2">'+mapping+'</div></div>' +
+      '<div style="height:18px"></div>' +
+      '<div class="card pad"><p class="eyebrow">Tags → dónde cae cada uno en el embudo</p>' +
+        '<p class="helptext" style="margin:-4px 0 10px">Si un contacto trae varios tags en TRUE, gana el más avanzado.</p>' + tagRows + '</div>' +
+      '<div style="height:18px"></div>' +
+      (hIdx < 0 ? '<div class="banner"><p>Escoge la columna del <b>@handle</b> para poder continuar.</p></div>' :
+        '<div class="banner '+(dupes||blanks?"":"info")+'"><p><b>'+nuevos+' se van a importar.</b>' +
+          (dupes?' '+dupes+' se saltan por handle repetido.':'') +
+          (blanks?' '+blanks+' se saltan por venir sin handle.':'') + '</p></div>' +
+        '<p class="eyebrow">Cómo quedan repartidos</p>' + resumen +
+        '<div style="height:18px"></div><p class="eyebrow">Primeras filas</p>' + preview +
+        '<div style="height:16px"></div>' +
+        '<div class="grid2"><div><label class="f" for="impFuente">Fuente</label>' +
+        '<select id="impFuente">'+FUENTES.map(f => '<option>'+esc(f)+'</option>').join("")+'</select></div>' +
+        '<div style="display:flex;align-items:flex-end"><p class="helptext">Lo que ya venía hecho en ManyChat entra marcado <b>sin historial</b>: aparece en tus colas, pero no en las tasas de cohorte, porque los tags no dicen cuándo pasó cada paso.</p></div></div>' +
+        '<div style="height:14px"></div>' +
+        '<button class="btn primary" data-act="doImport">Importar '+nuevos+' leads</button> ' +
+        '<button class="btn ghost" data-act="cancelImport">Cancelar</button>');
+  }
+  return modeBanner() + '<div class="section">' +
+    '<div class="h-row"><h2>Importar</h2><span class="sub">Desde el Sheet de ManyChat</span></div>' + body + '</div>';
+}
+
+/* ===================== CSV ===================== */
+function parseCSV(text){
+  const rows = []; let row = [], cur = "", q = false;
+  text = text.replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  /* Copiar y pegar desde Google Sheets da tabuladores, no comas. */
+  const head = text.split("\n")[0] || "";
+  const SEP = (head.split("\t").length > head.split(",").length) ? "\t" : ",";
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(q){
+      if(c === '"'){ if(text[i+1] === '"'){ cur += '"'; i++; } else q = false; }
+      else cur += c;
+    } else {
+      if(c === '"') q = true;
+      else if(c === SEP){ row.push(cur); cur = ""; }
+      else if(c === "\n"){ row.push(cur); rows.push(row); row = []; cur = ""; }
+      else cur += c;
+    }
+  }
+  if(cur.length || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ""));
+}
+function guessMap(headers){
+  const map = {}; FIELDS.forEach(f => map[f.k] = "");
+  const find = (...pats) => {
+    for(let i=0;i<headers.length;i++){
+      const h = headers[i].toLowerCase().trim();
+      if(pats.some(p => h.includes(p))) return String(i);
+    }
+    return "";
+  };
+  map.handle = find("handle","username","user name","instagram","usuario","ig ","@");
+  map.fuente = find("fuente","source","origen","canal","flow");
+  map.nombre = find("nombre","name","first");
+  map.meta   = find("meta","goal","objetivo");
+  map.dolor  = find("dolor","pain","problema");
+  return map;
+}
+function normDate(s){
+  if(!s) return null;
+  s = String(s).trim();
+  let mm = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(mm) return mm[1]+"-"+mm[2]+"-"+mm[3];
+  mm = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if(mm) return mm[3]+"-"+pad(mm[2])+"-"+pad(mm[1]);
+  const d = new Date(s);
+  if(!isNaN(d.getTime())) return iso(d);
+  return null;
+}
+function leadsToCSV(){
+  const cols = ["handle","nombre","fuente","entry","block","respondio","respondioAt","propuesta","propuestaAt",
+    "agendo","agendoAt","callDate","show","cierre","cierreAt","oferta","importe","objecion","estado","meta","dolor","comentarios"];
+  const head = ["Handle","Nombre","Fuente","Fecha entrada","Bloque","Respondió","Fecha respondió","Propuesta","Fecha propuesta",
+    "Fecha agendada","Fecha agendó","Fecha llamada","Show","Cierre","Fecha cierre","Oferta","Importe","Objeción","Estado","Meta","Dolor","Comentarios"];
+  const q = v => { const s = v===null||v===undefined?"":String(v); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+  const lines = [head.join(",")];
+  LEADS.forEach(l => lines.push(cols.map(c => {
+    let v = l[c];
+    if(c === "handle") v = "@"+l.handle;
+    if(v === true) v = "Sí"; if(v === false) v = "No";
+    return q(v);
+  }).join(",")));
+  return lines.join("\n");
+}
+async function doExport(){
+  const csv = leadsToCSV();
+  const dl = await claude.use("downloads");
+  if(!dl){ toast("La descarga no está disponible en esta vista."); return; }
+  try{
+    await dl.save({ filename:"blueprint-leads-"+todayStr()+".csv", data:csv });
+    toast("CSV guardado.");
+  }catch(e){
+    if(e && e.code === "declined") return;
+    toast("No se pudo descargar el CSV.");
+  }
+}
+
+/* ===================== exportar ===================== */
+/* El .xlsx sale con la misma forma que el Sheet original de tu cliente:
+   Leads, Toques, Diario y Dashboard. Son valores, no fórmulas: es una foto. */
+const SI = v => v === true ? "Sí" : v === false ? "No" : "";
+function rangoDias(){
+  const fechas = [];
+  LEADS.forEach(l => { if(l.entry) fechas.push(l.entry); if(l.touchedAt) fechas.push(l.touchedAt); });
+  Object.keys((TOUCHDAYS && TOUCHDAYS.dias) || TOUCHDAYS || {}).forEach(d => fechas.push(d));
+  if(!fechas.length) return [todayStr()];
+  let ini = fechas.sort()[0], fin = todayStr();
+  if(ini > fin) ini = fin;
+  const out = []; let d = ini;
+  for(let i=0; i<400 && d <= fin; i++){ out.push(d); d = addDays(d,1); }
+  return out;
+}
+function hojaLeads(){
+  const rows = [
+    ["REGISTRO DE LEADS"],
+    ["Exportado de BLUEPRINT CRM el "+todayStr()+". Una fila por lead. Valores, no fórmulas."],
+    ["IDENTIDAD",null,null,null,null,null,null,"BLUEPRINT",null,null,null,null,"OPERACIONES",null,null,null,null,null,"VENTA"],
+    ["ID","Fecha Entrada","@Handle","Nombre","Fuente","Pieza / Ángulo","Dueño","Bloque alcanzado",
+     "Meta (sus palabras)","Dolor (sus palabras)","Ya tiene / hace","Tags ManyChat","Respondió M1","A2 Propuesta",
+     "A3 Fecha agendó","Fecha llamada","Hora","A4 Show","A5 Cierre","Activo","Oferta","Importe",
+     "Objeción principal","Comentarios"]
+  ];
+  LEADS.slice().sort((a,b) => String(a.entry||"").localeCompare(String(b.entry||""))).forEach(l => {
+    rows.push([
+      l.id, l.entry || "", "@"+(l.handle||""), l.nombre || "", l.fuente || "", l.via || "", "",
+      blockOf(l), l.meta || "", l.dolor || "", l.yaHace || "",
+      (l.tags||[]).map(tagName).join(" · "),
+      SI(l.respondio), SI(l.propuesta), l.agendoAt || "", l.agendo || l.callDate || "", l.agendoHora || "",
+      SI(l.show), SI(l.cierre), l.estado === "muerto" ? "No" : "Sí",
+      l.oferta || "", (l.importe === null || l.importe === undefined || l.importe === "") ? "" : +l.importe,
+      l.objecion || "", l.comentarios || ""
+    ]);
+  });
+  return rows;
+}
+function hojaToques(){
+  const rows = [["TOQUES"],
+    ["Una línea por handle por día. De ManyChat (last_touch) y de los que anotaste a mano."],
+    [], ["Fecha","@Handle","Dueño","Origen","Nota"]];
+  const out = [];
+  LEADS.filter(l => l.touchedAt).forEach(l =>
+    out.push([l.touchedAt, "@"+(l.handle||""), "", "ManyChat", (l.tags||[]).map(tagName).join(" · ")]));
+  /* Los de a mano viven solo en el CRM: si no salieran aquí, el export mentiría. */
+  Object.keys(TOUCHMAN || {}).forEach(dia =>
+    manualEn(dia).forEach(h => out.push([dia, "@"+h, "", "A mano", ""])));
+  out.sort((a,b) => String(a[0]).localeCompare(String(b[0])) || String(a[1]).localeCompare(String(b[1])));
+  return rows.concat(out);
+}
+function diaStats(d){
+  const n = f => LEADS.filter(f).length;
+  const convos  = toquesEn(d);
+  const resp    = n(l => l.respondioAt === d);
+  const props   = n(l => l.propuestaAt === d);
+  const agendo  = n(l => l.agendoAt === d);
+  const llam    = n(l => (l.agendo || l.callDate) === d);
+  const shows   = n(l => (l.agendo || l.callDate) === d && l.show === true);
+  const cierres = n(l => l.cierreAt === d);
+  const cash    = LEADS.filter(l => l.cierreAt === d && l.cierre === true)
+                       .reduce((a,l) => a + (+l.importe||0), 0);
+  return { convos, resp, props, agendo, llam, shows, cierres, cash };
+}
+function hojaDiario(){
+  const dias = ["dom","lun","mar","mié","jue","vie","sáb"];
+  const rows = [
+    ["DIARIO"],
+    ["Meta toques/día", CFG.metaToques || 0, "Meta agendas/semana", CFG.metaAgendasSem || 0],
+    [],
+    ["FECHA",null,"CONVERSACIONES",null,null,null,null,"LLAMADAS",null,null,"CASH",null,"HÁBITOS"],
+    ["Fecha","Día","Convos","Respondió","Propuestas","Agendó","Book %","Llamadas","Shows","Cierres","Cash","","Convos OK"]
+  ];
+  rangoDias().forEach(d => {
+    const x = diaStats(d);
+    rows.push([d, dias[parseISO(d).getDay()], x.convos, x.resp, x.props, x.agendo,
+      x.convos ? +(x.agendo/x.convos).toFixed(4) : 0,
+      x.llam, x.shows, x.cierres, x.cash, "", x.convos >= (CFG.metaToques||0) ? "OK" : ""]);
+  });
+  return rows;
+}
+function hojaDashboard(){
+  const meses = {};
+  LEADS.forEach(l => {
+    const m = String(l.entry || "").slice(0,7);
+    if(!m) return;
+    const o = meses[m] || (meses[m] = {leads:0,resp:0,props:0,agen:0,llam:0,shows:0,cierres:0,cash:0});
+    o.leads++;
+    if(l.respondio) o.resp++;
+    if(l.propuesta) o.props++;
+    if(l.agendo || l.pendingBook) o.agen++;
+    if(l.agendo && l.agendo <= todayStr()) o.llam++;
+    if(l.show === true) o.shows++;
+    if(l.cierre === true){ o.cierres++; o.cash += (+l.importe||0); }
+  });
+  const r4 = (a,b) => b ? +(a/b).toFixed(4) : 0;
+  const rows = [
+    ["DASHBOARD MENSUAL"],
+    ["Agrupado por Fecha Entrada del lead — el mismo criterio que 'Por cohorte' en la app."],
+    ["MES","APERTURA",null,null,"CONVERSIÓN",null,null,null,null,"LLAMADAS",null,null,null,null,"CASH"],
+    ["Mes","Leads","Respondió","% Resp","Propuestas","% Prop","Agendó","% Agenda","DM→Book",
+     "Llamadas","Shows","% Show","Cierres","% Cierre","Cash","AOV"]
+  ];
+  Object.keys(meses).sort().forEach(m => {
+    const o = meses[m];
+    rows.push([m, o.leads, o.resp, r4(o.resp,o.leads), o.props, r4(o.props,o.leads),
+      o.agen, r4(o.agen,o.props), r4(o.agen,o.leads),
+      o.llam, o.shows, r4(o.shows,o.llam), o.cierres, r4(o.cierres,o.shows),
+      o.cash, o.cierres ? +(o.cash/o.cierres).toFixed(2) : 0]);
+  });
+  return rows;
+}
+
+/* --- Escritor de .xlsx propio ---------------------------------------------
+   Un .xlsx es un ZIP con XML adentro. Lo armamos a mano (unas 90 líneas) en vez
+   de cargar una librería de 900 KB desde un CDN: así el artifact es autónomo y
+   la exportación funciona aunque el CDN esté caído o bloqueado. */
+const XML_ESC = t => String(t).replace(/[&<>"']/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"})[c]);
+function colName(i){ let s=""; i++; while(i>0){ const r=(i-1)%26; s=String.fromCharCode(65+r)+s; i=(i-r-1)/26; } return s; }
+const CRCT = (() => { const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320 ^ (c>>>1) : c>>>1; t[n]=c>>>0; }
+  return t; })();
+function crc32(u8){ let c = 0xFFFFFFFF; for(let i=0;i<u8.length;i++) c = CRCT[(c ^ u8[i]) & 0xFF] ^ (c>>>8); return (c ^ 0xFFFFFFFF)>>>0; }
+function zip(files){
+  const enc = new TextEncoder();
+  const parts = [], dir = []; let off = 0;
+  const u16 = n => [n & 255, (n>>>8) & 255];
+  const u32 = n => [n & 255, (n>>>8) & 255, (n>>>16) & 255, (n>>>24) & 255];
+  files.forEach(f => {
+    const name = enc.encode(f.name), data = enc.encode(f.data), crc = crc32(data);
+    const head = [].concat([0x50,0x4B,3,4], u16(20), u16(0x800), u16(0), u16(0), u16(0),
+      u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0));
+    parts.push(new Uint8Array(head), name, data);
+    dir.push({ name, crc, len:data.length, off });
+    off += head.length + name.length + data.length;
+  });
+  const cd = [];
+  dir.forEach(d => {
+    const head = [].concat([0x50,0x4B,1,2], u16(20), u16(20), u16(0x800), u16(0), u16(0), u16(0),
+      u32(d.crc), u32(d.len), u32(d.len), u16(d.name.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(d.off));
+    cd.push(new Uint8Array(head), d.name);
+  });
+  const cdLen = cd.reduce((a,x) => a + x.length, 0);
+  const eocd = new Uint8Array([].concat([0x50,0x4B,5,6], u16(0), u16(0),
+    u16(dir.length), u16(dir.length), u32(cdLen), u32(off), u16(0)));
+  const all = parts.concat(cd, [eocd]);
+  const total = all.reduce((a,x) => a + x.length, 0);
+  const out = new Uint8Array(total); let q = 0;
+  all.forEach(x => { out.set(x, q); q += x.length; });
+  return out;
+}
+/* s=1 título, s=2 cabecera de grupo, s=3 cabecera de columna */
+function sheetXML(aoa, anchos){
+  const cols = anchos ? '<cols>' + anchos.map((w,i) =>
+    '<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join("") + '</cols>' : "";
+  const rows = aoa.map((row, r) => {
+    const st = r === 0 ? 1 : (r === 2 || r === 3 || r === 4) ? 3 : 0;
+    const cells = (row||[]).map((v, c) => {
+      if(v === null || v === undefined || v === "") return "";
+      const ref = colName(c) + (r+1);
+      const sa = st ? ' s="'+st+'"' : "";
+      return (typeof v === "number" && isFinite(v))
+        ? '<c r="'+ref+'"'+sa+'><v>'+v+'</v></c>'
+        : '<c r="'+ref+'"'+sa+' t="inlineStr"><is><t xml:space="preserve">'+XML_ESC(v)+'</t></is></c>';
+    }).join("");
+    return cells ? '<row r="'+(r+1)+'">'+cells+'</row>' : "";
+  }).join("");
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    cols + '<sheetData>' + rows + '</sheetData></worksheet>';
+}
+function buildXlsx(hojas){
+  const n = hojas.length;
+  const rel = i => 'rId'+(i+1);
+  const files = [
+    { name:"[Content_Types].xml", data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+      hojas.map((_,i) => '<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join("") +
+      '</Types>' },
+    { name:"_rels/.rels", data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+      '</Relationships>' },
+    { name:"xl/workbook.xml", data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
+      hojas.map((h,i) => '<sheet name="'+XML_ESC(h.nombre)+'" sheetId="'+(i+1)+'" r:id="'+rel(i)+'"/>').join("") +
+      '</sheets></workbook>' },
+    { name:"xl/_rels/workbook.xml.rels", data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      hojas.map((_,i) => '<Relationship Id="'+rel(i)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>').join("") +
+      '<Relationship Id="rId'+(n+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+      '</Relationships>' },
+    { name:"xl/styles.xml", data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<fonts count="3"><font><sz val="11"/><name val="Calibri"/></font>' +
+      '<font><b/><sz val="14"/><name val="Calibri"/></font>' +
+      '<font><b/><sz val="11"/><name val="Calibri"/></font></fonts>' +
+      '<fills count="3"><fill><patternFill patternType="none"/></fill>' +
+      '<fill><patternFill patternType="gray125"/></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFDCE9F5"/><bgColor indexed="64"/></patternFill></fill></fills>' +
+      '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+      '<cellXfs count="4">' +
+        '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+        '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+        '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+        '<xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>' +
+      '</cellXfs>' +
+      '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
+      '<dxfs count="0"/></styleSheet>' }
+  ];
+  hojas.forEach((h,i) => files.push({ name:"xl/worksheets/sheet"+(i+1)+".xml", data:sheetXML(h.filas, h.anchos) }));
+  return zip(files);
+}
+function libroCompleto(){
+  return [
+    { nombre:"Leads",     filas:hojaLeads(),     anchos:[16,13,20,18,17,14,10,14,26,26,22,24,12,12,14,13,8,9,9,8,14,11,20,30] },
+    { nombre:"Toques",    filas:hojaToques(),    anchos:[13,20,10,10,30] },
+    { nombre:"Diario",    filas:hojaDiario(),    anchos:[12,7,9,11,12,9,9,11,8,9,12,4,11] },
+    { nombre:"Dashboard", filas:hojaDashboard(), anchos:[10,8,11,9,12,9,9,11,11,10,8,9,9,10,12,11] }
+  ];
+}
+let EXPORTING = false;
+async function doExportXlsx(){
+  if(EXPORTING) return;
+  const dl = await claude.use("downloads");
+  if(!dl){ toast("La descarga no está disponible en esta vista."); return; }
+  EXPORTING = true; render();
+  try{
+    const bytes = buildXlsx(libroCompleto());
+    await dl.save({ filename:"blueprint-crm-"+todayStr()+".xlsx", data:new Blob([bytes]) });
+    toast("Excel guardado.");
+  }catch(e){
+    if(!(e && e.code === "declined")) toast("No se pudo armar el Excel. Baja el CSV como respaldo.");
+  }
+  EXPORTING = false; render();
+}
+
+function viewExportar(){
+  const conCierre = LEADS.filter(l => l.cierre === true).length;
+  const conToque  = LEADS.filter(l => l.touchedAt).length;
+  const dias = rangoDias().length;
+  const cash = LEADS.filter(l => l.cierre === true).reduce((a,l) => a + (+l.importe||0), 0);
+  return modeBanner() + '<div class="section">' +
+    '<div class="h-row"><h2>Exportar</h2><span class="sub">Una foto de toda la data, con la forma del Sheet original</span></div>' +
+    '<div class="stats" style="margin-bottom:18px">' +
+      '<div class="stat"><div class="k">Leads</div><div class="v">'+LEADS.length+'</div><div class="d">filas en Leads</div></div>' +
+      '<div class="stat"><div class="k">Toques</div><div class="v">'+conToque+'</div><div class="d">filas en Toques</div></div>' +
+      '<div class="stat"><div class="k">Días</div><div class="v">'+dias+'</div><div class="d">filas en Diario</div></div>' +
+      '<div class="stat good"><div class="k">Cash total</div><div class="v">'+money2(cash)+'</div><div class="d">'+conCierre+' cierres</div></div>' +
+    '</div>' +
+    '<div class="card pad">' +
+      '<p class="eyebrow">Excel · 4 pestañas</p>' +
+      '<p class="helptext" style="margin-bottom:12px">Mismas pestañas y mismas columnas que el CRM en Sheets que usaba tu cliente: <b>Leads</b>, <b>Toques</b>, <b>Diario</b> y <b>Dashboard</b>. Va con valores calculados, no con fórmulas, así que abre igual en Excel, Numbers o Google Sheets.</p>' +
+      '<button class="btn primary" data-act="exportXlsx"'+(EXPORTING?" disabled":"")+'>'+(EXPORTING?"Armando…":"Descargar Excel")+'</button>' +
+    '</div>' +
+    '<div style="height:18px"></div>' +
+    '<div class="card pad">' +
+      '<p class="eyebrow">CSV plano</p>' +
+      '<p class="helptext" style="margin-bottom:12px">Solo la tabla de leads, una fila por lead. Para meterlo en otra herramienta.</p>' +
+      '<button class="btn" data-act="export">Descargar CSV</button>' +
+    '</div>' +
+    '<div style="height:18px"></div>' +
+    '<p class="helptext">La app guarda todo sola en la nube. Esto es para tener una copia tuya o para mandarle el mes a tu cliente.</p>' +
+    '</div>';
+}
+
+/* ===================== drawer ===================== */
+function drawer(){
+  const host = document.getElementById("drawerHost");
+  /* el panel se reconstruye entero: guardamos su scroll para no saltar al tope */
+  const prev = document.querySelector(".drawer-body");
+  const dy = prev ? prev.scrollTop : 0;
+  const restore = () => {
+    const b = document.querySelector(".drawer-body");
+    if(b && dy) b.scrollTop = dy;
+  };
+  if(!OPEN){ host.innerHTML = ""; return; }
+  const l = LEADS.find(x => x.id === OPEN);
+  if(!l){ OPEN = null; host.innerHTML = ""; return; }
+
+  const opt = (arr, sel) => arr.map(o => '<option'+(o===sel?" selected":"")+'>'+esc(o)+'</option>').join("");
+  const booked = !!(l.agendo || l.pendingBook);
+  const st = statusOf(l);
+  const mine = ROLE === "setter";
+
+  /* El estado no se toca: lo dictan los tags de ManyChat y lo que registró el closer. */
+  const steps =
+    '<div class="verdict '+(st.cls==="good"?"ok":st.cls==="crit"?"crit":"")+'" style="' +
+      (st.cls==="cool"   ? "border-left-color:var(--cool);background:var(--cool-soft);color:var(--cool)" :
+       st.cls==="warn"   ? "border-left-color:var(--warn);background:var(--warn-soft);color:var(--warn)" :
+       st.cls==="accent" ? "border-left-color:var(--accent);background:var(--accent-soft);color:var(--accent)" :
+       st.cls===""       ? "border-left-color:var(--line-2);background:var(--surface-2);color:var(--ink-2)" : "") + '">' +
+      '<div class="t">Estado ahora · '+esc(blockOf(l))+'</div>' +
+      '<div class="m">'+esc(st.t)+'</div><div class="s">'+esc(st.d)+'</div>' +
+    '</div>' +
+    (l.tags && l.tags.length
+      ? '<div><p class="helptext" style="margin-bottom:5px">Tags en ManyChat</p>' +
+        '<div style="display:flex;gap:5px;flex-wrap:wrap">'+l.tags.map(t => '<span class="chip">'+esc(tagName(t))+'</span>').join("")+'</div></div>'
+      : '<p class="helptext">Este lead no vino de ManyChat, así que no tiene tags.</p>') +
+    (booked ? (mine ?
+      '<div class="grid2">' +
+        '<div><label class="f" for="d_agendo">Fecha de la llamada</label>' +
+          '<input type="date" id="d_agendo" data-f="agendo" value="'+(l.agendo||"")+'"></div>' +
+        '<div><label class="f" for="d_agendoHora">Hora</label>' +
+          '<input type="time" id="d_agendoHora" data-f="agendoHora" value="'+(l.agendoHora||"")+'"></div>' +
+      '</div>' +
+      (l.pendingBook ? '<p class="helptext" style="color:var(--crit)">Falta la fecha de la llamada. Sin ella no entra a la vista del closer.</p>' : "")
+      :
+      '<div><p class="eyebrow" style="margin-bottom:3px">Llamada</p>' +
+        '<p style="font-size:15px;margin:0;font-weight:600">'+esc(fmtCita(l))+'</p></div>')
+    : "");
+
+  const ventaBlock = l.agendo ?
+    '<div class="fieldset"><p class="eyebrow">Llamada · lo llena el closer</p>' +
+      '<div><label class="f" for="d_show">¿Se presentó?</label><select id="d_show" data-f="show">' +
+        '<option value=""'+(l.show===null?" selected":"")+'>Sin registrar</option>' +
+        '<option value="1"'+(l.show===true?" selected":"")+'>Vino</option>' +
+        '<option value="0"'+(l.show===false?" selected":"")+'>No vino</option></select></div>' +
+      (l.show === true ?
+        '<div class="grid2">' +
+          '<div><label class="f" for="d_cierre">¿Cerró?</label><select id="d_cierre" data-f="cierre">' +
+            '<option value=""'+(l.cierre===null?" selected":"")+'>Sin registrar</option>' +
+            '<option value="1"'+(l.cierre===true?" selected":"")+'>Pagó</option>' +
+            '<option value="0"'+(l.cierre===false?" selected":"")+'>No cerró</option></select></div>' +
+          '<div><label class="f" for="d_importe">Importe</label><input type="number" id="d_importe" data-f="importe" value="'+(l.importe||"")+'" min="0" step="25"></div>' +
+        '</div>' +
+        '<div class="grid2">' +
+          '<div><label class="f" for="d_oferta">Oferta</label><select id="d_oferta" data-f="oferta"><option value=""></option>'+opt(OFERTAS,l.oferta)+'</select></div>' +
+          '<div><label class="f" for="d_objecion">Objeción principal</label><select id="d_objecion" data-f="objecion"><option value=""></option>'+opt(OBJECIONES,l.objecion)+'</select></div>' +
+        '</div>' : "") +
+    '</div>' : "";
+
+  host.innerHTML =
+  '<div class="scrim" data-act="closeDrawer"></div>' +
+  '<div class="drawer" role="dialog" aria-label="Detalle del lead">' +
+    '<div class="drawer-head">' +
+      (l.handle ? '<h3 class="mono">'+igLink(l.handle)+'</h3>' : '<h3 class="mono">@nuevo</h3>') +
+      '<button class="btn sm ghost" data-act="closeDrawer">Cerrar</button>' +
+    '</div>' +
+    '<div class="drawer-body">' +
+      '<div class="fieldset">'+steps+'</div>' +
+
+      '<div class="fieldset"><p class="eyebrow">Identidad</p>' +
+        (EDITID ?
+          '<div class="grid2">' +
+            '<div><label class="f" for="d_handle">@Handle</label><input type="text" id="d_handle" data-f="handle" value="'+esc(l.handle)+'" class="mono"></div>' +
+            '<div><label class="f" for="d_nombre">Nombre</label><input type="text" id="d_nombre" data-f="nombre" value="'+esc(l.nombre)+'"></div>' +
+          '</div>' +
+          '<p class="helptext" style="color:var(--crit)">Cuidado: el handle es la llave que enlaza este lead con ManyChat. Si lo cambias mal, la sincronización deja de encontrarlo y te crea un duplicado.</p>'
+        :
+          '<div style="display:flex;align-items:center;gap:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px">' +
+            '<div style="flex:1;min-width:0">' +
+              '<div class="mono" style="font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+igLink(l.handle)+'</div>' +
+              '<div style="font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(l.nombre||"—")+(l.contactId?' · ID '+esc(l.contactId):'')+'</div>' +
+            '</div>' +
+            (mine ? '<button class="btn sm ghost" data-act="editId">Editar</button>' : "") +
+          '</div>'
+        ) +
+        '<div class="grid2">' +
+          '<div><label class="f" for="d_fuente">Fuente</label><select id="d_fuente" data-f="fuente">'+opt(FUENTES,l.fuente)+'</select></div>' +
+          '<div><label class="f" for="d_entry">Fecha de entrada</label><input type="date" id="d_entry" data-f="entry" value="'+(l.entry||"")+'"></div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="fieldset"><p class="eyebrow">Sus palabras · munición para cerrarlo</p>' +
+        '<p class="helptext" style="margin:-6px 0 2px">Escríbelo como te lo dijo, no lo resumas. Esto es lo que le repites en el follow-up y lo que tu cliente lee antes de la llamada. Además, cada caja que llenas sube el bloque sola.</p>' +
+        '<div><label class="f" for="d_meta">Meta <span style="color:var(--accent)">→ 01</span></label>' +
+          '<textarea id="d_meta" data-f="meta" placeholder="Qué quiere lograr, en sus palabras">'+esc(l.meta)+'</textarea></div>' +
+        '<div><label class="f" for="d_dolor">Dolor <span style="color:var(--accent)">→ 02</span></label>' +
+          '<textarea id="d_dolor" data-f="dolor" placeholder="Qué le está doliendo o frustrando ahora">'+esc(l.dolor)+'</textarea></div>' +
+        '<div><label class="f" for="d_yaHace">Ya hace <span style="color:var(--accent)">→ 03</span></label>' +
+          '<textarea id="d_yaHace" data-f="yaHace" placeholder="Qué está haciendo ya, qué ha intentado, qué tiene">'+esc(l.yaHace||"")+'</textarea></div>' +
+        '<div><label class="f" for="d_comentarios">Comentarios</label><textarea id="d_comentarios" data-f="comentarios" placeholder="Cualquier otra cosa">'+esc(l.comentarios)+'</textarea></div>' +
+      '</div>' +
+
+      ventaBlock +
+    '</div>' +
+    '<div class="drawer-foot">' +
+      (mine ? '<button class="btn danger sm" data-act="delLead">Borrar</button>' : "") +
+      '<div class="spacer" style="flex:1"></div>' +
+      '<button class="btn primary" data-act="closeDrawer">Listo</button>' +
+    '</div>' +
+  '</div>';
+  restore();
+}
+
+/* ===================== render ===================== */
+/* Al guardar un campo se vuelve a pintar todo. Sin esto el navegador pierde el
+   scroll y "la carta se sube" justo cuando terminas de escribir. */
+let SKIP_DRAWER = false;
+/* La sincronización escribe cada pocas horas y dispara un re-render. Si en ese
+   momento el closer está escribiendo un importe, reconstruir el panel le borra
+   lo que lleva tecleado — el valor no se guarda hasta que suelta el campo.
+   Mientras tenga el foco adentro, el panel no se toca. */
+function focoEnDrawer(){
+  try{
+    const a = document.activeElement;
+    return !!(a && a.closest && a.closest(".drawer"));
+  }catch(_){ return false; }
+}
+function render(){
+  if(!viewOk(VIEW)) VIEW = navs()[0].k;   // el closer no entra a las vistas del setter
+  const y = (typeof window !== "undefined" && window.scrollY) || 0;
+  renderNav();
+  const v = document.getElementById("view");
+  v.innerHTML = VIEW === "hoy" ? viewHoy()
+    : VIEW === "leads" ? viewLeads()
+    : VIEW === "llamadas" ? viewLlamadas()
+    : VIEW === "numeros" ? viewNumeros()
+    : VIEW === "exportar" ? viewExportar()
+    : viewImportar();
+  if(!SKIP_DRAWER && !focoEnDrawer()) drawer();
+  if(y && typeof window !== "undefined" && window.scrollTo) window.scrollTo(0, y);
+}
+let TOAST_T = null;
+function toast(msg){
+  const h = document.getElementById("toastHost");
+  h.innerHTML = '<div class="toast">'+esc(msg)+'</div>';
+  clearTimeout(TOAST_T);
+  TOAST_T = setTimeout(() => { h.innerHTML = ""; }, 3200);
+}
+
+/* ===================== eventos ===================== */
+function getLead(id){ return LEADS.find(l => l.id === id); }
+
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("button");
+  if(!t) return;
+
+  if(t.dataset.nav){ if(viewOk(t.dataset.nav)) VIEW = t.dataset.nav; OPEN = null; render(); window.scrollTo(0,0); return; }
+  if(t.dataset.role){
+    if(ROL_REAL !== "setter") return;     /* el rol lo manda la base */
+    ROLE = t.dataset.role; try{ localStorage.setItem(LS_ROLE, ROLE); }catch(_){}
+    VIEW = ROLE === "closer" ? "llamadas" : "hoy"; render(); return; }
+  if(t.dataset.period !== undefined && t.dataset.period !== ""){ PERIOD = Number(t.dataset.period); render(); return; }
+  if(t.dataset.countby){ COUNTBY = t.dataset.countby; render(); return; }
+  if(t.dataset.open){ OPEN = t.dataset.open; EDITID = false; drawer(); return; }
+
+  if(t.dataset.show){
+    const parts = t.dataset.show.split("|");
+    const l = getLead(parts[0]); if(!l) return;
+    l.show = parts[1] === "1"; l.showAt = l.callDate || todayStr();
+    if(l.show === false){ l.cierre = false; l.cierreAt = null; }
+    await persist(l);
+    if(l.show){ OPEN = l.id; drawer(); toast("Vino. Registra el resultado."); }
+    else toast("Marcado: no se presentó.");
+    return;
+  }
+  if(t.dataset.close){
+    const parts = t.dataset.close.split("|");
+    const l = getLead(parts[0]); if(!l) return;
+    if(parts[1] === "x"){          /* deshacer: volver a preguntar */
+      l.cierre = null; l.cierreAt = null; l.importe = null;
+      if(l.estado === "cliente") l.estado = "activo";
+      await persist(l); return;
+    }
+    l.cierre = parts[1] === "1";
+    l.cierreAt = l.callDate || todayStr();
+    /* Si hubo cierre o no-cierre, es porque la persona se presentó. */
+    if(l.show !== true){ l.show = true; l.showAt = l.callDate || todayStr(); }
+    if(l.cierre){ l.estado = "cliente"; }
+    await persist(l);
+    if(l.cierre){
+      toast("Cerró. Escribe cuánto pagó.");
+      /* el input del importe aparece en la misma fila: le damos el foco */
+      setTimeout(() => { const i = document.querySelector('[data-amount="'+l.id+'"]'); if(i) i.focus(); }, 30);
+    } else { OPEN = l.id; drawer(); toast("No cerró. Marca la objeción."); }
+    return;
+  }
+  if(t.dataset.saveamount){
+    const l = getLead(t.dataset.saveamount); if(!l) return;
+    const inp = document.querySelector('[data-amount="'+l.id+'"]');
+    const v = inp ? Number(inp.value) : 0;
+    if(!(v > 0)){ toast("Escribe el importe primero."); return; }
+    l.importe = Math.round(v*100)/100;
+    if(!l.cierreAt) l.cierreAt = l.callDate || todayStr();
+    if(l.cierre === null){ l.cierre = true; l.estado = "cliente"; }
+    await persist(l);
+    toast(money2(l.importe)+" registrado.");
+    return;
+  }
+  const act = t.dataset.act;
+  if(!act) return;
+
+  if(act === "closeDrawer"){ OPEN = null; EDITID = false; drawer(); return; }
+  if(act === "editId"){
+    if(ROLE !== "setter"){ toast("El @handle solo lo cambia el setter."); return; }
+    EDITID = true; drawer(); setTimeout(() => { const el = document.getElementById("d_nombre"); if(el) el.focus(); }, 30); return;
+  }
+  if(act === "new"){
+    /* Los leads entran solo por la sincronización de ManyChat o por Importar.
+       A mano se crean fantasmas con el handle vacío que ensucian las tasas. */
+    toast("Los leads entran desde Importar, no a mano.");
+    VIEW = "importar"; render();
+    return;
+  }
+  if(act === "delLead"){
+    /* Borrar un lead rompe el enlace con ManyChat y no se puede deshacer.
+       Es del setter, aunque el botón no esté a la vista. */
+    if(ROLE !== "setter"){ toast("Solo el setter puede borrar leads."); return; }
+    const l = getLead(OPEN); if(!l) return;
+    if(!confirm("¿Borrar @"+l.handle+"? No se puede deshacer.")) return;
+    await removeLead(l.id); OPEN = null; drawer(); toast("Lead borrado.");
+    return;
+  }
+  if(act === "startFresh"){ exitDemo(); render(); toast("Listo. Importa o añade tu primer lead."); return; }
+  if(act === "export"){ await doExport(); return; }
+
+  if(act === "parseCsv"){
+    const fileEl = document.getElementById("csvFile");
+    const pasted = (document.getElementById("csvPaste")||{}).value || "";
+    if(fileEl && fileEl.files && fileEl.files[0]){
+      const text = await fileEl.files[0].text();
+      startImport(text);
+    } else if(pasted.trim()){
+      startImport(pasted);
+    } else toast("Escoge un archivo o pega el CSV primero.");
+    return;
+  }
+  if(act === "cancelImport"){ IMPORT = null; render(); return; }
+  if(act === "doImport"){ await runImport(); return; }
+  if(act === "addToque"){
+    const inp = document.getElementById("tqHandle");
+    const r = await registrarToque(inp ? inp.value : "");
+    if(r.ok){ const i2 = document.getElementById("tqHandle"); if(i2){ i2.value = ""; i2.focus(); } }
+    toast(r.msg);
+    return;
+  }
+  if(act === "exportXlsx"){ await doExportXlsx(); return; }
+});
+
+/* Todos los tags en TRUE de esta fila, no solo el más alto. */
+function rowTags(r){
+  const stages = [], names = [];
+  (IMPORT ? IMPORT.tags : []).forEach(t => {
+    if(!isTrue(r[t.i])) return;
+    names.push(t.header);
+    if(t.stage) stages.push(t.stage);
+  });
+  return { stages, names };
+}
+/* El más avanzado — solo para etiquetar la fila en la vista previa. */
+function rowStage(r){
+  const st = rowTags(r).stages;
+  return st.length ? st.slice().sort((a,b) => etapaRank(b) - etapaRank(a))[0] : "";
+}
+function startImport(text){
+  const rows = parseCSV(text);
+  if(rows.length < 2){ toast("Ese archivo no tiene filas suficientes."); return; }
+  const headers = rows[0].map(h => String(h).trim());
+  const body = rows.slice(1);
+  const tags = [];
+  headers.forEach((h,i) => { if(isTagCol(body, i)) tags.push({ i:i, header:h, stage: guessStage(h) }); });
+  const map = guessMap(headers);
+  Object.keys(map).forEach(k => {
+    if(map[k] !== "" && tags.some(t => String(t.i) === map[k])) map[k] = "";
+  });
+  IMPORT = { headers, rows: body, map, tags };
+  render();
+}
+async function runImport(){
+  if(!IMPORT) return;
+  const { rows, map } = IMPORT;
+  const hIdx = map.handle === "" ? -1 : Number(map.handle);
+  if(hIdx < 0){ toast("Falta escoger la columna del handle."); return; }
+  const defFuente = (document.getElementById("impFuente")||{}).value || FUENTES[0];
+
+  exitDemo();
+  const existing = new Set(LEADS.map(l => norm(l.handle)));
+  const out = [];
+  rows.forEach(r => {
+    const h = norm(r[hIdx]);
+    if(!h || existing.has(h)) return;
+    existing.add(h);
+    const l = blankLead();
+    l.handle = h;
+    FIELDS.forEach(f => {
+      if(f.k === "handle") return;
+      const i = map[f.k] === "" ? -1 : Number(map[f.k]);
+      if(i < 0) return;
+      const v = String(r[i]||"").trim();
+      if(!v) return;
+      if(f.k === "fuente"){ l.fuente = FUENTES.includes(v) ? v : defFuente; }
+      else l[f.k] = v;
+    });
+    if(!FUENTES.includes(l.fuente)) l.fuente = defFuente;
+    if(!l.nombre) l.nombre = h;              // sin nombre en ManyChat → usa el username
+    const rt = rowTags(r);
+    applyTags(l, rt.stages, rt.names);       // los tags deciden dónde arranca en el embudo
+    out.push(l);
+  });
+  if(!out.length){ toast("No había nada nuevo que importar."); IMPORT = null; render(); return; }
+  await persistMany(out);
+  IMPORT = null; VIEW = "hoy"; render();
+  toast(out.length+" leads importados a la cola de hoy.");
+}
+
+/* campos del drawer + filtros + config */
+document.addEventListener("change", async (e) => {
+  const el = e.target;
+
+  if(el.dataset && el.dataset.f){
+    const l = getLead(OPEN); if(!l) return;
+    const k = el.dataset.f;
+    let v = el.value;
+    if(k === "show" || k === "cierre") v = v === "" ? null : v === "1";
+    else if(k === "importe") v = v === "" ? null : Number(v);
+    else if(k === "handle") v = norm(v);
+    else if((k === "entry" || k === "callDate" || k === "agendo" || k === "agendoAt") && v === "") v = null;
+    l[k] = v;
+    if(k === "agendo"){
+      l.callDate = v;
+      l.pendingBook = !v;
+      if(v){ l.respondio = true; l.propuesta = true; }
+    }
+    if(k === "cierre"){
+      if(v === true){ l.cierreAt = todayStr(); l.estado = "cliente"; }
+      else if(v === false){ l.cierreAt = todayStr(); }
+      else l.cierreAt = null;
+    }
+    if(k === "show"){
+      l.showAt = v === null ? null : (l.callDate || todayStr());
+      if(v === false){ l.cierre = false; l.cierreAt = todayStr(); }
+    }
+    /* Un campo de texto no cambia la forma del panel: repintarlo destruiría el
+       input al que el usuario acaba de hacer click. Solo se repinta cuando el
+       cambio sí reordena el panel. */
+    const estructural = (k === "show" || k === "cierre" || k === "agendo");
+    SKIP_DRAWER = !estructural;
+    await persist(l);
+    SKIP_DRAWER = false;
+    if(estructural) drawer();
+    return;
+  }
+
+  if(el.dataset && el.dataset.cfg){
+    const k = el.dataset.cfg;
+    let v = Number(el.value);
+    if(!isFinite(v) || v < 0) v = 0;
+    CFG[k] = el.dataset.kind === "pct" ? v/100 : v;
+    await persistCfg();
+    return;
+  }
+
+  if(el.dataset && el.dataset.map !== undefined && IMPORT){
+    IMPORT.map[el.dataset.map] = el.value; render(); return;
+  }
+  if(el.dataset && el.dataset.tag !== undefined && IMPORT){
+    const t = IMPORT.tags.find(x => String(x.i) === el.dataset.tag);
+    if(t){ t.stage = el.value; render(); }
+    return;
+  }
+  if(el.dataset && el.dataset.callhora){
+    const l = getLead(el.dataset.callhora); if(!l) return;
+    l.agendoHora = el.value || "";
+    await persist(l);
+    if(el.value) toast("Llamada a las "+fmtHora(el.value)+".");
+    return;
+  }
+  if(el.dataset && el.dataset.calldate){
+    const l = getLead(el.dataset.calldate); if(!l) return;
+    if(!el.value){ l.agendo = null; l.callDate = null; await persist(l); return; }
+    l.agendo = el.value; l.callDate = el.value; l.pendingBook = false;
+    l.respondio = true; l.propuesta = true;
+    await persist(l);
+    toast("Llamada para el "+fmtShort(el.value)+".");
+    return;
+  }
+
+  if(el.id === "festado"){ FILTERS.estado = el.value; render(); return; }
+  if(el.id === "ffuente"){ FILTERS.fuente = el.value; render(); return; }
+  if(el.id === "fbloque"){ FILTERS.bloque = el.value; render(); return; }
+});
+
+let SEARCH_T = null;
+document.addEventListener("input", (e) => {
+  if(e.target.id !== "fq") return;
+  clearTimeout(SEARCH_T);
+  const v = e.target.value;
+  SEARCH_T = setTimeout(() => {
+    FILTERS.q = v; render();
+    const el = document.getElementById("fq");
+    if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  }, 260);
+});
+
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape" && OPEN){ OPEN = null; EDITID = false; drawer(); }
+});
+
+/* ===================== Supabase ===================== */
+/* Estas dos son públicas a propósito: van en el navegador. Solas no dan acceso
+   a nada — las reglas (RLS) de la base exigen estar logueado. */
+const SB_URL = "https://acfazifclubppmjiuvgm.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjZmF6aWZjbHVicHBtaml1dmdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4MTI5NDAsImV4cCI6MjEwNDM4ODk0MH0.ONld376wuMCkbF_StY30_utNJqdQryFCW2s0y8EfyS4";
+
+const SB = window.supabase.createClient(SB_URL, SB_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true }
+});
+
+/* El rol REAL, el que dice la base. ROLE es solo la vista que se está mirando. */
+let ROL_REAL = "closer";
+
+/* ---------- adaptador ----------
+   Expone exactamente la misma forma que la app ya usaba, así los 10 sitios que
+   tocan la base siguen escritos igual. Debajo habla Supabase. */
+let CANAL = 0;
+function makeDB(){
+  function escuchar(tabla, fn){
+    SB.channel("rt_" + tabla + "_" + (++CANAL))
+      .on("postgres_changes", { event:"*", schema:"public", table:tabla }, fn)
+      .subscribe();
+  }
+  return {
+    collection(nombre){
+      return {
+        doc(id){
+          return {
+            async set(obj){
+              /* UPDATE primero, INSERT solo si la fila no existe.
+                 Con .upsert() PostgREST manda INSERT..ON CONFLICT, y eso hace que
+                 Postgres evalue la politica de INSERT (solo setter). El closer se
+                 estrellaba ahi y nunca llegaba al trigger guardia_leads, asi que no
+                 podia ni marcar cierre ni escribir importe. Por la ruta de UPDATE
+                 si pasa, y el trigger sigue decidiendo que campos puede tocar. */
+              const ts = new Date().toISOString();
+              const { data: actualizado, error: eUpd } = await SB.from(nombre)
+                .update({ data:obj, updated_at:ts }).eq("id", id).select("id");
+              if(eUpd) throw eUpd;
+              if(actualizado && actualizado.length) return;
+              const { error: eIns } = await SB.from(nombre)
+                .insert({ id, data:obj, updated_at:ts });
+              if(eIns) throw eIns;
+            },
+            async delete(){
+              const { error } = await SB.from(nombre).delete().eq("id", id);
+              if(error) throw error;
+            }
+          };
+        },
+        onSnapshot(cb, onErr){
+          const traer = async () => {
+            const { data, error } = await SB.from(nombre).select("id,data");
+            if(error){ if(onErr) onErr(error); return; }
+            cb({ docs: (data || []).map(r => ({ id:r.id, data: () => r.data })) });
+          };
+          traer(); escuchar(nombre, traer);
+        }
+      };
+    },
+    doc(ruta){
+      const leer = async () => {
+        const { data, error } = await SB.from("kv").select("data").eq("key", ruta).maybeSingle();
+        if(error) throw error;
+        return { exists: !!data, data: () => (data ? data.data : {}) };
+      };
+      return {
+        get: leer,
+        async set(obj){
+          const { error } = await SB.from("kv")
+            .upsert({ key:ruta, data:obj, updated_at:new Date().toISOString() });
+          if(error) throw error;
+        },
+        onSnapshot(cb, onErr){
+          const traer = () => leer().then(cb).catch(e => { if(onErr) onErr(e); });
+          traer(); escuchar("kv", traer);
+        }
+      };
+    }
+  };
+}
+
+/* La app pide sus capacidades con claude.use(). Se las damos nosotros:
+   la base sale de Supabase y la descarga es un blob normal del navegador.
+   Así los sitios que llaman a claude.use() no cambian ni una letra. */
+const DBADAPTER = makeDB();
+const claude = {
+  async use(qué){
+    if(qué === "db") return DBADAPTER;
+    if(qué === "downloads") return {
+      async save({ filename, data }){
+        const blob = data instanceof Blob ? data : new Blob([data]);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        return { status:"saved" };
+      }
+    };
+    return null;
+  }
+};
+
+/* ===================== login ===================== */
+const gate = document.getElementById("gate");
+const gErr = document.getElementById("gErr");
+
+function errLogin(msg){
+  gErr.textContent = msg; gErr.hidden = false;
+}
+
+document.getElementById("gateForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById("gBtn");
+  gErr.hidden = true; btn.disabled = true; btn.textContent = "Entrando…";
+  const { error } = await SB.auth.signInWithPassword({
+    email: (document.getElementById("gEmail").value || "").trim(),
+    password: document.getElementById("gPass").value || ""
+  });
+  btn.disabled = false; btn.textContent = "Entrar";
+  if(error){
+    errLogin(/invalid/i.test(error.message || "")
+      ? "Correo o contraseña incorrectos."
+      : (error.message || "No se pudo entrar."));
+    return;
+  }
+  location.reload();
+});
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest('[data-act="salir"]');
+  if(!b) return;
+  SB.auth.signOut().then(() => location.reload());
+});
+
+function mostrarLogin(){
+  const lg = document.getElementById("gateLogo");
+  if(lg && LOGO) lg.src = LOGO;
+  gate.hidden = false;
+  document.querySelector(".app").style.display = "none";
+  document.getElementById("nav").style.display = "none";
+}
+
+/* ===================== arranque ===================== */
+MODE = "demo";
+LEADS = demoLeads();
+
+(async function boot(){
+  const { data: { session } } = await SB.auth.getSession();
+  if(!session){ mostrarLogin(); return; }
+
+  /* El rol lo dice la base, no el navegador. */
+  const { data: perfil } = await SB.from("profiles").select("rol").eq("id", session.user.id).maybeSingle();
+  ROL_REAL = (perfil && perfil.rol === "setter") ? "setter" : "closer";
+  ROLE = ROL_REAL;
+  if(ROLE === "closer"){
+    VIEW = "llamadas";
+    const sw = document.getElementById("roleSwitch");
+    if(sw) sw.hidden = true;          /* el closer no cambia de vista */
+  }
+
+  /* Botón de salir, al lado del switch */
+  const bar = document.querySelector(".topbar-in");
+  if(bar){
+    const out = document.createElement("button");
+    out.className = "btn sm ghost logout";
+    out.dataset.act = "salir";
+    out.textContent = "Salir";
+    out.title = session.user.email || "";
+    bar.appendChild(out);
+  }
+
+  render();
+
+  DB = DBADAPTER;
+  try{
+    const cfgSnap = await DB.doc("config/settings").get();
+    if(cfgSnap.exists) CFG = Object.assign({}, DEFAULT_CFG, cfgSnap.data());
+  }catch(_){}
+
+  DB.collection("leads").onSnapshot((snap) => {
+    const docs = snap.docs.map(d => Object.assign({ id:d.id }, d.data()));
+    if(docs.length === 0 && MODE === "demo"){ LEADS = demoLeads(); }
+    else { MODE = "db"; LEADS = docs; }
+    render();
+  }, (err) => { toast(dbMsg(err)); });
+
+  DB.doc("config/settings").onSnapshot((s) => {
+    if(s.exists){ CFG = Object.assign({}, DEFAULT_CFG, s.data()); render(); }
+  }, () => {});
+
+  DB.doc("metrics/manual").onSnapshot((s) => {
+    if(s.exists){ const d = s.data() || {}; TOUCHMAN = (d.dias && typeof d.dias === "object") ? d.dias : d; render(); }
+  }, () => {});
+
+  DB.doc("metrics/touches").onSnapshot((s) => {
+    if(s.exists){
+      const d = s.data() || {};
+      TOUCHDAYS = (d.dias && typeof d.dias === "object") ? d.dias : d;
+      render();
+    }
+  }, () => {});
+})();
+</script>
+</body>
+</html>
