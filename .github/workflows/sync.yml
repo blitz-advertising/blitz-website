@@ -1,0 +1,29 @@
+name: Sincronizar ManyChat → CRM
+
+on:
+  schedule:
+    # 7am, 12pm, 4pm y 8pm hora de Puerto Rico (UTC-4)
+    - cron: "5 11,16,20,0 * * *"
+  workflow_dispatch:        # y un botón para correrla a mano cuando quieras
+
+# Que no se solapen dos corridas: escribirían encima la una de la otra.
+concurrency:
+  group: sync-crm
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Correr la sincronización
+        env:
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node sync/sync.js
