@@ -1165,6 +1165,31 @@ body::before {
   line-height: 1.78;
   color: rgba(255,255,255,0.55);
 }
+.legal-block p + p { margin-top: 16px; }
+.legal-list {
+  margin: 16px 0 0;
+  padding-left: 20px;
+  list-style: none;
+}
+.legal-list li {
+  position: relative;
+  font-size: 15px;
+  font-weight: 300;
+  line-height: 1.78;
+  color: rgba(255,255,255,0.55);
+  margin-bottom: 12px;
+}
+.legal-list li::before {
+  content: "";
+  position: absolute;
+  left: -20px;
+  top: 12px;
+  width: 5px;
+  height: 1px;
+  background: var(--blue-bright);
+}
+.legal-list li:last-child { margin-bottom: 0; }
+.legal-list strong { color: rgba(255,255,255,0.85); font-weight: 500; }
 .legal-link {
   color: var(--blue-bright);
   text-decoration: none;
