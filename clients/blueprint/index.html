@@ -1004,6 +1004,15 @@ function diasSinTocar(l){
 }
 const tocadoHoy = l => l.touchedAt === todayStr() || manualEn(todayStr()).map(norm).indexOf(norm(l.handle)) >= 0;
 
+/* Un toque a alguien archivado o ya cliente. No cuenta en las metricas —tocar a
+   un cliente no es prospeccion— pero tampoco se ignora en silencio: si le
+   volviste a poner un tag de pipeline en ManyChat, es que esa persona vuelve a
+   estar en juego. Se avisa y se ofrece devolverla. */
+function tocadoArchivado(l){
+  const seg = segmento(l);
+  return (seg === "archivo" || seg === "cliente") && tocadoHoy(l);
+}
+
 /* Prioridad para "toca hoy": manda el bloque (cuan cerca del booking) y
    dentro del mismo bloque, el que lleva mas tiempo sin respuesta.
    El umbral de "frio" es configurable porque es una regla de negocio que
@@ -1212,6 +1221,16 @@ function markAgendo(lead, fecha){
 function windowFrom(days){ return days === 0 ? "0000-01-01" : addDays(todayStr(), -(days-1)); }
 /* Leads que corrieron el embudo dentro de la app (sin el arrastre importado) */
 function REAL(){ return LEADS.filter(l => !l.seed); }
+/* Todos, archivados incluidos. Solo para detectar toques a gente fuera del
+   pipeline — para métricas se usa siempre REAL(). */
+function REAL_TODOS(){ return LEADS.slice(); }
+/* Los que SÍ están en juego: ni archivados, ni clientes, ni descartados.
+   El punto de un toque es agendar una llamada, asi que tocar a quien ya compró
+   —o a quien dijo que no— no es prospeccion y no cuenta para la meta del dia.
+   REAL() no basta: solo quita los archivados a mano. */
+function ENPIPELINE(){
+  return LEADS.filter(l => { const s = segmento(l); return s !== "archivo" && s !== "cliente"; });
+}
 function seedCount(){ return LEADS.filter(l => l.seed).length; }
 
 function metrics(days, countBy){
@@ -1299,7 +1318,7 @@ function toquesEn(dia){
   /* REAL() y no LEADS: los archivados no cuentan en ninguna metrica, y este
      numero alimenta el medidor de "toques hoy". Si se contaran aqui, el
      medidor diria 6 mientras la lista de abajo enseña 4. */
-  const tocados = REAL().filter(l => l.touchedAt === dia).map(l => norm(l.handle));
+  const tocados = ENPIPELINE().filter(l => l.touchedAt === dia).map(l => norm(l.handle));
   /* ManyChat y la app ven a la misma gente, así que ahí se toma el mayor, no la
      suma. Los de a mano son justamente los que ManyChat NO puede ver, así que
      esos sí suman — descontando a los que ya cuentan como lead trabajado. */
@@ -1563,15 +1582,14 @@ function metersHTML(){
       '<div class="track"><i class="'+(ok?"done":"")+'" style="width:'+pct+'%"></i></div>' +
       '<p class="helptext" style="margin-top:7px">'+sub+'</p>'+(extra||"")+'</div>';
   /* ManyChat no puede tocar a quien no sigue la cuenta o tiene la ventana cerrada.
-     Esos toques son reales, así que se anotan aquí a mano. */
-  const man = manualEn(T);
+     Esos toques son reales, así que se anotan aquí a mano.
+     La lista de quién llevas hoy sale en "Tocados hoy", justo debajo: aquí solo
+     va la caja de añadir, para no enseñar lo mismo dos veces. */
   const addBox = ROLE !== "setter" ? "" :
     '<div class="touchadd">' +
       '<input type="text" id="tqHandle" placeholder="@handle que tocaste" class="mono" autocomplete="off">' +
       '<button class="btn sm primary" data-act="addToque">+ toque</button>' +
-    '</div>' +
-    (man.length ? '<p class="helptext" style="margin-top:8px">A mano hoy: ' +
-      man.map(h => '<span class="chip">@'+esc(h)+'</span>').join(" ") + '</p>' : "");
+    '</div>';
   return '<div class="meters">' +
     meter("Toques hoy", "Conversaciones que tocaste hoy" + (nuevos ? " · "+nuevos+" leads nuevos" : ""),
           t, mt, Math.min(100, t/mt*100), t >= mt, addBox) +
@@ -1611,20 +1629,41 @@ function viewHoy(){
      tienes que rellenar TU, no una lista de leads que consultar. */
   const faltanFechas = sinFechaGroup(q.pendientes);
 
-  return modeBanner() + '<div class="section">' + meters + avisoTz + alerta +
+  /* Tocaste a alguien que está archivado o cerrado: probablemente le devolviste
+     un tag de pipeline en ManyChat y vuelve a estar en juego. */
+  const revividos = REAL_TODOS().filter(tocadoArchivado);
+  const avisoRevive = !revividos.length ? "" :
+    '<div class="banner"><p><b>' +
+      (revividos.length === 1
+        ? 'Tocaste a alguien que está fuera del pipeline.'
+        : 'Tocaste a '+revividos.length+' personas que están fuera del pipeline.') +
+      '</b> No cuentan como toque mientras sigan archivadas. Si volvieron a interesarse, devuélvelas: ' +
+      revividos.map(l => '<button class="linkish" data-revive="'+l.id+'">@'+esc(l.handle)+'</button>').join(" · ") +
+    '</p></div>';
+
+  return modeBanner() + '<div class="section">' + meters + avisoTz + alerta + avisoRevive +
     body + tocadosHoyHTML() + sugerenciasHTML() + faltanFechas + '</div>';
 }
 
 /* ---- lo que ya trabajaste hoy: para no repetir con 500 en la lista ---- */
 function tocadosHoyHTML(){
+  const T = todayStr();
   /* REAL() y no LEADS: los "sin historial" no son trabajo de hoy. */
-  const hechos = REAL().filter(tocadoHoy);
-  if(!hechos.length) return "";
+  const hechos = ENPIPELINE().filter(tocadoHoy);
+  /* Los toques a mano de gente que NO es lead del CRM. La caja de "+ toque"
+     existe justo para esos (ManyChat no los alcanza), y el medidor de arriba
+     los suma — asi que si no salieran aqui, el numero y la lista no cuadrarian.
+     Van sin boton porque no hay ficha que abrir. */
+  const enCRM = new Set(hechos.map(l => norm(l.handle)));
+  const sueltos = manualEn(T).filter(h => h && !enCRM.has(norm(h)));
+  const total = hechos.length + sueltos.length;
+  if(!total) return "";
   return '<section class="qgroup"><div class="qhead"><h3>Tocados hoy</h3>' +
-    '<span class="n">'+hechos.length+'</span><span class="rule"></span></div>' +
+    '<span class="n">'+total+'</span><span class="rule"></span></div>' +
     '<p class="helptext" style="margin:-4px 0 9px">Ya trabajados. No los repitas.</p>' +
-    '<div class="chiprow">' + hechos.map(l =>
-      '<button class="chip done" data-open="'+l.id+'">@'+esc(l.handle)+'</button>').join("") +
+    '<div class="chiprow">' +
+      hechos.map(l => '<button class="chip done" data-open="'+l.id+'">@'+esc(l.handle)+'</button>').join("") +
+      sueltos.map(h => '<span class="chip done" title="Anotado a mano — no está en el CRM">@'+esc(String(h).replace(/^@/,""))+'</span>').join("") +
     '</div></section>';
 }
 
@@ -2958,6 +2997,46 @@ document.addEventListener("click", async (e) => {
     else toast("Marcado: no se presentó.");
     return;
   }
+  /* Devolver al pipeline a alguien archivado o cerrado al que has vuelto a tocar.
+     Limpia el archivado Y el resultado de la llamada anterior: si vuelve, empieza
+     un ciclo nuevo. Sus notas no se tocan — lo que ya sabes de él sigue valiendo. */
+  if(t.dataset.revive){
+    if(ROLE !== "setter"){ toast("Solo el setter devuelve leads al pipeline."); return; }
+    const l = getLead(t.dataset.revive); if(!l) return;
+    const tenia = [l.seed ? "archivado" : null,
+                   l.cierre === true ? "cerrada como cliente" : null,
+                   l.cierre === false ? "marcada como no cerró" : null,
+                   (+l.importe > 0) ? money2(l.importe) : null].filter(Boolean).join(" · ");
+    /* Los tags los manda ManyChat: si el terminal sigue puesto alli, el sync lo
+       devolvera a Archivo pase lo que pase aqui. Hay que decirlo ANTES, no
+       despues, o parece que el boton no funciona. */
+    const terminal = tieneTag(l,"Tag Client") ? "Tag Client"
+                   : esNoCerro(l)             ? "Tag Not Closed"
+                   : esNoInteresado(l)        ? "Tag Not Interested" : null;
+    const ok = await confirmar({
+      titulo: "¿Devolver a @"+esc(l.handle)+" al pipeline?",
+      texto: terminal
+        ? "Se le borra el resultado anterior ("+(tenia || "archivado")+") y sus notas se conservan. " +
+          "<b>Pero en ManyChat sigue con " + terminal + "</b>, y los tags los manda ManyChat: " +
+          "el robot lo devolverá a Archivo en la próxima corrida. Quítale ese tag allí para que el cambio aguante."
+        : "Ahora mismo está fuera ("+(tenia || "archivado")+"), así que tus toques no cuentan. " +
+          "Al devolverlo vuelve a las colas y a las métricas, y se le borra el resultado de la llamada anterior. " +
+          "Sus notas se conservan.",
+      ok: terminal ? "Devolver igualmente" : "Devolver al pipeline"
+    });
+    if(!ok) return;
+    Object.assign(l, {
+      seed:false, agendo:null, agendoHora:"", agendoAt:null, callDate:null, pendingBook:false,
+      show:null, showAt:null, cierre:null, cierreAt:null, importe:null, objecion:"", estado:"activo"
+    });
+    if(!l.touchedAt) l.touchedAt = todayStr();
+    await persist(l); render();
+    toast(terminal
+      ? "@"+l.handle+" limpiado. Quítale "+terminal+" en ManyChat o volverá a Archivo."
+      : "@"+l.handle+" vuelve al pipeline. Su toque ya cuenta.");
+    return;
+  }
+
   /* Desde el aviso de arriba o desde la ficha: pedir el importe que falta. */
   if(t.dataset.askamount){
     const l = getLead(t.dataset.askamount); if(!l) return;
