@@ -782,7 +782,13 @@ const DEFAULT_CFG = {
 /* ===================== utilidades de fecha ===================== */
 const pad = n => String(n).padStart(2,"0");
 function iso(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
-function todayStr(){ return iso(new Date()); }
+/* "Hoy" es SIEMPRE el dia en Puerto Rico, de 00:00 a 23:59, sin importar desde
+   donde se abra el CRM. Con new Date() a secas se usaba la zona del navegador:
+   si el closer viaja o tiene mal la hora del portatil, los toques caian en el
+   dia equivocado y el contador no cuadraba con el del sync, que ya usa PR. */
+function todayStr(){
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Puerto_Rico" });
+}
 function parseISO(s){ const p=String(s).split("-").map(Number); return new Date(p[0],p[1]-1,p[2]); }
 function addDays(s,n){ const d=parseISO(s); d.setDate(d.getDate()+n); return iso(d); }
 function daysBetween(a,b){ return Math.round((parseISO(b)-parseISO(a))/86400000); }
