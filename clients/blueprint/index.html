@@ -541,6 +541,18 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
 .heat.cool{background:rgba(95,178,236,.09); border-color:rgba(95,178,236,.24); color:#8FC4EA}
 .heat.ice{background:rgba(140,190,235,.07); border-color:rgba(140,190,235,.20); color:#A9CCE6}
 .heat.client{background:var(--good-soft); border-color:rgba(79,214,154,.36); color:var(--good)}
+/* ---- Archivo: tinte rojo en toda la tabla ----
+   Se lee de un vistazo que nada de aqui esta en juego, sin tener que mirar
+   fila por fila. Suave a proposito: sigue habiendo que leer los datos. */
+.archivo .tablewrap{
+  border-color:rgba(255,146,128,.22);
+  background:linear-gradient(rgba(255,120,100,.055), rgba(255,120,100,.055));
+}
+.archivo tbody tr{background:rgba(255,120,100,.028)}
+.archivo tbody tr:hover{background:rgba(255,120,100,.075)}
+.archivo thead th{color:rgba(255,178,166,.72); border-bottom-color:rgba(255,146,128,.20)}
+.archivo tbody td{border-bottom-color:rgba(255,146,128,.10)}
+.archivo .linkish{color:#FFB2A6}
 .heat.dead{background:transparent; border-color:var(--line); color:var(--muted)}
 td.crit{color:var(--crit)}
 .chiprow{display:flex; flex-wrap:wrap; gap:6px}
@@ -1818,23 +1830,23 @@ function viewArchivo(){
     const s = f.q.toLowerCase();
     list = list.filter(l => (l.handle+" "+l.nombre+" "+l.meta+" "+l.dolor).toLowerCase().includes(s));
   }
-  const noCerro = list.filter(esNoCerro).sort((a,b) => (b.cierreAt||"") < (a.cierreAt||"") ? -1 : 1);
-  const noInt   = list.filter(l => !esNoCerro(l)).sort((a,b) => (b.entry||"") < (a.entry||"") ? -1 : 1);
+  /* Una sola lista, sin subgrupos: el motivo ya lo dice el emoji de cada fila,
+     asi que partirlo en "No cerraron" y "No interesados" era decir lo mismo dos
+     veces. Ordenados por lo mas reciente primero. */
+  list.sort((a,b) => {
+    const fa = a.cierreAt || a.entry || "", fb = b.cierreAt || b.entry || "";
+    return fb < fa ? -1 : 1;
+  });
   const total = enSegmento("archivo").length;
   const filtro = '<div class="filters"><input type="text" id="fq" placeholder="Buscar handle o nombre…" value="'+esc(f.q)+'"></div>';
   if(!list.length){
     return modeBanner() + '<div class="section"><div class="h-row"><h2>Archivo</h2></div>' + filtro +
-      '<div class="card empty"><h3>Archivo vacío</h3><p>Aquí caen los que dijeron que no y los que no cerraron.</p></div></div>';
+      '<div class="card empty"><h3>Archivo vacío</h3><p>Aquí caen los que dijeron que no, los que no cerraron y los que archivaste a mano.</p></div></div>';
   }
-  const bloque = (tit, arr, pista) => arr.length ?
-    '<div class="h-row" style="margin-top:22px"><h3>'+tit+'</h3><span class="sub">'+arr.length+'</span></div>' +
-    '<p class="helptext" style="margin:-4px 0 10px">'+pista+'</p>' + tablaSegmento(arr) : "";
-  return modeBanner() + '<div class="section">' +
+  return modeBanner() + '<div class="section archivo">' +
     '<div class="h-row"><h2>Archivo</h2><span class="sub">'+list.length+' de '+total+'</span></div>' +
-    '<p class="helptext" style="margin:-4px 0 12px">No se borran. Dentro de unos meses el momento puede ser otro — de aquí sale el follow-up frío.</p>' +
-    filtro +
-    bloque("No cerraron", noCerro, "Llegaron a la llamada y no compraron. Son los más cálidos del archivo: ya saben quién eres.") +
-    bloque("No interesados", noInt, "Dijeron que no antes de la llamada.") +
+    '<p class="helptext" style="margin:-4px 0 12px">No se borran. Dentro de unos meses el momento puede ser otro — de aquí sale el follow-up frío. La columna de calor dice por qué está archivado cada uno.</p>' +
+    filtro + tablaSegmento(list) +
     '</div>';
 }
 
