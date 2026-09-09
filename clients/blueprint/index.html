@@ -228,11 +228,18 @@ button{cursor:pointer}
   font-style:normal; font-family:"IBM Plex Mono",monospace; font-size:13px;
   color:var(--muted); flex:none; user-select:none;
 }
-.handlebox input{
-  flex:1; min-width:0; font-size:13px; padding:6px 9px 6px 1px;
-  background:none; border:0; border-radius:0; box-shadow:none;
+/* .touchadd delante a proposito: la regla global input[type=text] va DESPUES en
+   la hoja, y con la misma especificidad ganaba ella — el campo se quedaba con su
+   borde y su fondo dentro de la caja, y se veia una linea entre la @ y el texto. */
+.touchadd .handlebox input[type=text]{
+  flex:1; min-width:0; width:auto; font-size:13px;
+  padding:6px 9px 6px 2px; margin:0;
+  background:none; border:0; border-radius:0; box-shadow:none; outline:none;
 }
-.handlebox input:focus{border:0; box-shadow:none}
+.touchadd .handlebox input[type=text]:focus,
+.touchadd .handlebox input[type=text]:hover{
+  border:0; box-shadow:none; background:none;
+}
 .amountbox input:focus{border-color:var(--good); box-shadow:0 0 20px -3px rgba(79,214,154,.8)}
 .btn[disabled]{opacity:.45; cursor:not-allowed}
 
