@@ -310,8 +310,10 @@ label.f{display:block; font-size:11px; font-weight:600; letter-spacing:.07em; te
 }
 .meter-top .val small{font-size:13px; color:var(--muted); font-weight:600}
 .track{
-  height:9px; border-radius:99px; background:var(--bar-track); overflow:hidden;
+  height:9px; border-radius:99px; background:var(--bar-track);
   border:1px solid var(--line); box-shadow:inset 0 1px 3px rgba(0,0,0,.7);
+  /* sin overflow:hidden — recortaba el resplandor del relleno. El borde
+     redondeado del propio relleno ya lo mantiene dentro de la forma. */
 }
 .track i{
   display:block; height:100%; border-radius:99px; min-width:3px;
@@ -431,7 +433,13 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
 .fdrop.ok .pct{color:var(--good)}
 
 .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
-@media (max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
+/* Con 3 tarjetas la ultima ocupa las dos columnas que sobran, para que la fila
+   llegue hasta el borde y quede alineada con la barra de abajo. */
+.stats--3 > :last-child{grid-column:span 2}
+@media (max-width:760px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .stats--3 > :last-child{grid-column:span 2}
+}
 .stat{
   position:relative; overflow:hidden;
   background:linear-gradient(180deg, rgba(95,178,236,.06), rgba(255,255,255,0) 70%), var(--surface);
@@ -552,12 +560,20 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
 }
 .barratoques .val{font-size:19px; font-weight:700; color:var(--ink)}
 .barratoques .val small{font-size:13px; font-weight:500; color:var(--muted)}
-.barratoques .track{height:6px; background:var(--ground); border-radius:99px; overflow:hidden}
-.barratoques .track i{
-  display:block; height:100%; border-radius:99px; background:var(--brand);
-  transition:width .3s ease;
+.barratoques .track{
+  height:6px; background:var(--ground); border-radius:99px;
+  border:1px solid var(--line); box-shadow:inset 0 1px 3px rgba(0,0,0,.7);
 }
-.barratoques .track i.done{background:var(--good)}
+.barratoques .track i{
+  display:block; height:100%; border-radius:99px; min-width:3px;
+  background:var(--grad-bar); background-size:200% 100%;
+  transition:width .5s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 0 10px rgba(95,178,236,.85), 0 0 22px rgba(95,178,236,.4), inset 0 1px 0 rgba(255,255,255,.3);
+}
+.barratoques .track i.done{
+  background:linear-gradient(90deg,#1F8A5C 0%,#4FD69A 55%,#B6F5D8 100%);
+  box-shadow:0 0 10px rgba(79,214,154,.85), 0 0 22px rgba(79,214,154,.38), inset 0 1px 0 rgba(255,255,255,.3);
+}
 .barratoques.done .val{color:var(--good)}
 
 /* ---- Archivo: tinte rojo en toda la tabla ----
@@ -2021,7 +2037,7 @@ function viewLlamadas(){
   const money30 = LEADS.filter(l => l.cierre === true && l.cierreAt && l.cierreAt >= addDays(T,-29))
                         .reduce((a,l) => a + (+l.importe||0), 0);
   const head =
-    '<div class="stats" style="margin-bottom:18px">' +
+    '<div class="stats stats--3" style="margin-bottom:18px">' +
       '<div class="stat'+(c.proximas.length?" cool":"")+'"><div class="k">Confirmadas</div><div class="v">'+c.proximas.length+'</div><div class="d">con fecha y hora</div></div>' +
       /* Prospectos, no "sin confirmar": completar fechas es trabajo del setter y
          al closer no le dice nada. Lo que si le importa es cuanta gente viene
