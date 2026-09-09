@@ -541,6 +541,25 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
 .heat.cool{background:rgba(95,178,236,.09); border-color:rgba(95,178,236,.24); color:#8FC4EA}
 .heat.ice{background:rgba(140,190,235,.07); border-color:rgba(140,190,235,.20); color:#A9CCE6}
 .heat.client{background:var(--good-soft); border-color:rgba(79,214,154,.36); color:var(--good)}
+/* Barra de toques del dia — ancho completo, debajo de las tarjetas */
+.barratoques{
+  background:var(--surface); border:1px solid var(--line); border-radius:12px;
+  padding:13px 16px 15px; margin:-6px 0 18px;
+}
+.barratoques .bt-top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:9px}
+.barratoques .lab{
+  font-size:11px; font-weight:500; letter-spacing:.09em; text-transform:uppercase; color:var(--muted);
+}
+.barratoques .val{font-size:19px; font-weight:700; color:var(--ink)}
+.barratoques .val small{font-size:13px; font-weight:500; color:var(--muted)}
+.barratoques .track{height:6px; background:var(--ground); border-radius:99px; overflow:hidden}
+.barratoques .track i{
+  display:block; height:100%; border-radius:99px; background:var(--brand);
+  transition:width .3s ease;
+}
+.barratoques .track i.done{background:var(--good)}
+.barratoques.done .val{color:var(--good)}
+
 /* ---- Archivo: tinte rojo en toda la tabla ----
    Se lee de un vistazo que nada de aqui esta en juego, sin tener que mirar
    fila por fila. Suave a proposito: sigue habiendo que leer los datos. */
@@ -1503,7 +1522,11 @@ function navCounts(){
   const q = queues(), c = callQueue();
   return { hoy: q.total, leads: enSegmento("leads").length,
     interesados: enSegmento("interesados").length, archivo: enSegmento("archivo").length,
-    llamadas: c.sinFecha.length + c.porRegistrar.length + c.porVenir.length, numeros: 0, importar: 0, exportar: 0 };
+    /* El badge dice cuantas llamadas hay AGENDADAS por delante: las confirmadas
+       mas las que tienen dia pero les falta la hora. Antes sumaba tambien las
+       que ya pasaron sin registrar, asi que el numero no era "cuantas me quedan"
+       sino una mezcla de futuro y deuda pendiente. */
+    llamadas: c.proximas.length + c.sinHora.length, numeros: 0, importar: 0, exportar: 0 };
 }
 function renderNav(){
   const counts = navCounts();
@@ -1805,6 +1828,21 @@ function tablaSegmento(list, archivo){
     rows + '</tbody></table></div>';
 }
 
+/* Cuantos toques lleva el dia. El closer no necesita saber A QUIEN se tocó
+   —eso es trabajo del setter—, pero si cuanto se esta alimentando el pipeline:
+   de ahi salen sus llamadas de la semana que viene. */
+function barraToquesHTML(){
+  const t = toquesHoy(), meta = CFG.metaToques || DEFAULT_CFG.metaToques;
+  const pct = Math.min(100, meta ? (t / meta) * 100 : 0);
+  return '<div class="barratoques'+(t >= meta ? " done" : "")+'">' +
+    '<div class="bt-top">' +
+      '<span class="lab">Toques del día</span>' +
+      '<span class="val num">'+t+'<small>/'+meta+'</small></span>' +
+    '</div>' +
+    '<div class="track"><i class="'+(t >= meta ? "done" : "")+'" style="width:'+pct+'%"></i></div>' +
+  '</div>';
+}
+
 /* Por que esta archivado. En Archivo todos son archivados —eso lo dice la
    primera columna—, asi que lo que aporta aqui es el motivo. */
 function motivoChip(l){
@@ -1985,10 +2023,18 @@ function viewLlamadas(){
   const head =
     '<div class="stats" style="margin-bottom:18px">' +
       '<div class="stat'+(c.proximas.length?" cool":"")+'"><div class="k">Confirmadas</div><div class="v">'+c.proximas.length+'</div><div class="d">con fecha y hora</div></div>' +
-      '<div class="stat'+(c.sinFecha.length+c.sinHora.length?" crit":"")+'"><div class="k">Sin confirmar</div><div class="v">'+(c.sinFecha.length+c.sinHora.length)+'</div><div class="d">falta fecha u hora</div></div>' +
-      '<div class="stat'+(c.porRegistrar.length+c.porResultado.length?" warn":"")+'"><div class="k">Pendientes</div><div class="v">'+(c.porRegistrar.length+c.porResultado.length)+'</div><div class="d">resultado o $</div></div>' +
+      /* Prospectos, no "sin confirmar": completar fechas es trabajo del setter y
+         al closer no le dice nada. Lo que si le importa es cuanta gente viene
+         detras — de ahi salen sus proximas llamadas. */
+      '<div class="stat"><div class="k">Prospectos</div><div class="v">'+enSegmento("leads").length+'</div><div class="d">leads en el pipeline</div></div>' +
+      /* "Pendientes" fuera: lo que falta por registrar ya se ve abajo, en sus
+         propios grupos y con los botones para resolverlo ahí mismo. Como
+         numero suelto solo repetia lo que ya estaba a la vista. */
       '<div class="stat good"><div class="k">Cash 30 días</div><div class="v">'+money2(money30)+'</div><div class="d">por fecha de cobro</div></div>' +
-    '</div>';
+    '</div>' +
+    /* La barra va aparte, a lo ancho, no como cuarta tarjeta: meterla en la fila
+       estrecharia la del cash, que es la que el closer mira primero. */
+    barraToquesHTML();
 
   /* La alerta cubre TODA llamada pendiente, tenga hora o no. */
   const ciegas = LEADS.filter(l => municionFaltante(l).length);
