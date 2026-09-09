@@ -208,7 +208,31 @@ button{cursor:pointer}
 .amountbox{display:flex; gap:6px; align-items:center; flex-wrap:nowrap}
 .amountbox input{width:118px; border-color:var(--good); box-shadow:0 0 14px -4px rgba(79,214,154,.6)}
 .touchadd{display:flex; gap:6px; align-items:center; margin-top:11px}
-.touchadd input{flex:1; min-width:0; font-size:13px; padding:6px 9px}
+/* Chip de toque a mano, con su ✕ para deshacerlo */
+.chip.manual{display:inline-flex; align-items:center; gap:5px; padding-right:5px}
+.chip.manual .quitar{
+  background:none; border:0; padding:0 2px; line-height:1; cursor:pointer;
+  font-size:14px; color:inherit; opacity:.5; transition:opacity .15s ease;
+}
+.chip.manual .quitar:hover{opacity:1; color:var(--crit)}
+
+/* La "@" pintada dentro de la caja pero fuera del campo: no se puede borrar
+   ni duplicar, y deja claro que lo que escribes va detras. */
+.handlebox{
+  flex:1; min-width:0; display:flex; align-items:center;
+  background:var(--surface-2); border:1px solid var(--line-2); border-radius:8px;
+  padding-left:9px; transition:border-color .16s ease, box-shadow .16s ease;
+}
+.handlebox:focus-within{border-color:var(--brand); box-shadow:var(--glow-sm)}
+.handlebox i{
+  font-style:normal; font-family:"IBM Plex Mono",monospace; font-size:13px;
+  color:var(--muted); flex:none; user-select:none;
+}
+.handlebox input{
+  flex:1; min-width:0; font-size:13px; padding:6px 9px 6px 1px;
+  background:none; border:0; border-radius:0; box-shadow:none;
+}
+.handlebox input:focus{border:0; box-shadow:none}
 .amountbox input:focus{border-color:var(--good); box-shadow:0 0 20px -3px rgba(79,214,154,.8)}
 .btn[disabled]{opacity:.45; cursor:not-allowed}
 
@@ -1168,6 +1192,26 @@ function exitDemo(){
   MODE = DB ? "db" : "local";
 }
 
+/* El campo del handle se limpia solo mientras escribes o pegas: fuera espacios,
+   "@" y cualquier caracter que un username de Instagram no puede llevar (solo
+   letras, numeros, punto y guion bajo). Pegar "  @Juan.Perez " deja "juan.perez".
+   Se hace aqui y no solo al guardar para que veas el handle real antes de darle. */
+function limpiaHandle(v){
+  return String(v||"").toLowerCase().replace(/[^a-z0-9._]/g, "");
+}
+document.addEventListener("input", (e) => {
+  const el = e.target;
+  if(!el || el.id !== "tqHandle") return;
+  const antes = el.value, pos = el.selectionStart;
+  const limpio = limpiaHandle(antes);
+  if(limpio === antes) return;
+  el.value = limpio;
+  /* recolocar el cursor donde estaba, descontando lo que se quito */
+  const quitados = antes.slice(0, pos).length - limpiaHandle(antes.slice(0, pos)).length;
+  const p = Math.max(0, pos - quitados);
+  try{ el.setSelectionRange(p, p); }catch(_){}
+});
+
 /* ===================== modales =====================
    Devuelven una promesa con la clave del boton pulsado (o null si se cierra).
    No se usa confirm()/prompt(): hay entornos que los bloquean en silencio. */
@@ -1638,7 +1682,12 @@ function metersHTML(){
      va la caja de añadir, para no enseñar lo mismo dos veces. */
   const addBox = ROLE !== "setter" ? "" :
     '<div class="touchadd">' +
-      '<input type="text" id="tqHandle" placeholder="@handle que tocaste" class="mono" autocomplete="off">' +
+      /* La "@" es fija y va fuera del campo: al pegar un username copiado de
+         Instagram venia con espacios, o con otra "@" delante, y se colaba en el
+         handle. Ahora el campo solo admite lo que puede llevar un username. */
+      '<span class="handlebox"><i>@</i>' +
+        '<input type="text" id="tqHandle" placeholder="handle que tocaste" class="mono" autocomplete="off" spellcheck="false">' +
+      '</span>' +
       '<button class="btn sm primary" data-act="addToque">+ toque</button>' +
     '</div>';
   return '<div class="meters">' +
@@ -1714,7 +1763,14 @@ function tocadosHoyHTML(){
     '<p class="helptext" style="margin:-4px 0 9px">Ya trabajados. No los repitas.</p>' +
     '<div class="chiprow">' +
       hechos.map(l => '<button class="chip done" data-open="'+l.id+'">@'+esc(l.handle)+'</button>').join("") +
-      sueltos.map(h => '<span class="chip done" title="Anotado a mano — no está en el CRM">@'+esc(String(h).replace(/^@/,""))+'</span>').join("") +
+      /* Los sueltos llevan una ✕: no tienen ficha que abrir, asi que sin esto un
+         handle mal pegado no habria forma de quitarlo. */
+      sueltos.map(h => {
+        const s = esc(String(h).replace(/^@/,""));
+        return '<span class="chip done manual" title="Anotado a mano — no está en el CRM">@'+s+
+          (ROLE === "setter" ? '<button class="quitar" data-quitatoque="'+s+'" title="Quitar este toque">×</button>' : "") +
+        '</span>';
+      }).join("") +
     '</div></section>';
 }
 
@@ -3130,6 +3186,18 @@ document.addEventListener("click", async (e) => {
   }
 
   /* Desde el aviso de arriba o desde la ficha: pedir el importe que falta. */
+  /* Quitar un toque anotado a mano. Hace falta porque estos no tienen ficha:
+     si pegas mal un handle, sin esto no habria forma de corregirlo. */
+  if(t.dataset.quitatoque){
+    if(ROLE !== "setter"){ toast("Solo el setter edita los toques."); return; }
+    const h = norm(t.dataset.quitatoque), T = todayStr();
+    TOUCHMAN = Object.assign({}, TOUCHMAN);
+    TOUCHMAN[T] = manualEn(T).filter(x => norm(x) !== h);
+    if(!TOUCHMAN[T].length) delete TOUCHMAN[T];
+    await persistMan();
+    toast("Toque de @"+h+" quitado.");
+    return;
+  }
   if(t.dataset.askamount){
     const l = getLead(t.dataset.askamount); if(!l) return;
     await pedirImporte(l);
