@@ -1779,22 +1779,40 @@ function calorChip(l){
   const b = blockIdx(l);
   return chip(b >= 3 ? "🔥" : b >= 1 ? "🧊" : "⚪", BLOQUES[b].slice(3), b >= 3 ? "hot" : b >= 1 ? "cool" : "");
 }
-function tablaSegmento(list){
+/* En Archivo las dos primeras columnas cambian de significado: la primera dice
+   POR QUE esta archivado, y donde iba el bloque del guion va el CALOR que tenia
+   al archivarse. El bloque no aporta nada aqui — nadie va a seguir el guion con
+   alguien que ya dijo que no. Lo util para rescatarlo es lo caliente que estaba. */
+function tablaSegmento(list, archivo){
   const rows = list.map(l => {
     const notas = [l.meta && "meta", l.dolor && "dolor", l.yaHace && "ya hace"].filter(Boolean);
     const d = diasSinTocar(l);
     const frio = estaFrio(l);
-    return '<tr><td>'+calorChip(l)+'</td>' +
+    return '<tr><td>'+(archivo
+        ? '<span class="heat dead"><i class="em">🗄️</i>Archivado</span>'
+        : calorChip(l))+'</td>' +
       '<td><button class="linkish" data-open="'+l.id+'">@'+esc(l.handle)+'</button></td>' +
       '<td>'+esc(l.nombre||"—")+'</td>' +
-      '<td>'+blockChip(l)+'</td>' +
+      '<td>'+(archivo ? motivoChip(l) : blockChip(l))+'</td>' +
       '<td class="mono'+(frio?' crit':'')+'" title="Días desde el último toque">'+(d>=999?"nunca":d===0?"hoy":d+"d")+'</td>' +
       '<td>'+(notas.length?esc(notas.join(" · ")):'<span style="color:var(--warn)">sin notas</span>')+'</td>' +
       '<td class="mono" title="'+esc(entryTitle(l.entry, l.subscribedAt))+'">'+fmtShort(l.entry)+'</td></tr>';
   }).join("");
-  return '<div class="tablewrap"><table><thead><tr><th>Calor</th><th>Handle</th><th>Nombre</th>' +
-    '<th>Bloque</th><th>Sin tocar</th><th>Notas</th><th>Entró</th></tr></thead><tbody>' +
+  return '<div class="tablewrap"><table><thead><tr>' +
+    '<th>'+(archivo ? "Estado" : "Calor")+'</th><th>Handle</th><th>Nombre</th>' +
+    '<th>'+(archivo ? "Motivo" : "Bloque")+'</th>' +
+    '<th>Sin tocar</th><th>Notas</th><th>Entró</th></tr></thead><tbody>' +
     rows + '</tbody></table></div>';
+}
+
+/* Por que esta archivado. En Archivo todos son archivados —eso lo dice la
+   primera columna—, asi que lo que aporta aqui es el motivo. */
+function motivoChip(l){
+  const chip = (em, txt, cls) => '<span class="heat '+(cls||"")+'"><i class="em">'+em+'</i>'+esc(txt)+'</span>';
+  if(esNoCerro(l))      return chip("👎🏼","No cerró","dead");
+  if(esNoInteresado(l)) return chip("🚫","No interesado","dead");
+  if(l.cierre === true || tieneTag(l,"Tag Client")) return chip("💪🏼","Cliente","client");
+  return chip("🗄️","A mano","dead");   /* lo archivaste tu, sin tag que lo explique */
 }
 
 /* ===================== render: INTERESADOS =====================
@@ -1846,7 +1864,7 @@ function viewArchivo(){
   return modeBanner() + '<div class="section archivo">' +
     '<div class="h-row"><h2>Archivo</h2><span class="sub">'+list.length+' de '+total+'</span></div>' +
     '<p class="helptext" style="margin:-4px 0 12px">No se borran. Dentro de unos meses el momento puede ser otro — de aquí sale el follow-up frío. La columna de calor dice por qué está archivado cada uno.</p>' +
-    filtro + tablaSegmento(list) +
+    filtro + tablaSegmento(list, true) +
     '</div>';
 }
 
