@@ -152,10 +152,12 @@ const nuevoId = () => "l" + Date.now().toString(36) + Math.random().toString(36)
     porDia.get(d).add(u);
     if (!ultimoToque.has(u) || d > ultimoToque.get(u)) ultimoToque.set(u, d);
   }
-  for (const [u, v] of porUser) {              // Last Touch de la pestaña Instagram
-    const d = fecha(v.fila["Last Touch"]);
-    if (d && (!ultimoToque.has(u) || d > ultimoToque.get(u))) ultimoToque.set(u, d);
-  }
+  /* La columna "Last Touch" de la pestaña Instagram NO se lee a proposito.
+     La actualizan tambien los envios automaticos de la secuencia de ManyChat,
+     asi que contarla inflaba los toques del setter con mensajes del bot: alguien
+     a quien solo le escribio la automatizacion aparecia como trabajado, y
+     "Toca hoy" lo bajaba en la cola sin que nadie hubiera hablado con el.
+     Un toque es lo que hace una persona, y eso vive en "Daily Touch". */
 
   /* Últimos 120 días, recalculado siempre desde el log entero: se autocorrige. */
   const corte = new Date(Date.now() - 120 * 864e5).toISOString().slice(0, 10);
