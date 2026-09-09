@@ -1,0 +1,26 @@
+{
+  "client": "Blueprint",
+  "project": "Q4 Campaign — Commercial + Paid Social",
+
+  "delivered": "2026-09-09",
+
+  "download": {
+    "url": "https://www.transfernow.net/dl/REPLACE-ME",
+    "expires": "2026-09-16"
+  },
+
+  "deliverables": [
+    { "item": "60s master commercial — 1080p, graded",        "qty": 1 },
+    { "item": "Ratio versions — 9:16, 1:1, 4:5",              "qty": 3 },
+    { "item": "Hook × CTA variants — 15s",               "qty": 30 },
+    { "item": "Stills — graded, product consistency held",    "qty": 50 }
+  ],
+
+  "licence": "Global",
+  "turnaround": "Rush — 3 days",
+  "revisions": { "used": 1, "total": 3 },
+
+  "note": "Masters are delivered at full bitrate. Save them locally — transfers expire and we don't archive them.",
+
+  "thumbs": []
+}

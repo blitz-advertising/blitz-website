@@ -3,13 +3,45 @@
     {
       "source": "/clients/(.*)",
       "headers": [
-        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive, nosnippet" },
-        { "key": "Referrer-Policy", "value": "no-referrer" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive, nosnippet"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
+      ]
+    },
+    {
+      "source": "/d/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive, nosnippet"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
       ]
     }
   ],
   "redirects": [
-    { "source": "/sync/:path*", "destination": "/404.html", "permanent": false },
-    { "source": "/db/:path*", "destination": "/404.html", "permanent": false }
+    {
+      "source": "/d/_template/:path*",
+      "destination": "/404.html",
+      "permanent": false
+    },
+    {
+      "source": "/sync/:path*",
+      "destination": "/404.html",
+      "permanent": false
+    },
+    {
+      "source": "/db/:path*",
+      "destination": "/404.html",
+      "permanent": false
+    }
   ]
 }
