@@ -1598,28 +1598,21 @@ function viewHoy(){
     '</b> El closer necesita meta, dolor y qué ya hace. Ábrelas y escribe lo que te dijeron: ' +
     ciegas.map(l => '@'+esc(l.handle)+' <span style="opacity:.75">(falta '+esc(municionFaltante(l).join(", "))+')</span>').join(" · ") +
     '</p></div>' : "";
-  let body = "";
-  if(!LEADS.length){
-    body = '<div class="card empty"><h3>Todavía no hay leads</h3><p>La sincronización de ManyChat corre 4 veces al día y los trae sola. También puedes importar el CSV del Sheet.</p>' +
-      '<button class="btn primary" data-nav="importar">Ir a Importar</button></div>';
-  } else if(q.total === 0){
-    body = '<div class="card empty"><h3>Nadie en la cola</h3><p>Todos los activos están agendados o cerrados.</p></div>';
-  } else {
-    const hints = {
-      4:"Ya tienen el link. Estos son los que están a un paso.",
-      3:"Ya sabes qué hacen. Falta llevarlos al link.",
-      2:"Te soltaron el dolor. Falta el filtro.",
-      1:"Te dijeron la meta. Falta el dolor.",
-      0:"Hablaste con ellos y todavía no anotaste nada. Aquí es donde está el trabajo."
-    };
-    body = q.porBloque.filter(g => g.list.length)
-      .map(g => group(g.lab, g.list, "", hints[g.i])).join("");
-  }
+  /* Hoy es el panel de accion del dia, no un indice de todo. Fuera quedaron:
+       · los grupos por bloque (Apertura, Meta, Dolor...) — eso es la pestaña Leads
+       · "Llamada agendada" — eso es la pestaña Llamadas
+     Aqui solo va lo que hay que HACER hoy: a quien tocar, a quien ya tocaste,
+     y los avisos de lo que falta por rellenar. */
+  const body = !LEADS.length
+    ? '<div class="card empty"><h3>Todavía no hay leads</h3><p>La sincronización de ManyChat corre 4 veces al día y los trae sola. También puedes importar el CSV del Sheet.</p>' +
+      '<button class="btn primary" data-nav="importar">Ir a Importar</button></div>'
+    : "";
+  /* Recordatorio: agendaron pero falta la fecha. Se queda porque es algo que
+     tienes que rellenar TU, no una lista de leads que consultar. */
   const faltanFechas = sinFechaGroup(q.pendientes);
-  const extra = group("Llamada agendada", q.agendados, "booked", "Ya no son tuyos hasta la llamada.");
 
   return modeBanner() + '<div class="section">' + meters + avisoTz + alerta +
-    tocadosHoyHTML() + sugerenciasHTML() + faltanFechas + body + extra + '</div>';
+    body + tocadosHoyHTML() + sugerenciasHTML() + faltanFechas + '</div>';
 }
 
 /* ---- lo que ya trabajaste hoy: para no repetir con 500 en la lista ---- */
