@@ -1587,15 +1587,10 @@ function viewOk(v){ return navs().some(n => n.k === v); }
 /* ===================== render: shell ===================== */
 function navCounts(){
   const q = queues(), c = callQueue();
-  /* El badge de Hoy cuenta lo que queda por hacer HOY: los que aún no has
-     tocado, del mismo grupo que sale en "Toca hoy". Antes contaba la cola
-     entera de leads pendientes — un numero de otra cosa, pegado al lado del
-     medidor de toques, que parecia medir lo mismo y no. */
-  const porTocar = LEADS.filter(l => {
-    const s = segmento(l);
-    return (s === "leads" || s === "interesados") && !tocadoHoy(l);
-  }).length;
-  return { hoy: porTocar, leads: enSegmento("leads").length,
+  /* Hoy va SIN badge. Cualquier numero ahi competia con la barra de progreso y
+     con "Tocados hoy", que ya dicen lo mismo con mas contexto. Los otros badges
+     si cuentan una lista concreta (Leads, Interesados, Archivo) y ahi encajan. */
+  return { hoy: 0, leads: enSegmento("leads").length,
     interesados: enSegmento("interesados").length, archivo: enSegmento("archivo").length,
     /* El badge dice cuantas llamadas hay AGENDADAS por delante: las confirmadas
        mas las que tienen dia pero les falta la hora. Antes sumaba tambien las
