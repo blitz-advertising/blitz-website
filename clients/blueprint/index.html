@@ -208,6 +208,31 @@ button{cursor:pointer}
 .amountbox{display:flex; gap:6px; align-items:center; flex-wrap:nowrap}
 .amountbox input{width:118px; border-color:var(--good); box-shadow:0 0 14px -4px rgba(79,214,154,.6)}
 .touchadd{display:flex; gap:6px; align-items:center; margin-top:11px}
+/* Munición en modo lectura (closer). Bloque destacado en azul: se despega del
+   resto de la ficha para que lo encuentre sin buscar, y el texto va grande
+   porque va a leerlo entero justo antes de llamar, no a escanearlo. */
+/* .fieldset solo es un separador (flex + gap), sin caja. Para que esto se lea
+   como un bloque y no como una franja de fondo pegada a los bordes, hay que
+   darle su propio padding, borde y radio. */
+.fieldset.municion{
+  background:linear-gradient(180deg, var(--accent-soft), var(--surface) 70%);
+  border:1px solid var(--accent-line);
+  border-radius:12px;
+  padding:16px 17px 18px;
+  box-shadow:0 0 0 1px rgba(95,178,236,.07), 0 10px 30px -12px rgba(0,0,0,.7);
+}
+.fieldset.municion .eyebrow{color:var(--brand-hi); margin-bottom:2px}
+.leer{display:flex; flex-direction:column; gap:16px; margin-top:2px}
+.leer-b + .leer-b{border-top:1px solid rgba(95,178,236,.18); padding-top:16px}
+.leer-k{
+  display:block; font-size:10px; font-weight:700; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--brand-hi); margin-bottom:6px;
+}
+.leer-v{
+  margin:0; font-size:17px; font-weight:500; line-height:1.5; color:#fff;
+  white-space:pre-wrap; word-break:break-word;
+}
+
 /* Chip de toque a mano, con su ✕ para deshacerlo */
 .chip.manual{display:inline-flex; align-items:center; gap:5px; padding-right:5px}
 .chip.manual .quitar{
@@ -1910,6 +1935,36 @@ function tablaSegmento(list, archivo){
     rows + '</tbody></table></div>';
 }
 
+/* La munición como se la lee el closer: grande, sin cajas de formulario y sin
+   nada que invite a escribir. Es lo que va a repetirle a la persona en la
+   llamada, asi que tiene que entrar de un vistazo. */
+function municionLeerHTML(l){
+  const campos = [
+    { k:"meta",        lab:"Meta" },
+    { k:"dolor",       lab:"Dolor" },
+    { k:"yaHace",      lab:"Ya hace" },
+    { k:"comentarios", lab:"Comentarios" }
+  ];
+  const puestos = campos.filter(c => String(l[c.k]||"").trim());
+  const faltan  = campos.slice(0,3).filter(c => !String(l[c.k]||"").trim());
+  if(!puestos.length){
+    return '<div class="fieldset"><p class="eyebrow">Sus palabras</p>' +
+      '<p class="nada">El setter todavía no ha escrito nada de esta persona. ' +
+      'Pídeselo antes de la llamada — sin meta, dolor y qué ya hace, entras a ciegas.</p></div>';
+  }
+  return '<div class="fieldset municion"><p class="eyebrow">Sus palabras · para la llamada</p>' +
+    '<div class="leer">' +
+      puestos.map(c =>
+        '<div class="leer-b"><span class="leer-k">'+c.lab+'</span>' +
+        '<p class="leer-v">'+esc(l[c.k])+'</p></div>').join("") +
+    '</div>' +
+    (faltan.length
+      ? '<p class="helptext" style="margin-top:10px;color:var(--warn)">Falta ' +
+        faltan.map(c => c.lab.toLowerCase()).join(", ") + '. Pídeselo al setter.</p>'
+      : "") +
+  '</div>';
+}
+
 /* Cuantos toques lleva el dia. El closer no necesita saber A QUIEN se tocó
    —eso es trabajo del setter—, pero si cuanto se esta alimentando el pipeline:
    de ahi salen sus llamadas de la semana que viene. */
@@ -3056,16 +3111,22 @@ function drawer(){
             '</span></div>' : "") +
       '</div>' +
 
-      '<div class="fieldset"><p class="eyebrow">Sus palabras · munición para cerrarlo</p>' +
-        '<p class="helptext" style="margin:-6px 0 2px">Escríbelo como te lo dijo, no lo resumas. Esto es lo que le repites en el follow-up y lo que tu cliente lee antes de la llamada. Además, cada caja que llenas sube el bloque sola.</p>' +
-        '<div><label class="f" for="d_meta">Meta <span style="color:var(--accent)">→ 01</span></label>' +
-          '<textarea id="d_meta" data-f="meta" placeholder="Qué quiere lograr, en sus palabras">'+esc(l.meta)+'</textarea></div>' +
-        '<div><label class="f" for="d_dolor">Dolor <span style="color:var(--accent)">→ 02</span></label>' +
-          '<textarea id="d_dolor" data-f="dolor" placeholder="Qué le está doliendo o frustrando ahora">'+esc(l.dolor)+'</textarea></div>' +
-        '<div><label class="f" for="d_yaHace">Ya hace <span style="color:var(--accent)">→ 03</span></label>' +
-          '<textarea id="d_yaHace" data-f="yaHace" placeholder="Qué está haciendo ya, qué ha intentado, qué tiene">'+esc(l.yaHace||"")+'</textarea></div>' +
-        '<div><label class="f" for="d_comentarios">Comentarios</label><textarea id="d_comentarios" data-f="comentarios" placeholder="Cualquier otra cosa">'+esc(l.comentarios)+'</textarea></div>' +
-      '</div>' +
+      /* Al closer se le ENSEÑAN, no se le dan a editar. Antes veía los mismos
+         campos que el setter, escribía, y Postgres le rechazaba el guardado.
+         Un campo que deja teclear y luego dice que no es peor que uno que no
+         deja. Ahora los lee en grande, que es para lo que los necesita. */
+      (mine
+        ? '<div class="fieldset"><p class="eyebrow">Sus palabras · munición para cerrarlo</p>' +
+          '<p class="helptext" style="margin:-6px 0 2px">Escríbelo como te lo dijo, no lo resumas. Esto es lo que le repites en el follow-up y lo que tu cliente lee antes de la llamada. Además, cada caja que llenas sube el bloque sola.</p>' +
+          '<div><label class="f" for="d_meta">Meta <span style="color:var(--accent)">→ 01</span></label>' +
+            '<textarea id="d_meta" data-f="meta" placeholder="Qué quiere lograr, en sus palabras">'+esc(l.meta)+'</textarea></div>' +
+          '<div><label class="f" for="d_dolor">Dolor <span style="color:var(--accent)">→ 02</span></label>' +
+            '<textarea id="d_dolor" data-f="dolor" placeholder="Qué le está doliendo o frustrando ahora">'+esc(l.dolor)+'</textarea></div>' +
+          '<div><label class="f" for="d_yaHace">Ya hace <span style="color:var(--accent)">→ 03</span></label>' +
+            '<textarea id="d_yaHace" data-f="yaHace" placeholder="Qué está haciendo ya, qué ha intentado, qué tiene">'+esc(l.yaHace||"")+'</textarea></div>' +
+          '<div><label class="f" for="d_comentarios">Comentarios</label><textarea id="d_comentarios" data-f="comentarios" placeholder="Cualquier otra cosa">'+esc(l.comentarios)+'</textarea></div>' +
+        '</div>'
+        : municionLeerHTML(l)) +
 
       ventaBlock +
     '</div>' +
