@@ -1144,6 +1144,10 @@ function saveLocal(){
   }catch(e){ toast("No se pudo guardar en este navegador."); }
 }
 
+/* Lo unico que el closer puede escribir. Tiene que coincidir con el array
+   `suyos` del trigger guardia_leads en db/schema.sql. */
+const CAMPOS_CLOSER = ["show","showAt","cierre","cierreAt","importe","oferta","objecion","estado","updatedAt"];
+
 async function persist(lead){
   lead.updatedAt = new Date().toISOString();
   /* Un toque es una conversación del setter. Que el closer registre un cierre
@@ -1153,10 +1157,41 @@ async function persist(lead){
   if(i < 0) LEADS.push(lead); else LEADS[i] = lead;
   render();
   if(MODE === "demo") return;
-  if(MODE === "db"){
-    try{ await DB.collection("leads").doc(lead.id).set(lead); }
-    catch(e){ toast(dbMsg(e)); }
-  } else saveLocal();
+  if(MODE !== "db"){ saveLocal(); return; }
+
+  try{
+    if(ROLE === "closer"){
+      /* El closer manda el lead ENTERO, y el trigger compara campo por campo.
+         Si su copia en pantalla estaba vieja —movil dormido, wifi caido, la
+         pestaña abierta desde la mañana— esa copia lleva la `meta` antigua, el
+         trigger ve un campo prohibido cambiado y RECHAZA TODO el guardado.
+         Se perdia el cierre entero por un campo que el ni siquiera toco.
+         Solucion: releer la version fresca y aplicarle SOLO sus campos. */
+      const fresco = await DB.collection("leads").doc(lead.id).get();
+      if(fresco && fresco.exists){
+        const base = Object.assign({}, fresco.data());
+        CAMPOS_CLOSER.forEach(k => { base[k] = lead[k]; });
+        await DB.collection("leads").doc(lead.id).set(base);
+        /* que la pantalla refleje lo que quedo guardado de verdad */
+        const j = LEADS.findIndex(l => l.id === lead.id);
+        if(j >= 0){ LEADS[j] = Object.assign({ id:lead.id }, base); render(); }
+        return;
+      }
+    }
+    await DB.collection("leads").doc(lead.id).set(lead);
+  }catch(e){
+    /* Si el guardado falla, la pantalla ya habia cambiado y parecia que si.
+       Ahora se avisa fuerte y se deshace, para que nadie se quede pensando
+       que registro algo que no llego a la base. */
+    toast("NO SE GUARDÓ: " + dbMsg(e));
+    try{
+      const real = await DB.collection("leads").doc(lead.id).get();
+      if(real && real.exists){
+        const j = LEADS.findIndex(l => l.id === lead.id);
+        if(j >= 0){ LEADS[j] = Object.assign({ id:lead.id }, real.data()); render(); }
+      }
+    }catch(_){}
+  }
 }
 async function persistMany(list){
   list.forEach(lead => {
@@ -1269,9 +1304,19 @@ function modal({titulo, texto, campo, botones}){
     host.innerHTML =
       '<div class="modal-bg" data-bg="1"><div class="modal" role="dialog" aria-modal="true">' +
         '<div class="modal-h"><h3>'+titulo+'</h3>'+(texto?'<p>'+texto+'</p>':'')+'</div>' +
-        (campo ? '<div class="modal-b"><input type="'+(campo.tipo||"text")+'" id="modalInput" ' +
-                 'inputmode="'+(campo.tipo==="number"?"decimal":"text")+'" ' +
-                 'placeholder="'+esc(campo.placeholder||"")+'" value="'+esc(campo.valor||"")+'"></div>' : '') +
+        (!campo ? '' : '<div class="modal-b">' +
+          (campo.tipo === "select"
+            /* desplegable cuando hay muchas opciones — con 11 objeciones, once
+               botones no caben ni se leen */
+            ? '<select id="modalInput">' +
+                (campo.placeholder ? '<option value="">'+esc(campo.placeholder)+'</option>' : '') +
+                (campo.opciones||[]).map(o =>
+                  '<option'+(o===campo.valor?' selected':'')+'>'+esc(o)+'</option>').join("") +
+              '</select>'
+            : '<input type="'+(campo.tipo||"text")+'" id="modalInput" ' +
+              'inputmode="'+(campo.tipo==="number"?"decimal":"text")+'" ' +
+              'placeholder="'+esc(campo.placeholder||"")+'" value="'+esc(campo.valor||"")+'">') +
+        '</div>') +
         '<div class="modal-f">' +
           botones.map(b => '<button class="btn '+(b.clase||"")+(b.ancho?" wide":"")+'" data-mk="'+b.k+'">'+esc(b.lab)+'</button>').join("") +
         '</div>' +
@@ -1313,6 +1358,29 @@ async function pedirImporte(l){
   if(!l.cierreAt) l.cierreAt = l.callDate || todayStr();
   await persist(l);
   toast(money2(l.importe) + " registrado.");
+  return true;
+}
+
+/* Al marcar "Not Closed" se pregunta la objecion en el acto, mientras la llamada
+   esta fresca. Si se deja para luego no se escribe nunca, y sin objeciones el
+   informe de "que mata los deals" no existe. Se puede saltar. */
+async function pedirObjecion(l){
+  const r = await modal({
+    titulo: "¿Qué lo frenó?",
+    texto: "La objeción de @"+esc(l.handle)+". Con esto sabrás qué se repite y qué hay que trabajar antes de la llamada.",
+    campo: { tipo:"select", placeholder:"Elige una…", valor:l.objecion||"", opciones:OBJECIONES },
+    botones: [
+      { k:"ok",    lab:"Guardar", clase:"primary", primario:true },
+      { k:"luego", lab:"Ahora no", clase:"ghost" }
+    ]
+  });
+  if(!r || r.accion !== "ok" || !r.valor){
+    toast("Marcado como no cerrada. La objeción queda pendiente.");
+    render(); return false;
+  }
+  l.objecion = r.valor;
+  await persist(l);
+  toast("Objeción: "+r.valor+".");
   return true;
 }
 
@@ -2048,8 +2116,8 @@ function viewArchivo(){
    verde cierra, rojo no cierra, Ver abre la ficha (ahí adentro está "no vino",
    que es un caso raro y no merece un botón en la tarjeta). */
 function resultadoBtns(l){
-  return '<button class="btn sm good" data-close="'+l.id+'|1">Cerró</button>' +
-         '<button class="btn sm crit" data-close="'+l.id+'|0">No cerró</button>' +
+  return '<button class="btn sm good" data-close="'+l.id+'|1">Closed</button>' +
+         '<button class="btn sm crit" data-close="'+l.id+'|0">Not Closed</button>' +
          '<button class="btn sm ghost" data-open="'+l.id+'">Ver</button>';
 }
 function callRow(l, kind){
@@ -2061,7 +2129,7 @@ function callRow(l, kind){
     right = resultadoBtns(l);
   } else if(kind === "cerrada"){
     tone = "done";
-    tags = '<span class="chip good">Cerró</span>';
+    tags = '<span class="chip good">Closed</span>';
     right = (+l.importe > 0)
       ? '<span class="chip good">'+money2(l.importe)+'</span>' +
         '<button class="btn sm ghost" data-open="'+l.id+'">Editar</button>'
@@ -2080,24 +2148,24 @@ function callRow(l, kind){
     tone = "late";
     tags = '<span class="chip good">Vino</span>';
     if(l.cierre === true){
-      tags += '<span class="chip good">Cerró</span>';
+      tags += '<span class="chip good">Closed</span>';
       right = '<span class="amountbox">' +
               '<input type="number" data-amount="'+l.id+'" placeholder="¿Cuánto?" min="0" step="25" ' +
               'inputmode="decimal" class="mono">' +
               '<button class="btn sm primary" data-saveamount="'+l.id+'">Guardar</button>' +
               '<button class="btn sm ghost" data-close="'+l.id+'|x" title="Deshacer">↩</button></span>';
     } else {
-      right = '<button class="btn sm good" data-close="'+l.id+'|1">Cerró</button>' +
-              '<button class="btn sm" data-close="'+l.id+'|0">No cerró</button>';
+      right = '<button class="btn sm good" data-close="'+l.id+'|1">Closed</button>' +
+              '<button class="btn sm" data-close="'+l.id+'|0">Not Closed</button>';
     }
   } else if(kind === "cerrar"){
     tone = "late";
     tags = '<span class="chip good">Vino</span>';
-    right = '<button class="btn sm good" data-close="'+l.id+'|1">Cerró</button>' +
-            '<button class="btn sm" data-close="'+l.id+'|0">No cerró</button>';
+    right = '<button class="btn sm good" data-close="'+l.id+'|1">Closed</button>' +
+            '<button class="btn sm" data-close="'+l.id+'|0">Not Closed</button>';
   } else if(kind === "importe"){
     tone = "late";
-    tags = '<span class="chip good">Cerró</span>';
+    tags = '<span class="chip good">Closed</span>';
     right = '<span class="amountbox">' +
             '<input type="number" data-amount="'+l.id+'" placeholder="¿Cuánto?" min="0" step="25" ' +
             'inputmode="decimal" class="mono">' +
@@ -3032,16 +3100,15 @@ function drawer(){
 
   const ventaBlock = l.agendo ?
     '<div class="fieldset"><p class="eyebrow">Llamada · lo llena el closer</p>' +
-      /* Un solo grupo con las tres salidas reales de una llamada. No se pregunta
-         antes si vino: si cerro o no cerro, es que vino. Y "No vino" descarta
-         las otras dos. Asi se registra en un clic en vez de dos.
-         "Cerró" abre el modal del importe, igual que desde la lista. */
+      /* Dos botones, no tres: si cerro o no cerro, es que vino. El caso de que
+         no se presentara se marca en el desplegable de abajo, que es raro y no
+         merece ocupar sitio arriba.
+         "Closed" abre el modal del importe; "Not Closed", el de la objecion. */
       (l.cierre === null && l.show !== false ?
         '<div class="resultbtns">' +
-          '<button class="btn good" data-close="'+l.id+'|1">Cerró</button>' +
-          '<button class="btn crit" data-close="'+l.id+'|0">No cerró</button>' +
-        '</div>' +
-        '<button class="btn" style="width:100%;margin-bottom:14px" data-show="'+l.id+'|0">No vino</button>'
+          '<button class="btn good" data-close="'+l.id+'|1">Closed</button>' +
+          '<button class="btn crit" data-close="'+l.id+'|0">Not Closed</button>' +
+        '</div>'
       : "") +
       (l.cierre === true && !(+l.importe > 0) ?
         '<button class="btn primary" style="width:100%;margin-bottom:12px" data-askamount="'+l.id+'">' +
@@ -3050,18 +3117,19 @@ function drawer(){
         '<option value=""'+(l.show===null?" selected":"")+'>Sin registrar</option>' +
         '<option value="1"'+(l.show===true?" selected":"")+'>Vino</option>' +
         '<option value="0"'+(l.show===false?" selected":"")+'>No vino</option></select></div>' +
+      /* Sin desplegable de "¿Cerró?": eso ya lo deciden los botones de arriba.
+         Tener las dos cosas invitaba a contradecirse entre ellas. */
       (l.show === true ?
         '<div class="grid2">' +
-          '<div><label class="f" for="d_cierre">¿Cerró?</label><select id="d_cierre" data-f="cierre">' +
-            '<option value=""'+(l.cierre===null?" selected":"")+'>Sin registrar</option>' +
-            '<option value="1"'+(l.cierre===true?" selected":"")+'>Pagó</option>' +
-            '<option value="0"'+(l.cierre===false?" selected":"")+'>No cerró</option></select></div>' +
           '<div><label class="f" for="d_importe">Importe</label><input type="number" id="d_importe" data-f="importe" value="'+(l.importe||"")+'" min="0" step="25"></div>' +
-        '</div>' +
-        '<div class="grid2">' +
           '<div><label class="f" for="d_oferta">Oferta</label><select id="d_oferta" data-f="oferta"><option value=""></option>'+opt(OFERTAS,l.oferta)+'</select></div>' +
-          '<div><label class="f" for="d_objecion">Objeción principal</label><select id="d_objecion" data-f="objecion"><option value=""></option>'+opt(OBJECIONES,l.objecion)+'</select></div>' +
-        '</div>' : "") +
+        '</div>' +
+        /* La objecion solo tiene sentido si NO cerro. Se pregunta en un modal al
+           pulsar "Not Closed"; aqui queda por si hay que corregirla despues. */
+        (l.cierre === false ?
+          '<div><label class="f" for="d_objecion">Objeción principal</label>' +
+            '<select id="d_objecion" data-f="objecion"><option value=""></option>'+opt(OBJECIONES,l.objecion)+'</select></div>' : "")
+      : "") +
     '</div>' : "";
 
   host.innerHTML =
@@ -3289,7 +3357,7 @@ document.addEventListener("click", async (e) => {
     if(l.cierre){ l.estado = "cliente"; }
     await persist(l);
     if(l.cierre) await pedirImporte(l);
-    else { OPEN = l.id; drawer(); toast("No cerró. Marca la objeción."); }
+    else await pedirObjecion(l);
     return;
   }
   if(t.dataset.saveamount){
@@ -3613,6 +3681,15 @@ function makeDB(){
               const { error: eIns } = await SB.from(nombre)
                 .insert({ id, data:obj, updated_at:ts });
               if(eIns) throw eIns;
+            },
+            /* Leer UN documento. Hacia falta para que el closer pueda releer la
+               version fresca antes de escribir y no mandar campos viejos que el
+               trigger rechazaria. */
+            async get(){
+              const { data, error } = await SB.from(nombre)
+                .select("data").eq("id", id).maybeSingle();
+              if(error) throw error;
+              return { exists: !!data, data: () => (data ? data.data : {}) };
             },
             async delete(){
               const { error } = await SB.from(nombre).delete().eq("id", id);
