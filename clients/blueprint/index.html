@@ -1622,12 +1622,17 @@ function callQueue(){
      REAL() es justo eso — todos menos los seed. */
   const LEADS = REAL();
   return {
-    /* falta la fecha de la llamada */
-    sinFecha:     LEADS.filter(l => l.pendingBook && !l.callDate),
+    /* Agendo pero le falta algo: sin dia, o con dia y sin hora. Es pendingBook a
+       secas — igual que la cola de Hoy. Antes pedia ademas !callDate, asi que al
+       escribir el dia la fila saltaba a "falta la hora", que es OTRO grupo y se
+       pinta con callRow(): el campo de la hora que tenia al lado desaparecia y
+       tocaba abrir la ficha para terminar la cita. */
+    sinFecha:     LEADS.filter(l => l.pendingBook),
     /* CONFIRMADAS: fecha Y hora, todavía sin resultado. Es la cola del closer. */
     proximas:     LEADS.filter(l => l.callDate && l.callDate >= T && l.show === null && !!l.agendoHora).sort(asc),
-    /* tienen día pero nadie puso la hora */
-    sinHora:      LEADS.filter(l => l.callDate && l.callDate >= T && l.show === null && !l.agendoHora).sort(asc),
+    /* tienen día pero nadie puso la hora. Las pendingBook ya salen arriba, con
+       sus dos campos; aqui solo quedan las que traen dia de fuera del CRM. */
+    sinHora:      LEADS.filter(l => !l.pendingBook && l.callDate && l.callDate >= T && l.show === null && !l.agendoHora).sort(asc),
     /* ya pasó el día y nadie dijo si vino */
     porRegistrar: LEADS.filter(l => l.callDate && l.callDate < T && l.show === null).sort(asc),
     /* vino: falta decir si cerró, o cerró y falta el dinero — todo en una fila */
@@ -2224,7 +2229,7 @@ function sinFechaGroup(list){
     '<div class="rows">'+list.map(l =>
       '<div class="row late" style="flex-wrap:wrap"><button class="row-main" data-open="'+l.id+'">' +
         '<span class="row-l1"><span class="h">@'+esc(l.handle)+'</span>'+(l.nombre && norm(l.nombre)!==norm(l.handle)?'<span class="n">'+esc(l.nombre)+'</span>':"")+'</span>' +
-        '<span class="row-l2"><span class="chip crit">falta la fecha</span>'+(l.seed?'<span class="chip">archivado</span>':'')+'</span></button>' +
+        '<span class="row-l2"><span class="chip crit">'+(l.agendo ? "falta la hora" : "falta la fecha")+'</span>'+(l.seed?'<span class="chip">archivado</span>':'')+'</span></button>' +
         '<span style="display:flex;gap:8px;flex:none;flex-wrap:wrap">' +
           '<span><label class="f" for="bc_'+l.id+'">Fecha de la llamada</label>' +
             '<input type="date" id="bc_'+l.id+'" data-calldate="'+l.id+'" value="'+(l.agendo||"")+'" style="width:auto"'+ro+'></span>' +
