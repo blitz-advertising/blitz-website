@@ -2195,6 +2195,23 @@ function callRow(l, kind){
     '</button><span class="row-acts">'+right+'</span></div>';
 }
 /* Las dos fechas de agenda las pone el SETTER. El closer solo las ve. */
+/* Lleva el cursor al campo de la hora de esa fila, despues de que render() haya
+   reconstruido el DOM. Se intenta varias veces porque el redibujado depende de
+   cuando conteste Supabase, y el campo puede no existir aun. */
+function enfocarHora(id){
+  let intentos = 0;
+  (function buscar(){
+    const h = document.getElementById("bh_" + id);
+    if(h && !h.disabled){
+      h.focus();
+      /* en escritorio abre el selector; en movil el teclado ya sale con el foco */
+      try{ if(h.showPicker) h.showPicker(); }catch(_){}
+      return;
+    }
+    if(++intentos < 12) setTimeout(buscar, 60);
+  })();
+}
+
 function sinFechaGroup(list){
   if(!list.length) return "";
   const mine = ROLE === "setter";
@@ -3592,6 +3609,7 @@ document.addEventListener("change", async (e) => {
     return;
   }
   /* Fecha y hora de la agenda, desde la fila de Hoy.
+     Ver enfocarHora(): tras escribir el dia, el cursor salta solo a la hora.
      La cita NO sale de "falta la fecha" hasta tener LAS DOS. Antes bastaba con
      la fecha: al escribirla, pendingBook pasaba a false, la fila saltaba de
      grupo en el mismo instante y el campo de la hora desaparecia debajo de los
@@ -3612,8 +3630,12 @@ document.addEventListener("change", async (e) => {
     l.pendingBook = !(l.agendo && l.agendoHora);
     l.respondio = true; l.propuesta = true;
     await persist(l);
-    if(l.agendoHora) toast("Agendada: "+fmtShort(el.value)+" a las "+fmtHora(l.agendoHora)+".");
-    else toast("Día puesto. Escribe la hora para confirmarla.");
+    if(l.agendoHora){ toast("Agendada: "+fmtShort(el.value)+" a las "+fmtHora(l.agendoHora)+"."); return; }
+    toast("Día puesto. Escribe la hora.");
+    /* persist() redibuja la vista entera, asi que el campo de la hora que habia
+       al lado es uno NUEVO: el de antes se destruyo y el cursor se quedo en el
+       limbo. Sin esto tocaba buscarlo con el raton o abrir la ficha. */
+    enfocarHora(l.id);
     return;
   }
 
