@@ -3,7 +3,7 @@ name: Sincronizar ManyChat → CRM
 on:
   schedule:
     # 7am, 12pm, 4pm y 8pm hora de Puerto Rico (UTC-4)
-    - cron: "5 11,16,20,0 * * *"
+    - cron: "37 11,16,20,0 * * *"
   workflow_dispatch:        # y un botón para correrla a mano cuando quieras
 
 # Que no se solapen dos corridas: escribirían encima la una de la otra.
