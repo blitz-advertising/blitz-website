@@ -66,6 +66,9 @@ declare
   -- lo único que el closer puede escribir
   suyos  text[] := array[
     'show','showAt','cierre','cierreAt','importe','oferta','objecion',
+    -- 'grabacion' es el link de la grabacion de la llamada. Lo pega el closer
+    -- porque es el unico que estuvo en ella; el setter solo lo abre.
+    'grabacion',
     'estado','updatedAt'
   ];
 begin

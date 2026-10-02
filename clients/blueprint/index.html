@@ -268,7 +268,11 @@ button{cursor:pointer}
 .amountbox input:focus{border-color:var(--good); box-shadow:0 0 20px -3px rgba(79,214,154,.8)}
 .btn[disabled]{opacity:.45; cursor:not-allowed}
 
-input[type=text],input[type=date],input[type=number],input[type=time],select,textarea{
+/* "url" va en la lista igual que los demas. Sin el, el campo de la grabacion se
+   quedaba con el estilo por defecto del navegador —caja blanca y estrecha, con
+   el ancho de 20 caracteres que trae de fabrica— en medio de un formulario
+   oscuro a lo ancho completo. */
+input[type=text],input[type=url],input[type=date],input[type=number],input[type=time],select,textarea{
   background:var(--surface-2); border:1px solid var(--line-2); border-radius:8px;
   color-scheme:dark; color:var(--ink);
   padding:7px 9px; font-size:14px; width:100%;
@@ -516,6 +520,51 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
   box-shadow:inset 0 0 26px -4px rgba(79,214,154,.45), inset 0 0 1px 1px rgba(79,214,154,.14), var(--shadow);
 }
 .stat.good::before{background:linear-gradient(90deg, transparent, rgba(79,214,154,.7) 25%, rgba(79,214,154,.7) 75%, transparent)}
+/* ---------- cierres por mes ---------- */
+.mescard{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+  box-shadow:var(--shadow); overflow:hidden; margin-bottom:12px;
+}
+.mescard.vivo{border-color:#2E7A57}
+/* La cabecera ES el boton que despliega el mes. Va a lo ancho entero para que
+   el area de click sea toda la barra y no haya que apuntar al triangulito. */
+.mescard-h{
+  display:flex; align-items:center; gap:9px; flex-wrap:wrap; width:100%;
+  padding:12px 16px; background:var(--surface-2); border:0; border-bottom:1px solid var(--line);
+  text-align:left; cursor:pointer; color:inherit;
+  transition:background .14s ease;
+}
+.mescard-h:hover{background:var(--surface-3)}
+.mescard:not(.abierto) .mescard-h{border-bottom:0}
+.mesflecha{
+  color:var(--muted); font-size:11px; flex:none; line-height:1;
+  transition:transform .16s ease; transform-origin:50% 50%;
+}
+.mescard.abierto .mesflecha{transform:rotate(90deg)}
+/* Con el mes plegado, el total sigue a la vista: es lo que se viene a mirar. */
+.messum{
+  margin-left:auto; font-family:"IBM Plex Mono",monospace; font-size:12.5px;
+  color:var(--ink-2); font-variant-numeric:tabular-nums; white-space:nowrap;
+}
+.mescard.abierto .messum{display:none}
+.mescard-h h4{
+  margin:0; font-family:"Archivo",sans-serif; font-weight:700; font-size:15.5px;
+  letter-spacing:-.02em; text-transform:uppercase;
+}
+.mesnums{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line)}
+.mesnum{padding:12px 16px; background:var(--surface)}
+.mesnum .k{font-size:10.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.mesnum .v{
+  font-family:"Archivo",sans-serif; font-weight:700; font-size:21px; letter-spacing:-.03em;
+  margin-top:4px; font-variant-numeric:tabular-nums; color:var(--ink);
+}
+.mesnum.cash .v{color:var(--good); text-shadow:0 0 18px rgba(79,214,154,.45)}
+.mesnum.com  .v{color:var(--brand-hi); text-shadow:0 0 18px rgba(95,178,236,.4)}
+.mesnum .d{font-size:11px; color:var(--muted); margin-top:2px; font-family:"IBM Plex Mono",monospace}
+.mescard table{border-top:1px solid var(--line)}
+.mescard th{position:static}
+@media (max-width:560px){ .mesnums{grid-template-columns:1fr} }
+
 .stat.good .k{color:#7FE0B4}
 .stat.good .v{text-shadow:0 0 22px rgba(79,214,154,.6); font-variant-numeric:tabular-nums}
 
@@ -879,7 +928,11 @@ const DEFAULT_CFG = {
   metaAgendasSem: 3,     // agendas por semana
   diasFrio: 4,           // días sin tocar antes de marcarlo como frío — ajústalo probando
   sugerencias: 15,       // cuántos sugerir en "Toca hoy"
-  goal: 50000, aov: 1250, closeRate: 0.30, showRate: 0.70, bookRate: 0.02, workDays: 22
+  goal: 50000, aov: 1250, closeRate: 0.30, showRate: 0.70, bookRate: 0.02, workDays: 22,
+  /* Comision del setter sobre el cash cerrado. Va en CFG y no fija en el codigo
+     para que se pueda cambiar sin tocar el archivo si cambia el acuerdo.
+     Solo el setter la edita: las reglas de la tabla kv no dejan escribir al closer. */
+  comision: 0.05
 };
 
 /* ===================== utilidades de fecha ===================== */
@@ -893,6 +946,21 @@ function todayStr(){
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/Puerto_Rico" });
 }
 function parseISO(s){ const p=String(s).split("-").map(Number); return new Date(p[0],p[1]-1,p[2]); }
+/* El mes de una fecha: "2026-10-14" -> "2026-10". Las fechas se guardan como
+   texto ISO, asi que cortar siete caracteres basta y no hay que construir un
+   Date —ni arrastrar su zona horaria— solo para saber en que mes cayo algo. */
+const mesDe = s => String(s||"").slice(0,7);
+/* El mes de hoy en Puerto Rico. Al cambiar el mes, el contador de arriba vuelve
+   a cero el dia 1 sin que nadie lo reinicie: compara contra este valor. */
+function mesActual(){ return mesDe(todayStr()); }
+/* "2026-10" -> "Octubre 2026" */
+function nombreMes(ym){
+  const p = String(ym||"").split("-");
+  const m = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+             "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const i = parseInt(p[1],10) - 1;
+  return (m[i] || "—") + " " + (p[0] || "");
+}
 function addDays(s,n){ const d=parseISO(s); d.setDate(d.getDate()+n); return iso(d); }
 function daysBetween(a,b){ return Math.round((parseISO(b)-parseISO(a))/86400000); }
 function fmtShort(s){
@@ -1010,6 +1078,12 @@ let TOUCHDAYS = {};   // { "2026-09-07": 18, ... } — lo escribe la sincronizac
    no puede tocar (no sigue la cuenta, ventana cerrada) pero con la que sí hablaste. */
 let TOUCHMAN = {};
 let EDITID = false;   // handle y nombre van bloqueados hasta que se pida editarlos
+/* Que meses de "Cierres por mes" estan desplegados. Vive aqui arriba y no en el
+   DOM porque render() reconstruye la pantalla entera cada vez que se guarda
+   algo: si el estado estuviera en un <details>, cualquier cambio en otra parte
+   del CRM cerraria los meses que tenias abiertos. Null = todavia sin decidir;
+   mesesAbiertos() lo arranca con el mes en curso abierto. */
+let MESES = null;
 
 /* ===================== lead ===================== */
 function blankLead(){
@@ -1023,6 +1097,8 @@ function blankLead(){
     callDate:null, show:null, showAt:null,
     cierre:null, cierreAt:null,
     oferta:"", importe:null, objecion:"", comentarios:"",
+    /* link de la grabacion de la llamada — lo pega el closer, el setter lo abre */
+    grabacion:"",
     estado:"activo",
     agendoHora:"", contactId:"", subscribedAt:"",
     seed:false, via:"", pendingBook:false, tags:[], touchedAt:null,
@@ -1146,7 +1222,7 @@ function saveLocal(){
 
 /* Lo unico que el closer puede escribir. Tiene que coincidir con el array
    `suyos` del trigger guardia_leads en db/schema.sql. */
-const CAMPOS_CLOSER = ["show","showAt","cierre","cierreAt","importe","oferta","objecion","estado","updatedAt"];
+const CAMPOS_CLOSER = ["show","showAt","cierre","cierreAt","importe","oferta","objecion","grabacion","estado","updatedAt"];
 
 async function persist(lead){
   lead.updatedAt = new Date().toISOString();
@@ -1524,6 +1600,33 @@ const igUrl = h => "https://www.instagram.com/" + encodeURIComponent(String(h||"
 const igLink = h => h
   ? '<a class="iglink" href="'+igUrl(h)+'" target="_blank" rel="noopener noreferrer" title="Abrir en Instagram">@'+esc(h)+'</a>'
   : '<span class="mono">—</span>';
+
+/* Devuelve la URL solo si es http o https; si no, cadena vacia.
+   Lo que se pega en el campo de la grabacion lo abre LA OTRA PERSONA. Sin este
+   filtro, un "javascript:..." pegado ahi —por error o a mala fe— se convertiria
+   en un enlace que ejecuta codigo en la sesion de quien lo pulsa. */
+function enlaceSeguro(u){
+  const s = String(u||"").trim();
+  return /^https?:\/\//i.test(s) ? s : "";
+}
+/* Nadie pega "https://" a mano. Si el link llega como "zoom.us/rec/..." se le
+   pone el protocolo delante: sin el, el navegador lo lee como una ruta de este
+   mismo sitio y el enlace acaba en una pagina que no existe. */
+function normUrl(v){
+  const s = String(v||"").trim();
+  if(!s) return "";
+  if(/^https?:\/\//i.test(s)) return s;
+  /* Si ya trae OTRO esquema (javascript:, data:, mailto:) no se le pone https
+     delante: saldria un enlace roto que encima disfraza lo que se pego. Se
+     guarda tal cual y enlaceSeguro() se niega a convertirlo en enlace. */
+  if(/^[a-z][a-z0-9+.-]*:/i.test(s)) return s;
+  return "https://" + s.replace(/^\/+/, "");
+}
+/* Acorta la URL para que quepa en una fila sin empujar el resto. */
+function urlCorta(u, max){
+  const s = String(u||"").replace(/^https?:\/\//i, "").replace(/\/$/, "");
+  return s.length > (max||38) ? s.slice(0, (max||38)-1) + "…" : s;
+}
 
 function bottleneck(m){
   const b = [];
@@ -2011,6 +2114,41 @@ function tablaSegmento(list, archivo){
 /* La munición como se la lee el closer: grande, sin cajas de formulario y sin
    nada que invite a escribir. Es lo que va a repetirle a la persona en la
    llamada, asi que tiene que entrar de un vistazo. */
+/* El link de la grabacion de la llamada.
+   Solo aparece si la persona VINO: si no se presento no hay nada que grabar, y
+   un campo vacio pidiendo una grabacion que no existe solo confunde.
+   Lo escribe el CLOSER —es el unico que estuvo en la llamada— y el setter lo
+   abre para oir como se vendio. Al setter no se le da un input: el trigger
+   guardia_leads de Postgres solo deja al closer escribir este campo, asi que
+   un input ahi seria una caja que acepta texto y luego falla al guardar. */
+function grabacionHTML(l){
+  const u = enlaceSeguro(l.grabacion);
+  const abrir = u
+    ? '<a class="iglink" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" title="'+esc(u)+'">'+esc(urlCorta(u))+'</a>'
+    : "";
+
+  if(ROLE === "closer"){
+    return '<div><label class="f" for="d_grabacion">Grabación de la llamada</label>' +
+      '<input type="url" id="d_grabacion" data-f="grabacion" value="'+esc(l.grabacion||"")+'" ' +
+        'placeholder="Pega aquí el link" inputmode="url" spellcheck="false">' +
+      '<p class="helptext" style="margin-top:5px'+(!u && l.grabacion ? ';color:var(--crit)' : '')+'">' +
+        (u ? 'Guardado: '+abrir+' — el setter ya la puede abrir.'
+           : l.grabacion
+             /* Hay algo escrito pero no es un link que se pueda abrir. Decirlo,
+                porque si no parece guardado y el setter no ve nada. */
+             ? 'Eso no es un link que se pueda abrir. Pega la dirección completa, la que empieza por https://.'
+             : 'Zoom, Meet, Fathom, Loom, Drive — cualquier link sirve. Sin esto el setter no puede oír la llamada.') +
+      '</p></div>';
+  }
+
+  return '<div><label class="f">Grabación de la llamada</label>' +
+    (u
+      ? '<div class="fixedval"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+abrir+'</span></div>'
+      : '<div class="fixedval"><span style="color:var(--muted)">Todavía no la ha subido.</span>' +
+        '<span class="lock">la sube el closer</span></div>') +
+  '</div>';
+}
+
 function municionLeerHTML(l){
   const campos = [
     { k:"meta",        lab:"Meta" },
@@ -2239,13 +2377,118 @@ function sinFechaGroup(list){
     '</div></section>';
 }
 
+/* Cierres agrupados por mes de COBRO (cierreAt), no por cuando entro el lead.
+   Una venta cobrada en octubre cuenta en octubre aunque la persona llegara en
+   julio: es el mes que se factura y sobre el que se paga la comision. */
+function cierresPorMes(){
+  const mapa = {};
+  REAL().filter(l => l.cierre === true && l.cierreAt).forEach(l => {
+    const k = mesDe(l.cierreAt);
+    if(!mapa[k]) mapa[k] = { mes:k, cash:0, leads:[] };
+    mapa[k].cash += (+l.importe||0);
+    mapa[k].leads.push(l);
+  });
+  return Object.keys(mapa).sort().reverse().map(k => {
+    const m = mapa[k];
+    m.leads.sort((a,b) => (+b.importe||0) - (+a.importe||0));
+    m.comision   = m.cash * (CFG.comision || 0);
+    m.sinImporte = m.leads.filter(l => !(+l.importe > 0)).length;
+    /* La media se saca solo sobre las ventas que TIENEN importe. Dividiendo el
+       cash entre todos los cierres, cada venta sin importe escribir tiraba la
+       media hacia abajo e inventaba un ticket medio que nadie cobro. */
+    const conImporte = m.leads.length - m.sinImporte;
+    m.aov = conImporte ? m.cash / conImporte : 0;
+    return m;
+  });
+}
+
+function mesesHTML(){
+  const meses = cierresPorMes();
+  if(!meses.length) return "";
+  const MES  = mesActual();
+  const tasa = CFG.comision || 0;
+  const pctTxt = (Math.round(tasa*1000)/10) + "%";
+  const mine = ROLE === "setter";
+
+  /* Un cliente archivado sale de REAL() y su dinero deja de contar aqui — es la
+     misma regla que usa el resto del CRM. Pero si pasa hay que decirlo: si no,
+     el total de un mes cerrado baja solo y parece un fallo. */
+  const ocultos = LEADS.filter(l => l.seed && l.cierre === true && +l.importe > 0);
+  const nota = ocultos.length
+    ? '<p class="helptext" style="margin:-4px 0 10px;color:var(--warn)">' +
+      ocultos.length + ' venta' + (ocultos.length>1?'s':'') + ' de clientes archivados no se cuenta' +
+      (ocultos.length>1?'n':'') + ' aquí (' + money(ocultos.reduce((a,l)=>a+(+l.importe||0),0)) +
+      '). Al archivar a alguien sale de todas las métricas. Si debe contar, sácalo del archivo.</p>'
+    : "";
+
+  /* La tasa la edita solo el setter: las reglas de la tabla kv no dejan escribir
+     al closer, asi que darle un input seria un campo que acepta y luego falla. */
+  const controlTasa = mine
+    ? '<div style="max-width:190px;margin:-2px 0 12px">' +
+        '<label class="f" for="cfg_comision">Comisión del setter %</label>' +
+        '<input type="number" id="cfg_comision" data-cfg="comision" data-kind="pct" value="' +
+          (Math.round(tasa*1000)/10) + '" step="0.5" min="0"></div>'
+    : '<p class="helptext" style="margin:-4px 0 10px">Comisión del setter: ' + pctTxt + ' del cash cerrado.</p>';
+
+  /* Al entrar, solo el mes en curso viene abierto: es el unico que todavia se
+     esta moviendo. Los cerrados se abren con un click y se quedan asi. */
+  if(MESES === null) MESES = { [MES]: true };
+
+  const fila = l => {
+    const u = enlaceSeguro(l.grabacion);
+    return '<tr>' +
+      '<td>' + igLink(l.handle) + '</td>' +
+      '<td style="color:var(--ink-2)">' + esc(l.oferta || "—") + '</td>' +
+      '<td class="r mono">' + (+l.importe > 0
+        ? money(l.importe)
+        : '<button class="linkish" data-askamount="'+l.id+'">falta</button>') + '</td>' +
+      '<td>' + (u
+        ? '<a class="iglink" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" title="'+esc(u)+'">grabación</a>'
+        : '<span style="color:var(--muted)">—</span>') + '</td>' +
+    '</tr>';
+  };
+
+  return '<p class="eyebrow">Cierres por mes</p>' + nota + controlTasa +
+    meses.map(m => {
+      const abierto = !!MESES[m.mes];
+      return '<div class="mescard'+(m.mes === MES ? " vivo" : "")+(abierto ? " abierto" : "")+'">' +
+        /* La cabecera es el boton: con el mes cerrado sigue enseñando el cash y
+           la comision, que es lo que se viene a mirar. Abrirlo solo hace falta
+           para ver QUIEN pago. */
+        '<button class="mescard-h" data-mes="'+esc(m.mes)+'" aria-expanded="'+abierto+'">' +
+          '<span class="mesflecha">▸</span>' +
+          '<h4>'+esc(nombreMes(m.mes))+'</h4>' +
+          (m.mes === MES ? '<span class="chip good">este mes</span>' : "") +
+          (m.sinImporte ? '<span class="chip crit">'+m.sinImporte+' sin importe</span>' : "") +
+          '<span class="messum">'+money(m.cash)+' · '+m.leads.length+' cierre'+(m.leads.length>1?'s':'')+'</span>' +
+        '</button>' +
+        (abierto ? '<div class="mesnums">' : '<div class="mesnums" hidden>') +
+          '<div class="mesnum cash"><div class="k">Cash</div><div class="v">'+money(m.cash)+'</div>' +
+            '<div class="d">cobrado en el mes</div></div>' +
+          '<div class="mesnum"><div class="k">Cierres</div><div class="v">'+m.leads.length+'</div>' +
+            '<div class="d">'+(m.aov ? money(Math.round(m.aov))+" de media" : "—")+'</div></div>' +
+          '<div class="mesnum com"><div class="k">Comisión setter</div><div class="v">'+money(m.comision)+'</div>' +
+            '<div class="d">'+pctTxt+' de '+money(m.cash)+'</div></div>' +
+        '</div>' +
+        '<div class="tablewrap" style="border:0;border-radius:0;box-shadow:none"'+(abierto?"":" hidden")+'>' +
+          '<table><thead><tr><th>Cliente</th><th>Oferta</th><th class="r">Importe</th><th>Grabación</th></tr></thead>' +
+          '<tbody>'+m.leads.map(fila).join("")+'</tbody></table></div>' +
+      '</div>';
+    }).join("");
+}
+
 function viewLlamadas(){
   const c = callQueue();
   const T = todayStr();
   /* Sin los "sin historial": ni su cash viejo cuenta ni sus llamadas de antes
      del CRM salen en la alerta de munición. Están solo en Archivo. */
   const LEADS = REAL();
-  const money30 = LEADS.filter(l => l.cierre === true && l.cierreAt && l.cierreAt >= addDays(T,-29))
+  /* Cash del MES, no de los ultimos 30 dias. La ventana movil mezclaba dos
+     meses: el dia 3 de octubre el numero todavia iba cargado de septiembre y no
+     se parecia a lo que se cobro en octubre. Ahora el 1 de cada mes arranca en
+     cero solo, porque compara contra el mes de hoy y nada mas. */
+  const MES = mesActual();
+  const cashMes = LEADS.filter(l => l.cierre === true && mesDe(l.cierreAt) === MES)
                         .reduce((a,l) => a + (+l.importe||0), 0);
   const head =
     '<div class="stats stats--3" style="margin-bottom:18px">' +
@@ -2257,7 +2500,8 @@ function viewLlamadas(){
       /* "Pendientes" fuera: lo que falta por registrar ya se ve abajo, en sus
          propios grupos y con los botones para resolverlo ahí mismo. Como
          numero suelto solo repetia lo que ya estaba a la vista. */
-      '<div class="stat good"><div class="k">Cash 30 días</div><div class="v">'+money2(money30)+'</div><div class="d">por fecha de cobro</div></div>' +
+      '<div class="stat good"><div class="k">Cash de '+esc(nombreMes(MES).split(" ")[0].toLowerCase())+'</div>' +
+        '<div class="v">'+money2(cashMes)+'</div><div class="d">este mes · vuelve a cero el día 1</div></div>' +
     '</div>' +
     /* La barra va aparte, a lo ancho, no como cuarta tarjeta: meterla en la fila
        estrecharia la del cash, que es la que el closer mira primero. */
@@ -2325,6 +2569,11 @@ function viewLlamadas(){
     grp("Agendadas · falta la hora", c.sinHora, "next", "Tienen día pero no hora, así que todavía no están confirmadas.") +
     grp("Cerradas", c.cerradas.slice(0,40), "cerrada", "Las que pagaron. Si falta el importe, escríbelo aquí — sin él, el cash y el AOV están incompletos.") +
     grp("No cerraron", c.noCerraron.slice(0,40), "nocerro", "No compraron o no se presentaron. Con la objeción marcada alimentan \"qué mata los deals\".") +
+    /* El historial de cash va aqui, al final de Llamadas, y no en Numeros: ahi
+       todo esta filtrado por periodo (7, 30, 90 dias) y un desglose por mes
+       dentro de "ultimos 7 dias" se contradice solo. Ademas el contador del mes
+       esta arriba de esta misma pantalla — el detalle vive debajo del total. */
+    (c.cerradas.length ? '<div style="height:26px"></div>' + mesesHTML() : "") +
     '</div>';
 }
 
@@ -3150,7 +3399,8 @@ function drawer(){
            pulsar "Not Closed"; aqui queda por si hay que corregirla despues. */
         (l.cierre === false ?
           '<div><label class="f" for="d_objecion">Objeción principal</label>' +
-            '<select id="d_objecion" data-f="objecion"><option value=""></option>'+opt(OBJECIONES,l.objecion)+'</select></div>' : "")
+            '<select id="d_objecion" data-f="objecion"><option value=""></option>'+opt(OBJECIONES,l.objecion)+'</select></div>' : "") +
+        grabacionHTML(l)
       : "") +
     '</div>' : "";
 
@@ -3294,6 +3544,14 @@ document.addEventListener("click", async (e) => {
     VIEW = ROLE === "closer" ? "llamadas" : "hoy"; render(); return; }
   if(t.dataset.period !== undefined && t.dataset.period !== ""){ PERIOD = Number(t.dataset.period); render(); return; }
   if(t.dataset.countby){ COUNTBY = t.dataset.countby; render(); return; }
+  /* Desplegar un mes de "Cierres por mes". render() ya devuelve el scroll a su
+     sitio, asi que abrir agosto no te manda al principio de la lista. */
+  if(t.dataset.mes){
+    if(MESES === null) MESES = {};
+    MESES[t.dataset.mes] = !MESES[t.dataset.mes];
+    render();
+    return;
+  }
   if(t.dataset.open){ OPEN = t.dataset.open; EDITID = false; drawer(); return; }
 
   if(t.dataset.show){
@@ -3336,7 +3594,9 @@ document.addEventListener("click", async (e) => {
     if(!ok) return;
     Object.assign(l, {
       seed:false, agendo:null, agendoHora:"", agendoAt:null, callDate:null, pendingBook:false,
-      show:null, showAt:null, cierre:null, cierreAt:null, importe:null, objecion:"", estado:"activo"
+      show:null, showAt:null, cierre:null, cierreAt:null, importe:null, objecion:"",
+      /* la grabacion era de la llamada que se acaba de borrar */
+      grabacion:"", estado:"activo"
     });
     if(!l.touchedAt) l.touchedAt = todayStr();
     await persist(l); render();
@@ -3455,7 +3715,7 @@ document.addEventListener("click", async (e) => {
     Object.assign(l, {
       agendo:null, agendoHora:"", agendoAt:null, callDate:null, pendingBook:false,
       show:null, showAt:null, cierre:null, cierreAt:null, importe:null,
-      objecion:"", estado:"activo"
+      objecion:"", grabacion:"", estado:"activo"
     });
     await persist(l); drawer(); render();
     toast("@"+l.handle+" vuelve a la cola.");
@@ -3565,6 +3825,7 @@ document.addEventListener("change", async (e) => {
     if(k === "show" || k === "cierre") v = v === "" ? null : v === "1";
     else if(k === "importe") v = v === "" ? null : Number(v);
     else if(k === "handle") v = norm(v);
+    else if(k === "grabacion") v = normUrl(v);
     else if((k === "entry" || k === "callDate" || k === "agendo" || k === "agendoAt") && v === "") v = null;
     l[k] = v;
     /* Igual que en la fila de Hoy: no se confirma hasta tener dia Y hora. */
@@ -3588,7 +3849,10 @@ document.addEventListener("change", async (e) => {
     /* Un campo de texto no cambia la forma del panel: repintarlo destruiría el
        input al que el usuario acaba de hacer click. Solo se repinta cuando el
        cambio sí reordena el panel. */
-    const estructural = (k === "show" || k === "cierre" || k === "agendo");
+    /* "grabacion" entra aqui aunque sea texto: el cambio solo salta al salir del
+       campo, asi que repintar no borra nada, y solo repintando se ve el enlace
+       recien guardado debajo del input. */
+    const estructural = (k === "show" || k === "cierre" || k === "agendo" || k === "grabacion");
     SKIP_DRAWER = !estructural;
     await persist(l);
     SKIP_DRAWER = false;
