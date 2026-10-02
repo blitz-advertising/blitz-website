@@ -1107,7 +1107,6 @@ let ROLE = "setter";
 let OPEN = null;              // lead id abierto en el drawer
 let FILTERS = { q:"", fuente:"", bloque:"", estado:"activo" };
 let PERIOD = 30;
-let COUNTBY = "cohorte";
 let IMPORT = null;
 let TOUCHDAYS = {};   // { "2026-09-07": 18, ... } — lo escribe la sincronización
 /* Toques a mano: { "2026-09-07": ["handle", ...] }. Para la gente que ManyChat
@@ -1552,7 +1551,13 @@ function ENPIPELINE(){
 }
 function seedCount(){ return LEADS.filter(l => l.seed).length; }
 
-function metrics(days, countBy){
+/* Un solo criterio: cada cosa cuenta por SU propia fecha, dentro de la ventana.
+   Hubo un interruptor cohorte/actividad. Se quito porque no se usaba y porque
+   el modo cohorte —que era el que salia por defecto— medía la ventana contra la
+   fecha de ENTRADA del lead: con leads de hace meses, "ultimos 30 dias" salia
+   vacio aunque hubieras cobrado ayer. Dos formas de contar en la misma pantalla
+   solo servian para no saber cual estabas leyendo. */
+function metrics(days){
   const from = windowFrom(days), to = todayStr(), T = todayStr();
   const inW = d => !!d && d >= from && d <= to;
   const m = { leads:0, resp:0, prop:0, agen:0, callsDone:0, shows:0, cierres:0,
@@ -1569,45 +1574,30 @@ function metrics(days, countBy){
   const cobrado = (lista, dentro) => lista.reduce((a,l) =>
     a + pagosDe(l).reduce((x,p) => x + ((p.cobrado && dentro(p)) ? p.importe : 0), 0), 0);
 
-  if(countBy === "cohorte"){
-    /* Cohorte agrupa por fecha de entrada, y la del arrastre es la de importación —
-       inventada. Por eso el arrastre queda fuera de este modo por completo. */
-    const LEADS = REAL();
-    const set = LEADS.filter(l => inW(l.entry));
-    m.leads = set.length;
-    m.resp = set.filter(l => l.respondio).length;
-    m.prop = set.filter(l => l.propuesta).length;
-    m.agen = set.filter(l => !!l.agendo).length;
-    const done = set.filter(l => l.callDate && l.callDate <= T);
-    m.callsDone = done.filter(l => l.show !== null).length;
-    m.pendReg   = done.filter(l => l.show === null).length;
-    m.futuras   = set.filter(l => l.callDate && l.callDate > T).length;
-    m.shows   = set.filter(l => l.show === true).length;
-    m.cierres = set.filter(l => l.cierre === true).length;
-    /* En cohorte la pregunta es "cuanto ha pagado esta tanda de leads", sin
-       recortar por fecha de cobro: lo que mide es la calidad de la fuente. */
-    m.cash      = cobrado(set, () => true);
-    m.contratos = set.filter(l => l.cierre === true).reduce((a,l) => a + valorContrato(l), 0);
-  } else {
-    /* Actividad cuenta cada evento por SU propia fecha. El arrastre entra aquí:
-       lo que le pase de hoy en adelante tiene fecha real y sí cuenta. Sus fechas
-       viejas están en null, así que se excluyen solas. La única excepción es
-       `leads`, que sale de `entry` — y esa sí es inventada para el arrastre. */
-    m.leads = REAL().filter(l => inW(l.entry)).length;
-    m.resp  = TODOS.filter(l => inW(l.respondioAt)).length;
-    m.prop  = TODOS.filter(l => inW(l.propuestaAt)).length;
-    m.agen  = TODOS.filter(l => inW(l.agendoAt)).length;
-    const done = TODOS.filter(l => l.callDate && inW(l.callDate) && l.callDate <= T);
-    m.callsDone = done.filter(l => l.show !== null).length;
-    m.pendReg   = done.filter(l => l.show === null).length;
-    m.futuras   = TODOS.filter(l => l.callDate && l.callDate > T).length;
-    m.shows   = TODOS.filter(l => l.show === true && inW(l.showAt)).length;
-    m.cierres = TODOS.filter(l => l.cierre === true && inW(l.cierreAt)).length;
-    /* Aqui si: literalmente el dinero cobrado dentro de la ventana. */
-    m.cash      = cobrado(TODOS, p => inW(p.fecha));
-    m.contratos = TODOS.filter(l => l.cierre === true && inW(l.cierreAt))
-                       .reduce((a,l) => a + valorContrato(l), 0);
-  }
+  /* El arrastre entra aquí: lo que le pase de hoy en adelante tiene fecha real y
+     sí cuenta. Sus fechas viejas están en null, así que se excluyen solas. La
+     única excepción es `leads`, que sale de `entry` — y esa sí es inventada para
+     el arrastre, por eso va sobre REAL(). */
+  m.leads = REAL().filter(l => inW(l.entry)).length;
+  m.resp  = TODOS.filter(l => inW(l.respondioAt)).length;
+  m.prop  = TODOS.filter(l => inW(l.propuestaAt)).length;
+  m.agen  = TODOS.filter(l => inW(l.agendoAt)).length;
+  const done = TODOS.filter(l => l.callDate && inW(l.callDate) && l.callDate <= T);
+  m.callsDone = done.filter(l => l.show !== null).length;
+  m.pendReg   = done.filter(l => l.show === null).length;
+  m.futuras   = TODOS.filter(l => l.callDate && l.callDate > T).length;
+  m.shows   = TODOS.filter(l => l.show === true && inW(l.showAt)).length;
+  m.cierres = TODOS.filter(l => l.cierre === true && inW(l.cierreAt)).length;
+
+  /* Literalmente lo cobrado entre hoy y N dias atras, por fecha de cobro. Con el
+     interruptor de modos esto se medía contra la fecha de ENTRADA del lead y
+     "ultimos 30 dias" salia $0 mientras "ultimos 90" salia $5.500. */
+  m.cash = cobrado(TODOS, p => inW(p.fecha));
+  /* Ventas firmadas DENTRO de la ventana. De aqui sale el ticket medio, que asi
+     habla del mismo trozo de tiempo que el dinero de al lado. */
+  const firmadas  = TODOS.filter(l => l.cierre === true && inW(l.cierreAt));
+  m.contratos     = firmadas.reduce((a,l) => a + valorContrato(l), 0);
+  m.cierresVentana = firmadas.length;
   m.rResp  = pct(m.resp, m.leads);
   m.rProp  = pct(m.prop, m.resp);
   m.rAgen  = pct(m.agen, m.prop);
@@ -1616,7 +1606,7 @@ function metrics(days, countBy){
   m.rClose = pct(m.cierres, m.shows);
   /* AOV sobre el VALOR del contrato, no sobre lo cobrado: si no, un cliente que
      va por el mes 1 de 12 hundiria el ticket medio hasta que acabara de pagar. */
-  m.aov    = m.cierres > 0 ? m.contratos / m.cierres : null;
+  m.aov    = m.cierresVentana > 0 ? m.contratos / m.cierresVentana : null;
   return m;
 }
 
@@ -3006,7 +2996,7 @@ function funnelTagsHTML(){
   return out;
 }
 function viewNumeros(){
-  const m = metrics(PERIOD, COUNTBY);
+  const m = metrics(PERIOD);
   const bn = bottleneck(m);
   const g = goalMath();
   const objs = byObjection();
@@ -3014,15 +3004,10 @@ function viewNumeros(){
 
   const periodBtns = [[7,"7 días"],[30,"30 días"],[90,"90 días"],[0,"Todo"]].map(p =>
     '<button class="btn sm'+(PERIOD===p[0]?" primary":"")+'" data-period="'+p[0]+'">'+p[1]+'</button>').join(" ");
-  const countBtns = [["cohorte","Por cohorte"],["actividad","Por actividad"]].map(c =>
-    '<button class="btn sm'+(COUNTBY===c[0]?" primary":"")+'" data-countby="'+c[0]+'">'+c[1]+'</button>').join(" ");
-
-  const countExplain = COUNTBY === "cohorte"
-    ? "Agrupa por <b>fecha de entrada del lead</b>. Un lead de agosto que cierra en octubre cuenta en agosto. Mide la calidad de la fuente. <b>Cobrado</b> aquí es todo lo que ha pagado esa tanda, sin recortar por fecha."
-    : "Agrupa por <b>la fecha de cada evento</b>. Una venta cobrada hoy cuenta hoy, aunque el lead entrara hace tres meses. Mide el mes que estás viviendo. <b>Cobrado</b> es el dinero que entró dentro del período — incluidas las cuotas de clientes que pagan mes a mes.";
+  const countExplain = "Todo cuenta por <b>la fecha en que pasó</b>. Una llamada de hoy cuenta hoy y un cobro de hoy cuenta hoy, aunque el lead entrara hace tres meses. El dinero incluye las cuotas de los que pagan mes a mes.";
 
   const sc = seedCount();
-  const seedNote = sc ? '<div class="banner info"><p><b>'+sc+' leads archivados.</b> Fuera de todas las métricas — normalmente contactos de antes del CRM o que ya no trabajas. Sus tags dicen dónde estaban, no cuándo llegaron ahí, así que no se puede reconstruir cuánto tardó cada paso.<br>Quedan fuera del modo <b>Cohorte</b>, que agrupa por fecha de entrada. Pero <b>en modo Actividad sí cuentan</b>: si uno de ellos agenda o cierra de hoy en adelante, eso tiene fecha real y entra en las tasas.</p></div>' : "";
+  const seedNote = sc ? '<div class="banner info"><p><b>'+sc+' leads archivados.</b> Clientes, descartados, o gente que salió de la secuencia en ManyChat. No arrastran sus fechas viejas a estas tasas —sus tags dicen dónde estaban, no cuándo llegaron ahí—, pero <b>lo que les pase de hoy en adelante sí cuenta</b>: si uno agenda o cierra, eso tiene fecha real y entra aquí.</p></div>' : "";
 
   const pend = m.pendReg ? '<div class="banner"><p><b>'+m.pendReg+' llamada'+(m.pendReg>1?"s":"")+' sin registrar.</b> Ya pasaron y nadie marcó si la persona vino. El show rate de abajo las excluye — no cuentan en contra tuya, pero el número está incompleto hasta que se registren.</p><span class="spacer"></span><button class="btn sm" data-nav="llamadas">Registrar</button></div>' : "";
 
@@ -3032,7 +3017,8 @@ function viewNumeros(){
       '<div class="stat"><div class="k">Show rate</div><div class="v">'+pctStr(m.rShow)+'</div><div class="d formula">show ÷ llamadas ya ocurridas</div></div>' +
       '<div class="stat"><div class="k">Close rate</div><div class="v">'+pctStr(m.rClose)+'</div><div class="d formula">cierres ÷ shows</div></div>' +
       '<div class="stat good"><div class="k">Cobrado</div><div class="v">'+money2(m.cash)+'</div>' +
-        '<div class="d formula">AOV '+(m.aov?money2(m.aov):"—")+'</div></div>' +
+        '<div class="d formula">'+(PERIOD===0?"todo el histórico":"entró en "+PERIOD+" días")+
+        ' · AOV '+(m.aov?money2(m.aov):"—")+'</div></div>' +
     '</div>';
 
   const verdict = '<div class="verdict '+(bn.ok?"ok":bn.none?"":"crit")+'" style="'+(bn.none?"border-left-color:var(--line-2);background:var(--surface-2);color:var(--ink-2)":"")+'">' +
@@ -3083,7 +3069,7 @@ function viewNumeros(){
 
   return modeBanner() + '<div class="section">' +
     '<div class="h-row"><h2>Números</h2><span class="sub">'+(PERIOD===0?"Todo el histórico":"Últimos "+PERIOD+" días")+'</span></div>' +
-    '<div class="filters">'+periodBtns+'<span style="width:10px"></span>'+countBtns+'</div>' +
+    '<div class="filters">'+periodBtns+'</div>' +
     '<p class="helptext" style="margin:-4px 0 14px">'+countExplain+'</p>' +
     seedNote + pend + stats +
     '<div style="height:18px"></div>' + verdict +
@@ -3296,7 +3282,7 @@ function viewImportar(){
         '<div style="height:16px"></div>' +
         '<div class="grid2"><div><label class="f" for="impFuente">Fuente</label>' +
         '<select id="impFuente">'+FUENTES.map(f => '<option>'+esc(f)+'</option>').join("")+'</select></div>' +
-        '<div style="display:flex;align-items:flex-end"><p class="helptext">Lo que ya venía hecho en ManyChat entra <b>archivado</b>: aparece en tus colas, pero no en las tasas de cohorte, porque los tags no dicen cuándo pasó cada paso.</p></div></div>' +
+        '<div style="display:flex;align-items:flex-end"><p class="helptext">Lo que ya venía hecho en ManyChat entra <b>archivado</b>: aparece en tus colas, pero sus pasos viejos no entran en las tasas, porque los tags no dicen cuándo pasó cada paso.</p></div></div>' +
         '<div style="height:14px"></div>' +
         '<button class="btn primary" data-act="doImport">Importar '+nuevos+' leads</button> ' +
         '<button class="btn ghost" data-act="cancelImport">Cancelar</button>');
@@ -3480,7 +3466,7 @@ function hojaDashboard(){
   const r4 = (a,b) => b ? +(a/b).toFixed(4) : 0;
   const rows = [
     ["DASHBOARD MENSUAL"],
-    ["Agrupado por Fecha Entrada del lead — el mismo criterio que 'Por cohorte' en la app."],
+    ["Agrupado por Fecha Entrada del lead. La app cuenta por la fecha de cada evento, así que estas filas no cuadran con Números — es a propósito: aquí manda la forma del Sheet."],
     ["MES","APERTURA",null,null,"CONVERSIÓN",null,null,null,null,"LLAMADAS",null,null,null,null,"CASH"],
     ["Mes","Leads","Respondió","% Resp","Propuestas","% Prop","Agendó","% Agenda","DM→Book",
      "Llamadas","Shows","% Show","Cierres","% Cierre","Cash","AOV"]
@@ -3879,7 +3865,6 @@ document.addEventListener("click", async (e) => {
     ROLE = t.dataset.role; try{ localStorage.setItem(LS_ROLE, ROLE); }catch(_){}
     VIEW = ROLE === "closer" ? "llamadas" : "hoy"; render(); return; }
   if(t.dataset.period !== undefined && t.dataset.period !== ""){ PERIOD = Number(t.dataset.period); render(); return; }
-  if(t.dataset.countby){ COUNTBY = t.dataset.countby; render(); return; }
   /* Desplegar un mes de "Cierres por mes". render() ya devuelve el scroll a su
      sitio, asi que abrir agosto no te manda al principio de la lista. */
   if(t.dataset.mes){
