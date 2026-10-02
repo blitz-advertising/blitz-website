@@ -69,6 +69,10 @@ declare
     -- 'grabacion' es el link de la grabacion de la llamada. Lo pega el closer
     -- porque es el unico que estuvo en ella; el setter solo lo abre.
     'grabacion',
+    -- Como paga el cliente: 'pago' es full o mes a mes, 'meses' cuantos dura el
+    -- plan cuando la oferta no lo dice, y 'cobros' que meses ya entraron.
+    -- Lo lleva el closer porque es quien cobra.
+    'pago','meses','cobros',
     'estado','updatedAt'
   ];
 begin

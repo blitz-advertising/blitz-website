@@ -201,7 +201,8 @@ const nuevoId = () => "l" + Date.now().toString(36) + Math.random().toString(36)
         agendoAt: (booked || notClosed || cliente) ? HOY : null,
         pendingBook: booked && !cliente && !notClosed,
         callDate: null, show: null, showAt: null,
-        cierre: null, cierreAt: null, importe: null, grabacion: "",
+        cierre: null, cierreAt: null, importe: null,
+        grabacion: "", pago: "", meses: null, cobros: {},
         estado: "activo", via: tiene(tags, "Tag VSL") ? "VSL" : "",
         touchedAt: toque, seed: false, tags,
         createdAt: AHORA, updatedAt: AHORA

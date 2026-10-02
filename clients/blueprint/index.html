@@ -551,7 +551,9 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
   margin:0; font-family:"Archivo",sans-serif; font-weight:700; font-size:15.5px;
   letter-spacing:-.02em; text-transform:uppercase;
 }
-.mesnums{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line)}
+/* auto-fit, no un numero fijo: la casilla de "por cobrar" solo existe en los
+   meses que tienen algo pendiente, asi que la fila es de 3 o de 4. */
+.mesnums{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background:var(--line)}
 .mesnum{padding:12px 16px; background:var(--surface)}
 .mesnum .k{font-size:10.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
 .mesnum .v{
@@ -560,6 +562,25 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
 }
 .mesnum.cash .v{color:var(--good); text-shadow:0 0 18px rgba(79,214,154,.45)}
 .mesnum.com  .v{color:var(--brand-hi); text-shadow:0 0 18px rgba(95,178,236,.4)}
+.mesnum.pen  .v{color:var(--warn)}
+/* Las cuotas que todavia no han entrado no se leen igual que el dinero real. */
+.mescard tr.pendiente td{background:var(--warn-soft)}
+.mescard tr.pendiente:hover td{background:var(--warn-soft)}
+.cobrobtn{cursor:pointer; border:0}
+.cobrobtn:hover{opacity:.7; text-decoration:line-through}
+
+/* ---------- plan de pago, dentro de la ficha ---------- */
+.planpago{display:flex; flex-direction:column; gap:11px}
+.cobros{display:flex; flex-direction:column; gap:6px}
+.cobrorow{
+  display:flex; align-items:center; gap:10px;
+  padding:7px 10px; border-radius:8px;
+  background:var(--warn-soft); border:1px solid transparent;
+}
+.cobrorow.si{background:var(--surface-2); border-color:var(--line)}
+.cobrorow .cm{flex:1; min-width:0; font-size:13px; color:var(--ink-2)}
+.cobrorow .ci{font-size:13.5px; font-variant-numeric:tabular-nums}
+.cobrorow .btn{flex:none}
 .mesnum .d{font-size:11px; color:var(--muted); margin-top:2px; font-family:"IBM Plex Mono",monospace}
 .mescard table{border-top:1px solid var(--line)}
 .mescard th{position:static}
@@ -953,6 +974,16 @@ const mesDe = s => String(s||"").slice(0,7);
 /* El mes de hoy en Puerto Rico. Al cambiar el mes, el contador de arriba vuelve
    a cero el dia 1 sin que nadie lo reinicie: compara contra este valor. */
 function mesActual(){ return mesDe(todayStr()); }
+/* "2026-10" + 2 -> "2026-12". Se suman meses sin tocar Date a proposito: con
+   Date, sumar un mes al 31 de enero te manda a marzo. Aqui solo hay año y mes. */
+function sumarMeses(ym, n){
+  const p = String(ym||"").split("-");
+  let y = parseInt(p[0],10), m = parseInt(p[1],10) - 1 + n;
+  if(!isFinite(y) || !isFinite(m)) return ym;
+  y += Math.floor(m/12);
+  m = ((m % 12) + 12) % 12;
+  return y + "-" + pad(m+1);
+}
 /* "2026-10" -> "Octubre 2026" */
 function nombreMes(ym){
   const p = String(ym||"").split("-");
@@ -1099,6 +1130,12 @@ function blankLead(){
     oferta:"", importe:null, objecion:"", comentarios:"",
     /* link de la grabacion de la llamada — lo pega el closer, el setter lo abre */
     grabacion:"",
+    /* Como paga: "" (sin decidir), "full" (todo de una) o "mensual".
+       Con "mensual", `importe` es lo que paga CADA MES, no el contrato entero:
+       el total son importe x meses. `meses` solo se usa cuando la oferta no
+       lleva el numero dentro ("Select"); si no, sale de la oferta.
+       `cobros` es { "2026-11": true } — los meses que ya entraron. */
+    pago:"", meses:null, cobros:{},
     estado:"activo",
     agendoHora:"", contactId:"", subscribedAt:"",
     seed:false, via:"", pendingBook:false, tags:[], touchedAt:null,
@@ -1222,7 +1259,8 @@ function saveLocal(){
 
 /* Lo unico que el closer puede escribir. Tiene que coincidir con el array
    `suyos` del trigger guardia_leads en db/schema.sql. */
-const CAMPOS_CLOSER = ["show","showAt","cierre","cierreAt","importe","oferta","objecion","grabacion","estado","updatedAt"];
+const CAMPOS_CLOSER = ["show","showAt","cierre","cierreAt","importe","oferta","objecion","grabacion",
+                       "pago","meses","cobros","estado","updatedAt"];
 
 async function persist(lead){
   lead.updatedAt = new Date().toISOString();
@@ -2114,6 +2152,64 @@ function tablaSegmento(list, archivo){
 /* La munición como se la lee el closer: grande, sin cajas de formulario y sin
    nada que invite a escribir. Es lo que va a repetirle a la persona en la
    llamada, asi que tiene que entrar de un vistazo. */
+/* Como paga el cliente. Solo aparece cuando ya cerro: antes de eso no hay nada
+   que cobrar y el bloque solo estorbaria.
+   Con "mes a mes", el "Importe" de arriba pasa a ser la CUOTA MENSUAL, no el
+   contrato entero. Es la parte que mas se presta a confusion, asi que el bloque
+   lo dice con el total calculado delante. */
+function planPagoHTML(l){
+  if(l.cierre !== true) return "";
+  const mensual = l.pago === "mensual";
+  const n   = mesesDelPlan(l);
+  const imp = +l.importe || 0;
+  const base = mesDe(l.cierreAt || todayStr());
+  const puedeEditar = (ROLE === "closer" || ROLE === "setter");
+
+  const selector =
+    '<div><label class="f" for="d_pago">¿Cómo paga?</label>' +
+      '<select id="d_pago" data-f="pago"'+(puedeEditar?"":" disabled")+'>' +
+        '<option value=""'       +(!l.pago            ?" selected":"")+'>Sin registrar</option>' +
+        '<option value="full"'   +(l.pago==="full"    ?" selected":"")+'>Pagó completo</option>' +
+        '<option value="mensual"'+(mensual            ?" selected":"")+'>Mes a mes</option>' +
+      '</select></div>';
+
+  if(!mensual){
+    return '<div class="planpago">' + selector +
+      /* !l.pago, no l.pago === "": los clientes cerrados antes de que existiera
+         este campo no lo traen, y son justo los que mas falta les hace el aviso. */
+      (!l.pago ? '<p class="helptext">Sin esto, el cobro se cuenta entero el mes del cierre.</p>' : "") +
+    '</div>';
+  }
+
+  /* Los meses solo se preguntan si la oferta no los dice ya. */
+  const campoMeses = ofertaLlevaMeses(l) ? "" :
+    '<div style="max-width:120px"><label class="f" for="d_meses">¿Cuántos meses?</label>' +
+      '<input type="number" id="d_meses" data-f="meses" value="'+(l.meses||"")+'" min="1" max="36" step="1"'+(puedeEditar?"":" disabled")+'></div>';
+
+  const pagos = pagosDe(l);
+  const cobrado = pagos.filter(p => p.cobrado).reduce((a,p) => a + p.importe, 0);
+
+  const lista = pagos.map(p =>
+    '<div class="cobrorow'+(p.cobrado?" si":"")+'">' +
+      '<span class="cm">'+esc(nombreMes(p.mes))+'</span>' +
+      '<span class="ci mono">'+(p.importe ? money(p.importe) : "—")+'</span>' +
+      (p.n === 1
+        /* El primero no se marca: la venta se cerro porque pago ese mes. */
+        ? '<span class="chip good">al cerrar</span>'
+        : p.cobrado
+          ? '<button class="chip good cobrobtn" data-cobro="'+l.id+'|'+p.mes+'" title="Marcar como no cobrado">cobrado</button>'
+          : '<button class="btn sm primary" data-cobro="'+l.id+'|'+p.mes+'">Marcar cobrado</button>') +
+    '</div>').join("");
+
+  return '<div class="planpago">' + selector + campoMeses +
+    '<p class="helptext" style="margin:0">' +
+      '<b>'+money(imp)+' cada mes · '+n+' meses</b> = '+money(imp*n)+' en total. ' +
+      'Llevas '+money(cobrado)+' cobrado.' +
+    '</p>' +
+    '<div class="cobros">'+lista+'</div>' +
+  '</div>';
+}
+
 /* El link de la grabacion de la llamada.
    Solo aparece si la persona VINO: si no se presento no hay nada que grabar, y
    un campo vacio pidiendo una grabacion que no existe solo confunde.
@@ -2377,27 +2473,74 @@ function sinFechaGroup(list){
     '</div></section>';
 }
 
-/* Cierres agrupados por mes de COBRO (cierreAt), no por cuando entro el lead.
-   Una venta cobrada en octubre cuenta en octubre aunque la persona llegara en
-   julio: es el mes que se factura y sobre el que se paga la comision. */
+/* Cuantos meses dura el plan. Normalmente sale de la oferta —"Foundation (3m)"
+   son 3— y solo hay que escribirlo a mano cuando la oferta no lleva el numero
+   dentro, como "Select". */
+function mesesDelPlan(l){
+  const n = parseInt(l.meses, 10);
+  if(n > 0) return n;
+  const m = String(l.oferta||"").match(/(\d+)\s*m\b/i);
+  return m ? parseInt(m[1],10) : 1;
+}
+/* La oferta ya dice los meses, asi que no hay que preguntarlos. */
+function ofertaLlevaMeses(l){ return /(\d+)\s*m\b/i.test(String(l.oferta||"")); }
+
+/* Los cobros de un cliente, uno por fila.
+   Si pago de una, es un solo cobro el mes del cierre. Si va mes a mes, `importe`
+   es lo que paga CADA mes, asi que son N cobros — uno por mes desde el cierre.
+   El primero se da por cobrado: se cerro la venta porque pago ese mes. Los demas
+   van pendientes hasta que alguien los marque. */
+function pagosDe(l){
+  if(l.cierre !== true || !l.cierreAt) return [];
+  const base = mesDe(l.cierreAt);
+  const imp  = +l.importe || 0;
+  if(l.pago !== "mensual"){
+    return [{ lead:l, mes:base, importe:imp, n:1, de:1, cobrado:true, unico:true }];
+  }
+  const n = mesesDelPlan(l);
+  const cobros = l.cobros || {};
+  const out = [];
+  for(let i = 0; i < n; i++){
+    const mes = sumarMeses(base, i);
+    out.push({ lead:l, mes, importe:imp, n:i+1, de:n,
+               cobrado: i === 0 || !!cobros[mes], unico:false });
+  }
+  return out;
+}
+
+/* Meses con dinero dentro: cobrado, pendiente, o las dos cosas.
+   Agrupa por mes de COBRO, no por cuando entro el lead — una venta cobrada en
+   octubre cuenta en octubre aunque la persona llegara en julio. Y por eso
+   aparecen meses que todavia no han llegado: si Edgardo paga hasta diciembre,
+   diciembre ya tiene una fila esperando. */
 function cierresPorMes(){
   const mapa = {};
+  const mes = k => (mapa[k] = mapa[k] || { mes:k, cash:0, pendiente:0, pagos:[], cierres:0, sinImporte:0 });
+
+  REAL().forEach(l => pagosDe(l).forEach(p => {
+    const M = mes(p.mes);
+    M.pagos.push(p);
+    if(p.cobrado) M.cash += p.importe; else M.pendiente += p.importe;
+  }));
+
+  /* Los cierres se cuentan el mes que se firmaron, no cada vez que se cobra:
+     un cliente mensual de 3 meses es UNA venta, no tres. */
   REAL().filter(l => l.cierre === true && l.cierreAt).forEach(l => {
-    const k = mesDe(l.cierreAt);
-    if(!mapa[k]) mapa[k] = { mes:k, cash:0, leads:[] };
-    mapa[k].cash += (+l.importe||0);
-    mapa[k].leads.push(l);
+    const M = mes(mesDe(l.cierreAt));
+    M.cierres++;
+    if(!(+l.importe > 0)) M.sinImporte++;
   });
+
   return Object.keys(mapa).sort().reverse().map(k => {
     const m = mapa[k];
-    m.leads.sort((a,b) => (+b.importe||0) - (+a.importe||0));
-    m.comision   = m.cash * (CFG.comision || 0);
-    m.sinImporte = m.leads.filter(l => !(+l.importe > 0)).length;
-    /* La media se saca solo sobre las ventas que TIENEN importe. Dividiendo el
-       cash entre todos los cierres, cada venta sin importe escribir tiraba la
-       media hacia abajo e inventaba un ticket medio que nadie cobro. */
-    const conImporte = m.leads.length - m.sinImporte;
-    m.aov = conImporte ? m.cash / conImporte : 0;
+    m.pagos.sort((a,b) => (+b.importe||0) - (+a.importe||0));
+    m.comision    = m.cash * (CFG.comision || 0);
+    m.comisionPen = m.pendiente * (CFG.comision || 0);
+    /* La media se saca solo sobre los cobros que TIENEN importe. Dividiendo
+       entre todos, cada venta sin importe escribir tiraba la media hacia abajo
+       e inventaba un ticket medio que nadie pago. */
+    const conImporte = m.pagos.filter(p => p.importe > 0).length;
+    m.aov = conImporte ? (m.cash + m.pendiente) / conImporte : 0;
     return m;
   });
 }
@@ -2434,14 +2577,28 @@ function mesesHTML(){
      esta moviendo. Los cerrados se abren con un click y se quedan asi. */
   if(MESES === null) MESES = { [MES]: true };
 
-  const fila = l => {
+  /* Una fila por COBRO, no por cliente: un mensual de 3 meses sale en tres meses
+     distintos, con su "mes 2 de 3" para que se sepa cual es cual. */
+  const fila = p => {
+    const l = p.lead;
     const u = enlaceSeguro(l.grabacion);
-    return '<tr>' +
+    const plan = p.unico
+      ? '<span style="color:var(--muted)">pago único</span>'
+      : '<span class="chip">mes '+p.n+' de '+p.de+'</span>';
+    /* El primer mes no lleva boton: ese ya se cobro al cerrar la venta. */
+    const estado = p.cobrado
+      ? (p.unico || p.n === 1
+          ? '<span class="chip good">cobrado</span>'
+          : '<button class="chip good cobrobtn" data-cobro="'+l.id+'|'+p.mes+'" title="Marcar como no cobrado">cobrado</button>')
+      : '<button class="btn sm primary" data-cobro="'+l.id+'|'+p.mes+'">Marcar cobrado</button>';
+    return '<tr'+(p.cobrado ? '' : ' class="pendiente"')+'>' +
       '<td>' + igLink(l.handle) + '</td>' +
       '<td style="color:var(--ink-2)">' + esc(l.oferta || "—") + '</td>' +
-      '<td class="r mono">' + (+l.importe > 0
-        ? money(l.importe)
+      '<td class="r mono">' + (p.importe > 0
+        ? money(p.importe)
         : '<button class="linkish" data-askamount="'+l.id+'">falta</button>') + '</td>' +
+      '<td>' + plan + '</td>' +
+      '<td>' + estado + '</td>' +
       '<td>' + (u
         ? '<a class="iglink" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" title="'+esc(u)+'">grabación</a>'
         : '<span style="color:var(--muted)">—</span>') + '</td>' +
@@ -2460,19 +2617,28 @@ function mesesHTML(){
           '<h4>'+esc(nombreMes(m.mes))+'</h4>' +
           (m.mes === MES ? '<span class="chip good">este mes</span>' : "") +
           (m.sinImporte ? '<span class="chip crit">'+m.sinImporte+' sin importe</span>' : "") +
-          '<span class="messum">'+money(m.cash)+' · '+m.leads.length+' cierre'+(m.leads.length>1?'s':'')+'</span>' +
+          (m.pendiente ? '<span class="chip warn">'+money(m.pendiente)+' por cobrar</span>' : "") +
+          '<span class="messum">'+money(m.cash)+
+            (m.cierres ? ' · '+m.cierres+' cierre'+(m.cierres>1?'s':'') : ' cobrado')+'</span>' +
         '</button>' +
         (abierto ? '<div class="mesnums">' : '<div class="mesnums" hidden>') +
           '<div class="mesnum cash"><div class="k">Cash</div><div class="v">'+money(m.cash)+'</div>' +
-            '<div class="d">cobrado en el mes</div></div>' +
-          '<div class="mesnum"><div class="k">Cierres</div><div class="v">'+m.leads.length+'</div>' +
-            '<div class="d">'+(m.aov ? money(Math.round(m.aov))+" de media" : "—")+'</div></div>' +
+            '<div class="d">cobrado de verdad</div></div>' +
+          '<div class="mesnum"><div class="k">Cierres</div><div class="v">'+m.cierres+'</div>' +
+            '<div class="d">'+(m.aov ? money(Math.round(m.aov))+" por cobro" : "—")+'</div></div>' +
           '<div class="mesnum com"><div class="k">Comisión setter</div><div class="v">'+money(m.comision)+'</div>' +
             '<div class="d">'+pctTxt+' de '+money(m.cash)+'</div></div>' +
+          /* La cuarta casilla solo sale si hay algo pendiente. Un mes cobrado
+             entero no tiene por que enseñar un cero. */
+          (m.pendiente
+            ? '<div class="mesnum pen"><div class="k">Por cobrar</div><div class="v">'+money(m.pendiente)+'</div>' +
+              '<div class="d">+'+money(m.comisionPen)+' de comisión</div></div>'
+            : "") +
         '</div>' +
         '<div class="tablewrap" style="border:0;border-radius:0;box-shadow:none"'+(abierto?"":" hidden")+'>' +
-          '<table><thead><tr><th>Cliente</th><th>Oferta</th><th class="r">Importe</th><th>Grabación</th></tr></thead>' +
-          '<tbody>'+m.leads.map(fila).join("")+'</tbody></table></div>' +
+          '<table><thead><tr><th>Cliente</th><th>Oferta</th><th class="r">Importe</th>' +
+            '<th>Plan</th><th>Estado</th><th>Grabación</th></tr></thead>' +
+          '<tbody>'+m.pagos.map(fila).join("")+'</tbody></table></div>' +
       '</div>';
     }).join("");
 }
@@ -2487,9 +2653,13 @@ function viewLlamadas(){
      meses: el dia 3 de octubre el numero todavia iba cargado de septiembre y no
      se parecia a lo que se cobro en octubre. Ahora el 1 de cada mes arranca en
      cero solo, porque compara contra el mes de hoy y nada mas. */
+  /* Suma COBROS, no cierres: un cliente que paga mes a mes aporta su cuota cada
+     mes, y solo cuenta la que ya entro. Lo que falta por cobrar va aparte. */
   const MES = mesActual();
-  const cashMes = LEADS.filter(l => l.cierre === true && mesDe(l.cierreAt) === MES)
-                        .reduce((a,l) => a + (+l.importe||0), 0);
+  const pagosMes = [];
+  LEADS.forEach(l => pagosDe(l).forEach(p => { if(p.mes === MES) pagosMes.push(p); }));
+  const cashMes     = pagosMes.filter(p =>  p.cobrado).reduce((a,p) => a + p.importe, 0);
+  const porCobrarMes= pagosMes.filter(p => !p.cobrado).reduce((a,p) => a + p.importe, 0);
   const head =
     '<div class="stats stats--3" style="margin-bottom:18px">' +
       '<div class="stat'+(c.proximas.length?" cool":"")+'"><div class="k">Confirmadas</div><div class="v">'+c.proximas.length+'</div><div class="d">con fecha y hora</div></div>' +
@@ -2501,7 +2671,9 @@ function viewLlamadas(){
          propios grupos y con los botones para resolverlo ahí mismo. Como
          numero suelto solo repetia lo que ya estaba a la vista. */
       '<div class="stat good"><div class="k">Cash de '+esc(nombreMes(MES).split(" ")[0].toLowerCase())+'</div>' +
-        '<div class="v">'+money2(cashMes)+'</div><div class="d">este mes · vuelve a cero el día 1</div></div>' +
+        '<div class="v">'+money2(cashMes)+'</div><div class="d">' +
+        (porCobrarMes ? money(porCobrarMes)+' por cobrar' : 'este mes · vuelve a cero el día 1') +
+        '</div></div>' +
     '</div>' +
     /* La barra va aparte, a lo ancho, no como cuarta tarjeta: meterla en la fila
        estrecharia la del cash, que es la que el closer mira primero. */
@@ -3400,6 +3572,7 @@ function drawer(){
         (l.cierre === false ?
           '<div><label class="f" for="d_objecion">Objeción principal</label>' +
             '<select id="d_objecion" data-f="objecion"><option value=""></option>'+opt(OBJECIONES,l.objecion)+'</select></div>' : "") +
+        planPagoHTML(l) +
         grabacionHTML(l)
       : "") +
     '</div>' : "";
@@ -3552,6 +3725,23 @@ document.addEventListener("click", async (e) => {
     render();
     return;
   }
+  /* Marcar (o desmarcar) la cuota de un mes como cobrada. Se guarda en el lead,
+     en `cobros`, para que lo vean los dos lados y sobreviva al sync. */
+  if(t.dataset.cobro){
+    const partes = t.dataset.cobro.split("|");
+    const l = getLead(partes[0]); if(!l) return;
+    const mes = partes[1];
+    /* Copia nueva: mutar el objeto que ya esta en LEADS deja al trigger de
+       Postgres comparando el valor consigo mismo y creyendo que no cambio. */
+    const cobros = Object.assign({}, l.cobros || {});
+    if(cobros[mes]) delete cobros[mes]; else cobros[mes] = true;
+    l.cobros = cobros;
+    await persist(l);
+    toast(cobros[mes]
+      ? "Cobrado: "+nombreMes(mes)+" de @"+l.handle+"."
+      : nombreMes(mes)+" de @"+l.handle+" vuelve a pendiente.");
+    return;
+  }
   if(t.dataset.open){ OPEN = t.dataset.open; EDITID = false; drawer(); return; }
 
   if(t.dataset.show){
@@ -3596,7 +3786,7 @@ document.addEventListener("click", async (e) => {
       seed:false, agendo:null, agendoHora:"", agendoAt:null, callDate:null, pendingBook:false,
       show:null, showAt:null, cierre:null, cierreAt:null, importe:null, objecion:"",
       /* la grabacion era de la llamada que se acaba de borrar */
-      grabacion:"", estado:"activo"
+      grabacion:"", pago:"", meses:null, cobros:{}, estado:"activo"
     });
     if(!l.touchedAt) l.touchedAt = todayStr();
     await persist(l); render();
@@ -3629,6 +3819,8 @@ document.addEventListener("click", async (e) => {
     const l = getLead(parts[0]); if(!l) return;
     if(parts[1] === "x"){          /* deshacer: volver a preguntar */
       l.cierre = null; l.cierreAt = null; l.importe = null;
+      /* Se deshace la venta: el plan de pago y los meses cobrados se van con ella. */
+      l.pago = ""; l.meses = null; l.cobros = {};
       if(l.estado === "cliente") l.estado = "activo";
       await persist(l); return;
     }
@@ -3715,7 +3907,7 @@ document.addEventListener("click", async (e) => {
     Object.assign(l, {
       agendo:null, agendoHora:"", agendoAt:null, callDate:null, pendingBook:false,
       show:null, showAt:null, cierre:null, cierreAt:null, importe:null,
-      objecion:"", grabacion:"", estado:"activo"
+      objecion:"", grabacion:"", pago:"", meses:null, cobros:{}, estado:"activo"
     });
     await persist(l); drawer(); render();
     toast("@"+l.handle+" vuelve a la cola.");
@@ -3824,6 +4016,7 @@ document.addEventListener("change", async (e) => {
     let v = el.type === "checkbox" ? el.checked : el.value;
     if(k === "show" || k === "cierre") v = v === "" ? null : v === "1";
     else if(k === "importe") v = v === "" ? null : Number(v);
+    else if(k === "meses")   v = v === "" ? null : Math.max(1, Math.round(Number(v) || 1));
     else if(k === "handle") v = norm(v);
     else if(k === "grabacion") v = normUrl(v);
     else if((k === "entry" || k === "callDate" || k === "agendo" || k === "agendoAt") && v === "") v = null;
@@ -3852,7 +4045,8 @@ document.addEventListener("change", async (e) => {
     /* "grabacion" entra aqui aunque sea texto: el cambio solo salta al salir del
        campo, asi que repintar no borra nada, y solo repintando se ve el enlace
        recien guardado debajo del input. */
-    const estructural = (k === "show" || k === "cierre" || k === "agendo" || k === "grabacion");
+    const estructural = (k === "show" || k === "cierre" || k === "agendo" || k === "grabacion" ||
+                         k === "pago" || k === "meses" || k === "oferta");
     SKIP_DRAWER = !estructural;
     await persist(l);
     SKIP_DRAWER = false;
