@@ -1143,7 +1143,10 @@ function blankLead(){
     pago:"", meses:null, cobros:{},
     estado:"activo",
     agendoHora:"", contactId:"", subscribedAt:"",
-    seed:false, via:"", pendingBook:false, tags:[], touchedAt:null,
+    /* seed = archivado. seedAuto dice que lo archivo el ROBOT por quedarse sin
+       tags en ManyChat, no tu. Solo lo que archivo el robot puede desarchivarlo
+       el robot: lo que archivas tu a mano se queda archivado pase lo que pase. */
+    seed:false, seedAuto:false, via:"", pendingBook:false, tags:[], touchedAt:null,
     createdAt: new Date().toISOString()
   };
 }
@@ -1208,7 +1211,13 @@ function segmento(l){
      en Llamadas ni como Clientes. Van a Archivo, que es de donde se rescatan
      cuando vuelvan a ser leads. Sus datos siguen intactos en la base. */
   if(l.seed) return "archivo";
-  if(l.cierre === true || tieneTag(l,"Tag Client")) return "cliente";
+  /* Clientes, no interesados y no cerraron van todos a Archivo. No es que dejen
+     de contar —su dinero y sus llamadas siguen en Llamadas y en Numeros— es que
+     ya no hay nada que trabajar con ellos: fuera de Hoy, Leads e Interesados.
+     Dentro de Archivo cada uno cae en su zona. Antes los clientes devolvian
+     "cliente", un segmento que no pintaba ninguna pestaña: no salian en ningun
+     listado y solo se les veia en "Cerradas". */
+  if(l.cierre === true || tieneTag(l,"Tag Client")) return "archivo";
   if(esNoInteresado(l) || esNoCerro(l) || l.estado === "muerto") return "archivo";
   if(yaAgendo(l)) return "llamadas";
   const c = calor(l);
@@ -1230,8 +1239,8 @@ const tocadoHoy = l => l.touchedAt === todayStr() || manualEn(todayStr()).map(no
    volviste a poner un tag de pipeline en ManyChat, es que esa persona vuelve a
    estar en juego. Se avisa y se ofrece devolverla. */
 function tocadoArchivado(l){
-  const seg = segmento(l);
-  return (seg === "archivo" || seg === "cliente") && tocadoHoy(l);
+  /* Los clientes ya caen dentro de "archivo"; antes habia que nombrarlos aparte. */
+  return segmento(l) === "archivo" && tocadoHoy(l);
 }
 
 /* Prioridad para "toca hoy": manda el bloque (cuan cerca del booking) y
@@ -1539,7 +1548,7 @@ function REAL_TODOS(){ return LEADS.slice(); }
    —o a quien dijo que no— no es prospeccion y no cuenta para la meta del dia.
    REAL() no basta: solo quita los archivados a mano. */
 function ENPIPELINE(){
-  return LEADS.filter(l => { const s = segmento(l); return s !== "archivo" && s !== "cliente"; });
+  return LEADS.filter(l => segmento(l) !== "archivo");
 }
 function seedCount(){ return LEADS.filter(l => l.seed).length; }
 
@@ -2156,24 +2165,23 @@ function calorChip(l){
    POR QUE esta archivado, y donde iba el bloque del guion va el CALOR que tenia
    al archivarse. El bloque no aporta nada aqui — nadie va a seguir el guion con
    alguien que ya dijo que no. Lo util para rescatarlo es lo caliente que estaba. */
-function tablaSegmento(list, archivo){
+function tablaSegmento(list, archivo, opts){
+  opts = opts || {};
   const rows = list.map(l => {
     const notas = [l.meta && "meta", l.dolor && "dolor", l.yaHace && "ya hace"].filter(Boolean);
     const d = diasSinTocar(l);
     const frio = estaFrio(l);
-    return '<tr><td>'+(archivo
-        ? '<span class="heat dead"><i class="em">🗄️</i>Archivado</span>'
-        : calorChip(l))+'</td>' +
+    return '<tr><td>'+(archivo ? estadoArchivoChip(l) : calorChip(l))+'</td>' +
       '<td><button class="linkish" data-open="'+l.id+'">@'+esc(l.handle)+'</button></td>' +
       '<td>'+esc(l.nombre||"—")+'</td>' +
-      '<td>'+(archivo ? motivoChip(l) : blockChip(l))+'</td>' +
+      '<td>'+(opts.motivo ? opts.motivo(l) : archivo ? motivoChip(l) : blockChip(l))+'</td>' +
       '<td class="mono'+(frio?' crit':'')+'" title="Días desde el último toque">'+(d>=999?"nunca":d===0?"hoy":d+"d")+'</td>' +
       '<td>'+(notas.length?esc(notas.join(" · ")):'<span style="color:var(--warn)">sin notas</span>')+'</td>' +
       '<td class="mono" title="'+esc(entryTitle(l.entry, l.subscribedAt))+'">'+fmtShort(l.entry)+'</td></tr>';
   }).join("");
   return '<div class="tablewrap"><table><thead><tr>' +
     '<th>'+(archivo ? "Estado" : "Calor")+'</th><th>Handle</th><th>Nombre</th>' +
-    '<th>'+(archivo ? "Motivo" : "Bloque")+'</th>' +
+    '<th>'+(opts.labMotivo || (archivo ? "Motivo" : "Bloque"))+'</th>' +
     '<th>Sin tocar</th><th>Notas</th><th>Entró</th></tr></thead><tbody>' +
     rows + '</tbody></table></div>';
 }
@@ -2198,7 +2206,7 @@ function planPagoHTML(l){
     '<div><label class="f" for="d_pago">¿Cómo paga?</label>' +
       '<select id="d_pago" data-f="pago"'+(puedeEditar?"":" disabled")+'>' +
         '<option value=""'       +(!l.pago            ?" selected":"")+'>Sin registrar</option>' +
-        '<option value="full"'   +(l.pago==="full"    ?" selected":"")+'>Pagó completo</option>' +
+        '<option value="full"'   +(l.pago==="full"    ?" selected":"")+'>Pago completo</option>' +
         '<option value="mensual"'+(mensual            ?" selected":"")+'>Mes a mes</option>' +
       '</select></div>';
 
@@ -2316,6 +2324,23 @@ function barraToquesHTML(){
   '</div>';
 }
 
+/* En que zona de Archivo cae cada uno. Mismo orden de mando que segmento():
+   el cierre manda sobre cualquier tag que arrastre de antes. */
+function zonaDe(l){
+  if(l.cierre === true || tieneTag(l,"Tag Client")) return "cliente";
+  if(esNoCerro(l))      return "nocerro";
+  if(esNoInteresado(l)) return "nointeres";
+  if(!(l.tags || []).length) return "fuera";
+  return "mano";
+}
+/* Columna izquierda en Archivo. Todos son archivados menos los clientes: a
+   alguien que te esta pagando no se le pone "Archivado" delante. */
+function estadoArchivoChip(l){
+  return zonaDe(l) === "cliente"
+    ? '<span class="heat client"><i class="em">💪🏼</i>Cliente</span>'
+    : '<span class="heat dead"><i class="em">🗄️</i>Archivado</span>';
+}
+
 /* Por que esta archivado. En Archivo todos son archivados —eso lo dice la
    primera columna—, asi que lo que aporta aqui es el motivo. */
 function motivoChip(l){
@@ -2323,6 +2348,8 @@ function motivoChip(l){
   if(esNoCerro(l))      return chip("👎🏼","No cerró","dead");
   if(esNoInteresado(l)) return chip("🚫","No interesado","dead");
   if(l.cierre === true || tieneTag(l,"Tag Client")) return chip("💪🏼","Cliente","client");
+  /* Sin un solo tag: ManyChat lo sacó de la secuencia y el robot lo archivó. */
+  if(!(l.tags || []).length) return chip("📭","Fuera de la secuencia","dead");
   return chip("🗄️","A mano","dead");   /* lo archivaste tu, sin tag que lo explique */
 }
 
@@ -2359,9 +2386,10 @@ function viewArchivo(){
     const s = f.q.toLowerCase();
     list = list.filter(l => (l.handle+" "+l.nombre+" "+l.meta+" "+l.dolor).toLowerCase().includes(s));
   }
-  /* Una sola lista, sin subgrupos: el motivo ya lo dice el emoji de cada fila,
-     asi que partirlo en "No cerraron" y "No interesados" era decir lo mismo dos
-     veces. Ordenados por lo mas reciente primero. */
+  /* Por zonas. Antes era una lista sola porque todo lo de aqui era lo mismo:
+     gente que dijo que no. Ahora tambien viven aqui los clientes, que no son
+     un descarte sino lo contrario, y mezclarlos en la misma tabla roja con los
+     "no interesado" leia fatal. Cada zona trae su tono y su explicacion. */
   list.sort((a,b) => {
     const fa = a.cierreAt || a.entry || "", fb = b.cierreAt || b.entry || "";
     return fb < fa ? -1 : 1;
@@ -2370,12 +2398,41 @@ function viewArchivo(){
   const filtro = '<div class="filters"><input type="text" id="fq" placeholder="Buscar handle o nombre…" value="'+esc(f.q)+'"></div>';
   if(!list.length){
     return modeBanner() + '<div class="section"><div class="h-row"><h2>Archivo</h2></div>' + filtro +
-      '<div class="card empty"><h3>Archivo vacío</h3><p>Aquí caen los que dijeron que no, los que no cerraron y los que archivaste a mano.</p></div></div>';
+      '<div class="card empty"><h3>Archivo vacío</h3><p>Aquí caen los clientes que ya cerraron, los que dijeron que no, los que no cerraron y los que archivaste a mano.</p></div></div>';
   }
-  return modeBanner() + '<div class="section archivo">' +
+
+  const ZONAS = [
+    { k:"cliente",   lab:"Clientes", rojo:false,
+      ayuda:"Pagaron. Siguen aquí por orden, no por descarte: su dinero cuenta igual en Llamadas y en Números.",
+      /* A un cliente no le interesa el "motivo": le interesa cuanto paga. */
+      motivo: l => '<span class="mono">'+((+l.importe > 0) ? money(l.importe) : "—")+
+                   (l.pago === "mensual" ? '<span class="chip" style="margin-left:6px">al mes</span>' : "")+'</span>',
+      labMotivo:"Importe" },
+    { k:"nocerro",   lab:"No cerraron", rojo:true,
+      ayuda:"Llegaron a la llamada y no compraron. Con la objeción marcada alimentan «qué mata los deals»." },
+    { k:"nointeres", lab:"No interesados", rojo:true,
+      ayuda:"Dijeron que no. Dentro de unos meses el momento puede ser otro — de aquí sale el follow-up frío." },
+    { k:"fuera",     lab:"Fuera de la secuencia", rojo:true,
+      ayuda:"Sin ningún tag en ManyChat. El robot los sacó solo. Si le pones un tag allí, vuelven a las colas." },
+    { k:"mano",      lab:"Archivados a mano", rojo:true,
+      ayuda:"Los archivaste tú. Ningún tag explica por qué, así que solo tú sabes el motivo." }
+  ];
+
+  const bloques = ZONAS.map(z => {
+    const sub = list.filter(l => zonaDe(l) === z.k);
+    if(!sub.length) return "";
+    const tabla = tablaSegmento(sub, true, { motivo:z.motivo, labMotivo:z.labMotivo });
+    return '<section style="margin-bottom:22px">' +
+      '<div class="qhead"><h3>'+esc(z.lab)+'</h3><span class="n">'+sub.length+'</span><span class="rule"></span></div>' +
+      '<p class="helptext" style="margin:-4px 0 9px">'+z.ayuda+'</p>' +
+      (z.rojo ? '<div class="archivo">'+tabla+'</div>' : tabla) +
+    '</section>';
+  }).join("");
+
+  return modeBanner() + '<div class="section">' +
     '<div class="h-row"><h2>Archivo</h2><span class="sub">'+list.length+' de '+total+'</span></div>' +
-    '<p class="helptext" style="margin:-4px 0 12px">No se borran. Dentro de unos meses el momento puede ser otro — de aquí sale el follow-up frío. La columna de calor dice por qué está archivado cada uno.</p>' +
-    filtro + tablaSegmento(list, true) +
+    '<p class="helptext" style="margin:-4px 0 12px">Nadie se borra. Aquí está todo el que ya no hay que trabajar — porque compró, porque dijo que no, o porque salió de la secuencia.</p>' +
+    filtro + bloques +
     '</div>';
 }
 
@@ -2795,10 +2852,24 @@ function viewLlamadas(){
 
   const sinFecha = sinFechaGroup(c.sinFecha);
 
-  const grp = (titulo, list, kind, hint) => list.length ?
+  const grp = (titulo, list, kind, hint, pie) => list.length ?
     '<section class="qgroup"><div class="qhead"><h3>'+titulo+'</h3><span class="n">'+list.length+'</span><span class="rule"></span></div>' +
     (hint ? '<p class="helptext" style="margin:-4px 0 9px">'+hint+'</p>' : "") +
-    '<div class="rows">'+list.map(l => callRow(l, kind)).join("")+'</div></section>' : "";
+    '<div class="rows">'+list.map(l => callRow(l, kind)).join("")+'</div>' +
+    (pie ? '<p class="helptext" style="margin:9px 0 0">'+pie+'</p>' : "") +
+    '</section>' : "";
+
+  /* Cerradas y No cerraron, solo las del MES EN CURSO.
+     Con el historial entero eran dos listas que no paraban de crecer y empujaban
+     hacia abajo lo unico que hay que trabajar: las llamadas que vienen. Y no se
+     pierde nada, porque esa misma gente ya esta en dos sitios mas — las cerradas
+     en "Cierres por mes", aqui abajo, y las dos en el tab de Archivo, cada una
+     en su zona. Lo de meses anteriores no se borra: se deja de repetir. */
+  const cerradasMes = c.cerradas.filter(l => mesDe(l.cierreAt) === MES);
+  const noCerrMes   = c.noCerraron.filter(l => mesDe(l.cierreAt || l.showAt || l.callDate) === MES);
+  const cerradasVie = c.cerradas.length - cerradasMes.length;
+  const noCerrVie   = c.noCerraron.length - noCerrMes.length;
+  const mesTxt      = nombreMes(MES).split(" ")[0].toLowerCase();
 
   /* Sin nada que enseñar se devuelve la MISMA estructura, no una pantalla
      aparte: el bloque de Próximas llamadas es la referencia del closer y tiene
@@ -2816,8 +2887,18 @@ function viewLlamadas(){
     grp("Vinieron · falta el resultado", c.porResultado.filter(l => l.cierre === null), "resultado", "Se presentaron. ¿Cerró o no cerró?") +
     sinFecha +
     grp("Agendadas · falta la hora", c.sinHora, "next", "Tienen día pero no hora, así que todavía no están confirmadas.") +
-    grp("Cerradas", c.cerradas.slice(0,40), "cerrada", "Las que pagaron. Si falta el importe, escríbelo aquí — sin él, el cash y el AOV están incompletos.") +
-    grp("No cerraron", c.noCerraron.slice(0,40), "nocerro", "No compraron o no se presentaron. Con la objeción marcada alimentan \"qué mata los deals\".") +
+    /* El pie cambia con el rol: el closer no tiene el tab de Archivo (sus vistas
+       son Llamadas y Números), asi que mandarlo alli seria un enlace muerto.
+       A el se le apunta a "Cierres por mes", que si ve, justo debajo. */
+    grp("Cerradas en "+mesTxt, cerradasMes, "cerrada",
+        "Las que pagaron este mes. Si falta el importe, escríbelo aquí — sin él, el cash y el AOV están incompletos.",
+        cerradasVie ? cerradasVie+' de meses anteriores están justo abajo, en <b>Cierres por mes</b>' +
+          (ROLE === "setter" ? ', y en Archivo → Clientes.' : '.') : "") +
+    grp("No cerraron en "+mesTxt, noCerrMes, "nocerro",
+        "No compraron o no se presentaron. Con la objeción marcada alimentan \"qué mata los deals\".",
+        noCerrVie ? (ROLE === "setter"
+          ? noCerrVie+' de meses anteriores están en Archivo. <button class="linkish" data-nav="archivo">Verlas</button>'
+          : noCerrVie+' de meses anteriores están archivadas.') : "") +
     /* El historial de cash va aqui, al final de Llamadas, y no en Numeros: ahi
        todo esta filtrado por periodo (7, 30, 90 dias) y un desglose por mes
        dentro de "ultimos 7 dias" se contradice solo. Ademas el contador del mes
@@ -3730,11 +3811,15 @@ function drawer(){
          neutro y directo: restaurar no necesita permiso. */
       (mine ? '<button class="btn sm '+(l.seed ? "" : "danger")+'" data-act="archivar">' +
         (l.seed ? "Sacar del archivo" : "Archivar") + '</button>' : "") +
-      /* Devolver a la cola: limpia agenda y resultado de golpe. Hace falta porque
-         los campos estan encadenados — borrar la fecha a mano pone pendingBook
-         en true y el lead se queda atascado en Llamadas "sin fecha". */
-      (mine && (yaAgendo(l) || l.show !== null || l.cierre !== null)
-        ? '<button class="btn sm" data-act="reactivar" title="Le quita agenda y resultado y lo devuelve a la cola del setter">Devolver a la cola</button>'
+      /* Deshacer llamada: para el que cancela o reagenda. Limpia la cita de golpe
+         porque los campos estan encadenados — borrar la fecha a mano pone
+         pendingBook en true y el lead se queda atascado en "sin fecha".
+         NO sale si ya es cliente. Un cierre es dinero cobrado: eso no se
+         deshace con un boton, se archiva y se queda en el historial. Si hiciera
+         falta corregir una venta de verdad, se edita el importe o se usa el
+         "deshacer" del propio resultado, no esto. */
+      (mine && l.cierre !== true && (yaAgendo(l) || l.show !== null || l.cierre === false)
+        ? '<button class="btn sm" data-act="reactivar" title="Para quien cancela o reagenda: le quita la cita y vuelve a tu cola con los tags que tenga ahora en ManyChat. Las notas se quedan.">Deshacer llamada</button>'
         : "") +
       '<div class="spacer" style="flex:1"></div>' +
       '<button class="btn primary" data-act="closeDrawer">Listo</button>' +
@@ -3954,7 +4039,24 @@ document.addEventListener("click", async (e) => {
       });
       if(!ok) return;
     }
+    /* Sacarlo del archivo sin tags en ManyChat no aguanta: el robot entiende que
+       sin tags esta fuera de la secuencia y lo vuelve a archivar en la proxima
+       corrida. Decirlo antes, no despues. */
+    else if(!(l.tags || []).length){
+      const ok = await confirmar({
+        titulo: "¿Sacar a @"+esc(l.handle)+" del archivo?",
+        texto: "<b>En ManyChat no tiene ningún tag</b>, y eso es lo que el robot lee como " +
+               "«fuera de la secuencia»: lo volverá a archivar en la próxima sincronización. " +
+               "Ponle un tag allí (Interest, Lead…) para que el cambio aguante.",
+        ok: "Sacarlo igualmente"
+      });
+      if(!ok) return;
+    }
     l.seed = !l.seed;
+    /* Deja de ser cosa del robot: ya no se lo desarchiva solo cuando vuelva a
+       tener tags. Si lo sacas del archivo y sigue sin tags, el robot sí volverá
+       a archivarlo — por eso el aviso de arriba. */
+    l.seedAuto = false;
     await persist(l);
     /* Al archivar se cierra la ficha: el lead ya no pertenece a esta pestaña y
        dejarla abierta sobre una lista donde ya no aparece confunde. Al sacarlo
@@ -3967,21 +4069,35 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if(act === "reactivar"){
-    /* Un cliente viejo que vuelve, o una agenda que nunca fue tuya. El sync no
-       puede deshacer un cierre a proposito (protege al closer de que ManyChat
-       le borre una venta real), asi que esto se hace a mano y solo el setter.
-       Se limpia TODO el bloque de agenda y resultado a la vez: si se dejara uno
-       suelto, el lead rebota entre Llamadas y la cola sin quedarse quieto. */
-    if(ROLE !== "setter"){ toast("Solo el setter puede devolver un lead a la cola."); return; }
+    /* El que cancela o reagenda. Se limpia TODO el bloque de cita y resultado a
+       la vez: si se dejara uno suelto, el lead rebota entre Llamadas y la cola
+       sin quedarse quieto. Los tags NO se tocan — vuelve a la cola con el calor
+       que ManyChat diga que tiene ahora. */
+    if(ROLE !== "setter"){ toast("Solo el setter puede deshacer una llamada."); return; }
     const l = getLead(OPEN); if(!l) return;
-    const tenia = [l.cierre === true ? "cierre" : null, l.show !== null ? "show" : null,
-                   (+l.importe > 0) ? money2(l.importe) : null, l.agendo ? "agenda" : null]
-                  .filter(Boolean).join(", ");
+    /* Un cierre es dinero cobrado y no se deshace desde aqui, pase lo que pase.
+       El boton ya no se pinta para un cliente, pero el candado va tambien en la
+       accion: un click no puede ser lo unico que separe una venta de borrarse. */
+    if(l.cierre === true){
+      toast("@"+l.handle+" ya es cliente. Una venta no se deshace: archívalo si hace falta.");
+      return;
+    }
+    const tenia = [l.show !== null ? "show" : null,
+                   l.cierre === false ? "marcada como no cerró" : null,
+                   l.agendo ? "la cita" : null].filter(Boolean).join(", ");
+    /* Solo estorba "Tag Not Closed": con ese puesto, el sync vuelve a marcar la
+       llamada como ocurrida y perdida, y parece que el boton no hizo nada.
+       "Tag Booked" NO se avisa — en un reagendo es justo lo que se quiere: el
+       lead vuelve pidiendo fecha nueva, que es el estado correcto. */
+    const tag = esNoCerro(l) ? "Tag Not Closed" : null;
     const ok = await confirmar({
-      titulo: "¿Devolver @"+esc(l.handle)+" a la cola?",
-      texto: "Se le quita: <b>"+esc(tenia || "nada")+"</b>. " +
-             "Sus notas (meta, dolor, ya hace) no se tocan.",
-      ok: "Devolver a la cola", peligro: true
+      titulo: "¿Deshacer la llamada de @"+esc(l.handle)+"?",
+      texto: "Se le borra: <b>"+esc(tenia || "nada")+"</b>. Vuelve a tu cola con los tags " +
+             "que tenga ahora en ManyChat, y sus notas (meta, dolor, ya hace) no se tocan." +
+             (tag ? " <b>Pero en ManyChat sigue con "+tag+"</b>, y los tags mandan: " +
+                    "el robot se lo volverá a poner en la próxima sincronización. " +
+                    "Quítale ese tag allí para que el cambio aguante." : ""),
+      ok: tag ? "Deshacer igualmente" : "Deshacer llamada", peligro: true
     });
     if(!ok) return;
     Object.assign(l, {
@@ -3990,7 +4106,9 @@ document.addEventListener("click", async (e) => {
       objecion:"", grabacion:"", pago:"", meses:null, cobros:{}, estado:"activo"
     });
     await persist(l); drawer(); render();
-    toast("@"+l.handle+" vuelve a la cola.");
+    toast(tag
+      ? "Llamada deshecha. Quítale "+tag+" en ManyChat o volverá solo."
+      : "Llamada deshecha. @"+l.handle+" vuelve a tu cola.");
     return;
   }
   if(act === "startFresh"){ exitDemo(); render(); toast("Listo. Importa o añade tu primer lead."); return; }

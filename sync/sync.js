@@ -119,7 +119,8 @@ const nuevoId = () => "l" + Date.now().toString(36) + Math.random().toString(36)
   const informe = {
     fecha: HOY, corridoA: AHORA, creados: 0, avanzados: 0, toquesHoy: 0,
     toquesActualizados: 0, entradasCorregidas: 0, contactosViejos: [],
-    duplicadosEnSheet: [], clientesRecuperados: [], sinCambio: 0, detalle: []
+    duplicadosEnSheet: [], clientesRecuperados: [], sinCambio: 0,
+    fueraDeSecuencia: [], devueltosASecuencia: [], detalle: []
   };
 
   /* --- 1. leer el sheet --- */
@@ -204,7 +205,9 @@ const nuevoId = () => "l" + Date.now().toString(36) + Math.random().toString(36)
         cierre: null, cierreAt: null, importe: null,
         grabacion: "", pago: "", meses: null, cobros: {},
         estado: "activo", via: tiene(tags, "Tag VSL") ? "VSL" : "",
-        touchedAt: toque, seed: false, tags,
+        /* Entra ya archivado si no trae ni un tag: esta en el sheet pero fuera
+           de la secuencia. Si luego le cae un tag, B6 lo saca del archivo. */
+        touchedAt: toque, seed: !tags.length, seedAuto: !tags.length, tags,
         createdAt: AHORA, updatedAt: AHORA
       };
       if (cliente) Object.assign(l, { show: true, cierre: true, cierreAt: HOY, estado: "cliente", pendingBook: false });
@@ -279,6 +282,31 @@ const nuevoId = () => "l" + Date.now().toString(36) + Math.random().toString(36)
       informe.detalle.push(`@${u}: Tag Client ganó sobre el cierre — falta el importe`);
     }
 
+    /* B6 · SIN NINGÚN TAG = fuera de la secuencia.
+       Si en ManyChat no le queda ni un tag es que se le sacó de la secuencia:
+       ya no es prospecto y no tiene por qué ocupar sitio en las colas ni contar
+       en las métricas. Se archiva solo.
+
+       Se marca con `seedAuto` para poder distinguirlo de lo que archivó el
+       setter a mano. Sin esa marca no habría forma de deshacerlo: un archivado
+       manual (cliente, no interesado) SÍ tiene tags, así que una regla del tipo
+       "tiene tags → desarchivar" los resucitaría a todos. Con la marca, el
+       robot solo deshace lo que hizo él. */
+    if (!tags.length && !l.seed) {
+      set("seed", true);
+      set("seedAuto", true);
+      informe.fueraDeSecuencia.push(u);
+      informe.detalle.push(`@${u}: sin tags en ManyChat — archivado (fuera de la secuencia)`);
+    } else if (tags.length && l.seed && l.seedAuto) {
+      /* Le volvieron a poner un tag: vuelve a las colas. Esto es lo que salva a
+         un suscriptor recién entrado al que todavía no le había caído el primer
+         tag cuando pasó el robot. */
+      set("seed", false);
+      set("seedAuto", false);
+      informe.devueltosASecuencia.push(u);
+      informe.detalle.push(`@${u}: volvió a tener tags — fuera del archivo`);
+    }
+
     if (cambió) { l.updatedAt = AHORA; escribir.push({ id: l.id, data: l, updated_at: AHORA }); }
     else informe.sinCambio++;
   }
@@ -292,6 +320,8 @@ const nuevoId = () => "l" + Date.now().toString(36) + Math.random().toString(36)
   console.log(`✓ ${HOY} — creados ${informe.creados}, avanzados ${informe.avanzados}, ` +
               `toques hoy ${informe.toquesHoy}, sin cambio ${informe.sinCambio}`);
   if (informe.clientesRecuperados.length) console.log("  clientes recuperados (falta importe):", informe.clientesRecuperados.join(", "));
+  if (informe.fueraDeSecuencia.length) console.log("  archivados por quedarse sin tags:", informe.fueraDeSecuencia.join(", "));
+  if (informe.devueltosASecuencia.length) console.log("  devueltos del archivo (volvieron a tener tags):", informe.devueltosASecuencia.join(", "));
   if (informe.contactosViejos.length) console.log("  contactos viejos:", informe.contactosViejos.map((c) => `${c.username} (${c.subscribed})`).join(", "));
   if (informe.duplicadosEnSheet.length) console.log("  duplicados en el sheet:", [...new Set(informe.duplicadosEnSheet)].join(", "));
   informe.detalle.forEach((d) => console.log("  ·", d));
