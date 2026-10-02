@@ -950,10 +950,15 @@ const DEFAULT_CFG = {
   diasFrio: 4,           // días sin tocar antes de marcarlo como frío — ajústalo probando
   sugerencias: 15,       // cuántos sugerir en "Toca hoy"
   goal: 50000, aov: 1250, closeRate: 0.30, showRate: 0.70, bookRate: 0.02, workDays: 22,
-  /* Comision del setter sobre el cash cerrado. Va en CFG y no fija en el codigo
+  /* Comision del setter sobre el cash cobrado. Va en CFG y no fija en el codigo
      para que se pueda cambiar sin tocar el archivo si cambia el acuerdo.
      Solo el setter la edita: las reglas de la tabla kv no dejan escribir al closer. */
-  comision: 0.05
+  comision: 0.05,
+  /* El historial de la tasa. Cambiar el % NO puede reescribir lo ya liquidado:
+     si en noviembre pasa al 7%, octubre tiene que seguir calculandose al 5% que
+     era el acuerdo cuando entro ese dinero. Cada entrada dice desde que mes
+     manda; desde:"" es la tasa de siempre, la de antes de que esto existiera. */
+  comisionHist: [{ desde:"", tasa:0.05 }]
 };
 
 /* ===================== utilidades de fecha ===================== */
@@ -1541,8 +1546,19 @@ function seedCount(){ return LEADS.filter(l => l.seed).length; }
 function metrics(days, countBy){
   const from = windowFrom(days), to = todayStr(), T = todayStr();
   const inW = d => !!d && d >= from && d <= to;
-  const m = { leads:0, resp:0, prop:0, agen:0, callsDone:0, shows:0, cierres:0, cash:0, pendReg:0, futuras:0 };
+  const m = { leads:0, resp:0, prop:0, agen:0, callsDone:0, shows:0, cierres:0,
+              cash:0, contratos:0, pendReg:0, futuras:0 };
   const TODOS = LEADS;
+  /* CASH = dinero que entro de verdad, no contratos firmados. Un cliente que
+     paga mes a mes aporta su cuota el mes que la paga, asi que "ultimos 30
+     dias" cuenta las cuotas cobradas en esos 30 dias — vengan de una venta de
+     este mes o de una de hace medio año. Antes se sumaba el importe entero el
+     dia del cierre, que para un mensual ni era el total ni era lo cobrado.
+     CONTRATOS = lo que valen las ventas firmadas en la ventana (cuota x meses).
+     De ahi sale el AOV: el ticket medio es lo que vale un cliente, no lo que
+     ha pagado hasta hoy. */
+  const cobrado = (lista, dentro) => lista.reduce((a,l) =>
+    a + pagosDe(l).reduce((x,p) => x + ((p.cobrado && dentro(p)) ? p.importe : 0), 0), 0);
 
   if(countBy === "cohorte"){
     /* Cohorte agrupa por fecha de entrada, y la del arrastre es la de importación —
@@ -1559,7 +1575,10 @@ function metrics(days, countBy){
     m.futuras   = set.filter(l => l.callDate && l.callDate > T).length;
     m.shows   = set.filter(l => l.show === true).length;
     m.cierres = set.filter(l => l.cierre === true).length;
-    m.cash    = set.filter(l => l.cierre === true).reduce((a,l) => a + (+l.importe||0), 0);
+    /* En cohorte la pregunta es "cuanto ha pagado esta tanda de leads", sin
+       recortar por fecha de cobro: lo que mide es la calidad de la fuente. */
+    m.cash      = cobrado(set, () => true);
+    m.contratos = set.filter(l => l.cierre === true).reduce((a,l) => a + valorContrato(l), 0);
   } else {
     /* Actividad cuenta cada evento por SU propia fecha. El arrastre entra aquí:
        lo que le pase de hoy en adelante tiene fecha real y sí cuenta. Sus fechas
@@ -1575,7 +1594,10 @@ function metrics(days, countBy){
     m.futuras   = TODOS.filter(l => l.callDate && l.callDate > T).length;
     m.shows   = TODOS.filter(l => l.show === true && inW(l.showAt)).length;
     m.cierres = TODOS.filter(l => l.cierre === true && inW(l.cierreAt)).length;
-    m.cash    = TODOS.filter(l => l.cierre === true && inW(l.cierreAt)).reduce((a,l) => a + (+l.importe||0), 0);
+    /* Aqui si: literalmente el dinero cobrado dentro de la ventana. */
+    m.cash      = cobrado(TODOS, p => inW(p.fecha));
+    m.contratos = TODOS.filter(l => l.cierre === true && inW(l.cierreAt))
+                       .reduce((a,l) => a + valorContrato(l), 0);
   }
   m.rResp  = pct(m.resp, m.leads);
   m.rProp  = pct(m.prop, m.resp);
@@ -1583,7 +1605,9 @@ function metrics(days, countBy){
   m.rBook  = pct(m.agen, m.leads);
   m.rShow  = pct(m.shows, m.callsDone);
   m.rClose = pct(m.cierres, m.shows);
-  m.aov    = m.cierres > 0 ? m.cash / m.cierres : null;
+  /* AOV sobre el VALOR del contrato, no sobre lo cobrado: si no, un cliente que
+     va por el mes 1 de 12 hundiria el ticket medio hasta que acabara de pagar. */
+  m.aov    = m.cierres > 0 ? m.contratos / m.cierres : null;
   return m;
 }
 
@@ -1701,8 +1725,13 @@ function bySource(){
   return FUENTES.map(f => {
     const set = LEADS.filter(l => l.fuente === f);
     const cierres = set.filter(l => l.cierre === true);
+    /* Mismo criterio que la tarjeta de Cash de arriba: dinero cobrado, no
+       contratos firmados. Dos cifras de dinero en la misma pantalla no pueden
+       medir cosas distintas. */
     return { lab:f, leads:set.length, agen:set.filter(l => !!l.agendo).length,
-      cierres:cierres.length, cash:cierres.reduce((a,l) => a + (+l.importe||0), 0) };
+      cierres:cierres.length,
+      cash:cierres.reduce((a,l) =>
+        a + pagosDe(l).reduce((x,p) => x + (p.cobrado ? p.importe : 0), 0), 0) };
   }).filter(r => r.leads > 0).sort((a,b) => b.cash - a.cash || b.leads - a.leads);
 }
 
@@ -2484,6 +2513,36 @@ function mesesDelPlan(l){
 }
 /* La oferta ya dice los meses, asi que no hay que preguntarlos. */
 function ofertaLlevaMeses(l){ return /(\d+)\s*m\b/i.test(String(l.oferta||"")); }
+/* Valor del contrato entero. Con pago mensual, `importe` es la cuota: el
+   contrato son las cuotas juntas. Es lo que vale la venta, no lo cobrado. */
+function valorContrato(l){
+  const imp = +l.importe || 0;
+  return l.pago === "mensual" ? imp * mesesDelPlan(l) : imp;
+}
+
+/* La tasa de comision que regia en un mes dado. Manda la ultima entrada del
+   historial cuyo "desde" ya habia llegado. */
+function tasaComision(mes){
+  const h = (Array.isArray(CFG.comisionHist) && CFG.comisionHist.length)
+    ? CFG.comisionHist.slice().sort((a,b) => String(a.desde||"") < String(b.desde||"") ? -1 : 1)
+    : [{ desde:"", tasa: CFG.comision || 0 }];
+  let t = h[0].tasa;
+  for(let i = 0; i < h.length; i++){
+    if(String(h[i].desde||"") <= String(mes)) t = h[i].tasa; else break;
+  }
+  return +t || 0;
+}
+/* Apunta una tasa nueva a partir del mes EN CURSO. Los meses anteriores se
+   quedan con la suya: cambiar el numero no reabre liquidaciones pasadas. */
+function fijarComision(tasa){
+  const mes = mesActual();
+  const h = (Array.isArray(CFG.comisionHist) ? CFG.comisionHist : []).filter(e => String(e.desde||"") !== mes);
+  h.push({ desde: mes, tasa });
+  h.sort((a,b) => String(a.desde||"") < String(b.desde||"") ? -1 : 1);
+  CFG.comisionHist = h;
+  CFG.comision = tasa;        /* la tasa "de ahora", para lo que la mire suelta */
+}
+const pctTasa = t => (Math.round((+t||0)*1000)/10) + "%";
 
 /* Los cobros de un cliente, uno por fila.
    Si pago de una, es un solo cobro el mes del cierre. Si va mes a mes, `importe`
@@ -2495,15 +2554,23 @@ function pagosDe(l){
   const base = mesDe(l.cierreAt);
   const imp  = +l.importe || 0;
   if(l.pago !== "mensual"){
-    return [{ lead:l, mes:base, importe:imp, n:1, de:1, cobrado:true, unico:true }];
+    return [{ lead:l, mes:base, importe:imp, n:1, de:1, cobrado:true, unico:true, fecha:l.cierreAt }];
   }
   const n = mesesDelPlan(l);
   const cobros = l.cobros || {};
   const out = [];
   for(let i = 0; i < n; i++){
     const mes = sumarMeses(base, i);
-    out.push({ lead:l, mes, importe:imp, n:i+1, de:n,
-               cobrado: i === 0 || !!cobros[mes], unico:false });
+    const marca = cobros[mes];
+    const cobrado = i === 0 || !!marca;
+    out.push({ lead:l, mes, importe:imp, n:i+1, de:n, cobrado, unico:false,
+      /* La marca guarda el DIA en que se cobro, no un simple true: sin dia no se
+         puede decir si ese dinero cae dentro de "ultimos 7 dias". Las marcas
+         antiguas si son true a secas — para esas se usa el dia 1 del mes, que
+         es todo lo que se sabe de ellas. */
+      fecha: i === 0 ? l.cierreAt
+           : (typeof marca === "string" && marca.length === 10) ? marca
+           : (cobrado ? mes + "-01" : null) });
   }
   return out;
 }
@@ -2534,8 +2601,10 @@ function cierresPorMes(){
   return Object.keys(mapa).sort().reverse().map(k => {
     const m = mapa[k];
     m.pagos.sort((a,b) => (+b.importe||0) - (+a.importe||0));
-    m.comision    = m.cash * (CFG.comision || 0);
-    m.comisionPen = m.pendiente * (CFG.comision || 0);
+    /* Cada mes se liquida con la tasa que regia ESE mes, no con la de hoy. */
+    m.tasa        = tasaComision(m.mes);
+    m.comision    = m.cash * m.tasa;
+    m.comisionPen = m.pendiente * m.tasa;
     /* La media se saca solo sobre los cobros que TIENEN importe. Dividiendo
        entre todos, cada venta sin importe escribir tiraba la media hacia abajo
        e inventaba un ticket medio que nadie pago. */
@@ -2549,9 +2618,15 @@ function mesesHTML(){
   const meses = cierresPorMes();
   if(!meses.length) return "";
   const MES  = mesActual();
-  const tasa = CFG.comision || 0;
-  const pctTxt = (Math.round(tasa*1000)/10) + "%";
+  const tasa = tasaComision(MES);          /* la que rige AHORA */
   const mine = ROLE === "setter";
+  /* Si la tasa ha cambiado alguna vez, hay que decirlo: si no, ver 7% arriba y
+     5% en un mes viejo parece un error de cuentas en vez de lo que es. */
+  const hist = (Array.isArray(CFG.comisionHist) ? CFG.comisionHist : []).filter(e => String(e.desde||""));
+  const notaTasa = hist.length
+    ? '<p class="helptext" style="margin:-4px 0 10px">Cada mes se liquida con la tasa que regía entonces. ' +
+      'Cambios: ' + hist.map(e => pctTasa(e.tasa)+' desde '+esc(nombreMes(e.desde))).join(' · ') + '.</p>'
+    : "";
 
   /* Un cliente archivado sale de REAL() y su dinero deja de contar aqui — es la
      misma regla que usa el resto del CRM. Pero si pasa hay que decirlo: si no,
@@ -2567,11 +2642,13 @@ function mesesHTML(){
   /* La tasa la edita solo el setter: las reglas de la tabla kv no dejan escribir
      al closer, asi que darle un input seria un campo que acepta y luego falla. */
   const controlTasa = mine
-    ? '<div style="max-width:190px;margin:-2px 0 12px">' +
+    ? '<div style="max-width:220px;margin:-2px 0 4px">' +
         '<label class="f" for="cfg_comision">Comisión del setter %</label>' +
         '<input type="number" id="cfg_comision" data-cfg="comision" data-kind="pct" value="' +
-          (Math.round(tasa*1000)/10) + '" step="0.5" min="0"></div>'
-    : '<p class="helptext" style="margin:-4px 0 10px">Comisión del setter: ' + pctTxt + ' del cash cerrado.</p>';
+          (Math.round(tasa*1000)/10) + '" step="0.5" min="0">' +
+        '<p class="helptext" style="margin-top:5px">Lo que escribas rige desde ' +
+          esc(nombreMes(MES)) + '. Los meses anteriores no se tocan.</p></div>'
+    : '<p class="helptext" style="margin:-4px 0 10px">Comisión del setter: ' + pctTasa(tasa) + ' del cash cobrado.</p>';
 
   /* Al entrar, solo el mes en curso viene abierto: es el unico que todavia se
      esta moviendo. Los cerrados se abren con un click y se quedan asi. */
@@ -2605,7 +2682,7 @@ function mesesHTML(){
     '</tr>';
   };
 
-  return '<p class="eyebrow">Cierres por mes</p>' + nota + controlTasa +
+  return '<p class="eyebrow">Cierres por mes</p>' + nota + controlTasa + notaTasa +
     meses.map(m => {
       const abierto = !!MESES[m.mes];
       return '<div class="mescard'+(m.mes === MES ? " vivo" : "")+(abierto ? " abierto" : "")+'">' +
@@ -2627,7 +2704,7 @@ function mesesHTML(){
           '<div class="mesnum"><div class="k">Cierres</div><div class="v">'+m.cierres+'</div>' +
             '<div class="d">'+(m.aov ? money(Math.round(m.aov))+" por cobro" : "—")+'</div></div>' +
           '<div class="mesnum com"><div class="k">Comisión setter</div><div class="v">'+money(m.comision)+'</div>' +
-            '<div class="d">'+pctTxt+' de '+money(m.cash)+'</div></div>' +
+            '<div class="d">'+pctTasa(m.tasa)+' de '+money(m.cash)+'</div></div>' +
           /* La cuarta casilla solo sale si hay algo pendiente. Un mes cobrado
              entero no tiene por que enseñar un cero. */
           (m.pendiente
@@ -2860,8 +2937,8 @@ function viewNumeros(){
     '<button class="btn sm'+(COUNTBY===c[0]?" primary":"")+'" data-countby="'+c[0]+'">'+c[1]+'</button>').join(" ");
 
   const countExplain = COUNTBY === "cohorte"
-    ? "Agrupa por <b>fecha de entrada del lead</b>. Un lead de agosto que cierra en octubre cuenta en agosto. Mide la calidad de la fuente."
-    : "Agrupa por <b>la fecha de cada evento</b>. Una venta cobrada hoy cuenta hoy, aunque el lead entrara hace tres meses. Mide el mes que estás viviendo.";
+    ? "Agrupa por <b>fecha de entrada del lead</b>. Un lead de agosto que cierra en octubre cuenta en agosto. Mide la calidad de la fuente. <b>Cobrado</b> aquí es todo lo que ha pagado esa tanda, sin recortar por fecha."
+    : "Agrupa por <b>la fecha de cada evento</b>. Una venta cobrada hoy cuenta hoy, aunque el lead entrara hace tres meses. Mide el mes que estás viviendo. <b>Cobrado</b> es el dinero que entró dentro del período — incluidas las cuotas de clientes que pagan mes a mes.";
 
   const sc = seedCount();
   const seedNote = sc ? '<div class="banner info"><p><b>'+sc+' leads archivados.</b> Fuera de todas las métricas — normalmente contactos de antes del CRM o que ya no trabajas. Sus tags dicen dónde estaban, no cuándo llegaron ahí, así que no se puede reconstruir cuánto tardó cada paso.<br>Quedan fuera del modo <b>Cohorte</b>, que agrupa por fecha de entrada. Pero <b>en modo Actividad sí cuentan</b>: si uno de ellos agenda o cierra de hoy en adelante, eso tiene fecha real y entra en las tasas.</p></div>' : "";
@@ -2873,7 +2950,8 @@ function viewNumeros(){
       '<div class="stat"><div class="k">DM → Book</div><div class="v">'+pctStr(m.rBook)+'</div><div class="d formula">agendó ÷ leads</div></div>' +
       '<div class="stat"><div class="k">Show rate</div><div class="v">'+pctStr(m.rShow)+'</div><div class="d formula">show ÷ llamadas ya ocurridas</div></div>' +
       '<div class="stat"><div class="k">Close rate</div><div class="v">'+pctStr(m.rClose)+'</div><div class="d formula">cierres ÷ shows</div></div>' +
-      '<div class="stat good"><div class="k">Cash</div><div class="v">'+money2(m.cash)+'</div><div class="d formula">AOV '+(m.aov?money2(m.aov):"—")+'</div></div>' +
+      '<div class="stat good"><div class="k">Cobrado</div><div class="v">'+money2(m.cash)+'</div>' +
+        '<div class="d formula">AOV '+(m.aov?money2(m.aov):"—")+'</div></div>' +
     '</div>';
 
   const verdict = '<div class="verdict '+(bn.ok?"ok":bn.none?"":"crit")+'" style="'+(bn.none?"border-left-color:var(--line-2);background:var(--surface-2);color:var(--ink-2)":"")+'">' +
@@ -3734,7 +3812,9 @@ document.addEventListener("click", async (e) => {
     /* Copia nueva: mutar el objeto que ya esta en LEADS deja al trigger de
        Postgres comparando el valor consigo mismo y creyendo que no cambio. */
     const cobros = Object.assign({}, l.cobros || {});
-    if(cobros[mes]) delete cobros[mes]; else cobros[mes] = true;
+    /* Se guarda el DIA, no un true: asi "cobrado en los ultimos 7 dias" tiene
+       con que contar. Ver pagosDe(). */
+    if(cobros[mes]) delete cobros[mes]; else cobros[mes] = todayStr();
     l.cobros = cobros;
     await persist(l);
     toast(cobros[mes]
@@ -4058,6 +4138,15 @@ document.addEventListener("change", async (e) => {
     const k = el.dataset.cfg;
     let v = Number(el.value);
     if(!isFinite(v) || v < 0) v = 0;
+    /* La comision no se pisa a secas: se apunta en el historial desde el mes en
+       curso, para que los meses ya liquidados conserven su tasa. */
+    if(k === "comision"){
+      fijarComision(v/100);
+      await persistCfg();
+      render();
+      toast("Comisión al "+pctTasa(v/100)+" desde "+nombreMes(mesActual())+".");
+      return;
+    }
     CFG[k] = el.dataset.kind === "pct" ? v/100 : v;
     await persistCfg();
     return;
