@@ -111,6 +111,17 @@ const TAGS = [
 /* Estos cuatro prueban que el link salió. Son los únicos que suben el bloque. */
 const PRECALL = ["Tag Link", "Tag Booked", "Tag Not Closed", "Tag Client"];
 
+/* Lo caliente que está cada tag. Mismo orden que usa el CRM para pintar el
+   termómetro. Solo se usa para desempatar filas duplicadas. */
+const CALOR = {
+  "Tag Client": 100, "Tag Booked": 90, "Tag Link": 80,
+  "Tag Lead": 60, "Tag Warming Lead": 50,
+  "Tag Not Closed": 45, "Tag Not Interested": 45,
+  "Tag Interest": 40, "Tag Interest Buildup": 30, "Ta Interest Buildup": 30,
+  "Tag VSL": 5
+};
+const calorDeFila = (f) => TAGS.reduce((max, t) => esTrue(f[t]) ? Math.max(max, CALOR[t] || 0) : max, 0);
+
 const tiene = (t, n) => t.includes(n);
 const nuevoId = () => "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
@@ -130,17 +141,35 @@ const nuevoId = () => "l" + Date.now().toString(36) + Math.random().toString(36)
   catch (e) { informe.detalle.push("Sin pestaña Daily Touch: " + e.message); }
 
   /* --- 2. deduplicar por username --- */
+  /* ManyChat deberia ACTUALIZAR la fila de cada persona en la pestaña Instagram,
+     pero a veces inserta una nueva. El 3 de octubre de 2026 habia 17 duplicados
+     de 65 personas, y seguian apareciendo ese mismo dia.
+
+     El desempate de antes era "gana la fila con mas tags; si empatan, la ultima"
+     y elegia mal. Mas tags no es mas avanzado —una fila con [Booked] es mejor
+     noticia que una con [Interest]— y el orden de las filas no es cronologico:
+     la fila nueva de @jahmarie_ con Booked estaba ENCIMA de la vieja con
+     Interest, asi que ganaba la vieja y en el CRM salia como Interest.
+
+     Ahora manda la fila mas reciente por "Last Touch", que es lo unico del Sheet
+     que dice cuando se movio cada fila. Si empatan o vienen vacias, gana la mas
+     caliente, y en ultimo caso la ultima. Ojo: "Last Touch" NO sirve para contar
+     toques —la mueve tambien la automatizacion, por eso no se lee para eso— pero
+     si sirve para saber cual de dos filas es la nueva. */
   const porUser = new Map();
   for (const f of instagram) {
     const u = norm(f.Username);
     if (!u) continue;
-    const cuantos = TAGS.filter((t) => esTrue(f[t])).length;
+    const cand = { fila: f, toque: fecha(f["Last Touch"]) || "", calor: calorDeFila(f) };
     const previo = porUser.get(u);
     if (previo) {
       informe.duplicadosEnSheet.push(u);
-      if (cuantos < previo.cuantos) continue;   // gana el de más tags; empate → el último
+      const gana = cand.toque !== previo.toque
+        ? cand.toque > previo.toque
+        : cand.calor >= previo.calor;
+      if (!gana) continue;
     }
-    porUser.set(u, { fila: f, cuantos });
+    porUser.set(u, cand);
   }
 
   /* --- 3. toques --- */
