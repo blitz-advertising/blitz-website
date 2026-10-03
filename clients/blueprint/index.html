@@ -2171,7 +2171,9 @@ function tablaSegmento(list, archivo, opts){
   }).join("");
   return '<div class="tablewrap"><table><thead><tr>' +
     '<th>'+(archivo ? "Estado" : "Calor")+'</th><th>Handle</th><th>Nombre</th>' +
-    '<th>'+(opts.labMotivo || (archivo ? "Motivo" : "Bloque"))+'</th>' +
+    /* !== undefined, no "||": una zona puede querer la columna SIN titulo, y con
+       "||" la cadena vacia caia en el valor por defecto. */
+    '<th>'+(opts.labMotivo !== undefined ? opts.labMotivo : (archivo ? "Motivo" : "Bloque"))+'</th>' +
     '<th>Sin tocar</th><th>Notas</th><th>Entró</th></tr></thead><tbody>' +
     rows + '</tbody></table></div>';
 }
@@ -2320,8 +2322,9 @@ function zonaDe(l){
   if(l.cierre === true || tieneTag(l,"Tag Client")) return "cliente";
   if(esNoCerro(l))      return "nocerro";
   if(esNoInteresado(l)) return "nointeres";
-  if(!(l.tags || []).length) return "fuera";
-  return "mano";
+  /* Quedarse sin tags no es un motivo aparte: el propio flow de ManyChat saca
+     de la secuencia a quien se queda sin ninguno. Es archivado y ya. */
+  return "archivado";
 }
 /* Columna izquierda en Archivo. Todos son archivados menos los clientes: a
    alguien que te esta pagando no se le pone "Archivado" delante. */
@@ -2331,16 +2334,22 @@ function estadoArchivoChip(l){
     : '<span class="heat dead"><i class="em">🗄️</i>Archivado</span>';
 }
 
-/* Por que esta archivado. En Archivo todos son archivados —eso lo dice la
-   primera columna—, asi que lo que aporta aqui es el motivo. */
+/* Esta columna solo habla cuando tiene algo que decir.
+   Que esta archivado ya lo dice la columna de al lado, y el titulo de la zona
+   dice de que grupo es. Repetirlo aqui no informaba de nada: por eso ya no hay
+   "A mano", ni "Del import", ni "Archivado" — eran la misma frase tres veces.
+   Queda lo que SI anade informacion: como acabo una llamada que se perdio, y
+   quien dijo que no. */
 function motivoChip(l){
   const chip = (em, txt, cls) => '<span class="heat '+(cls||"")+'"><i class="em">'+em+'</i>'+esc(txt)+'</span>';
-  if(esNoCerro(l))      return chip("👎🏼","No cerró","dead");
+  /* En los que no cerraron, lo que importa no es que no cerraron —eso ya lo
+     dice el grupo— sino POR QUE. Y si falta, que se vea que falta. */
+  if(esNoCerro(l)) return l.objecion
+    ? chip("👎🏼", l.objecion, "dead")
+    : chip("👎🏼", "falta la objeción", "warn");
   if(esNoInteresado(l)) return chip("🚫","No interesado","dead");
   if(l.cierre === true || tieneTag(l,"Tag Client")) return chip("💪🏼","Cliente","client");
-  /* Sin un solo tag: ManyChat lo sacó de la secuencia y el robot lo archivó. */
-  if(!(l.tags || []).length) return chip("📭","Fuera de la secuencia","dead");
-  return chip("🗄️","A mano","dead");   /* lo archivaste tu, sin tag que lo explique */
+  return '<span style="color:var(--muted)">—</span>';
 }
 
 /* ===================== render: INTERESADOS =====================
@@ -2398,14 +2407,15 @@ function viewArchivo(){
       motivo: l => '<span class="mono">'+((+l.importe > 0) ? money(l.importe) : "—")+
                    (l.pago === "mensual" ? '<span class="chip" style="margin-left:6px">al mes</span>' : "")+'</span>',
       labMotivo:"Importe" },
-    { k:"nocerro",   lab:"No cerraron", rojo:true,
+    { k:"nocerro",   lab:"No cerraron", rojo:true, labMotivo:"Objeción",
       ayuda:"Llegaron a la llamada y no compraron. Con la objeción marcada alimentan «qué mata los deals»." },
     { k:"nointeres", lab:"No interesados", rojo:true,
       ayuda:"Dijeron que no. Dentro de unos meses el momento puede ser otro — de aquí sale el follow-up frío." },
-    { k:"fuera",     lab:"Fuera de la secuencia", rojo:true,
-      ayuda:"Sin ningún tag en ManyChat. El robot los sacó solo. Si le pones un tag allí, vuelven a las colas." },
-    { k:"mano",      lab:"Archivados a mano", rojo:true,
-      ayuda:"Los archivaste tú. Ningún tag explica por qué, así que solo tú sabes el motivo." }
+    /* Todo lo demas junto: los que se quedaron sin tags, los del import inicial
+       y los que archivaste tu. No hay motivo que contar —estan archivados y ya—
+       asi que la columna va vacia a proposito. */
+    { k:"archivado", lab:"Archivados", rojo:true, labMotivo:"",
+      ayuda:"Salieron de la secuencia en ManyChat, vinieron del import inicial, o los archivaste tú. Si a alguno le pones un tag en ManyChat, vuelve solo a tus colas." }
   ];
 
   const bloques = ZONAS.map(z => {
@@ -3181,6 +3191,8 @@ function srcFromTag(t){
 }
 function applyTags(l, stages, tagNames){
   if(!stages.length && !(tagNames||[]).some(srcFromTag)) return;
+  /* Entra archivado porque sus tags dicen DONDE estaba, no CUANDO llego ahi:
+     sin fechas no se puede reconstruir su embudo y ensuciaria las tasas. */
   l.seed = true;
   l.tags = tagNames || [];
   l.respondio = true;
