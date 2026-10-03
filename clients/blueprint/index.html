@@ -2164,16 +2164,19 @@ function tablaSegmento(list, archivo, opts){
     return '<tr><td>'+(archivo ? estadoArchivoChip(l) : calorChip(l))+'</td>' +
       '<td><button class="linkish" data-open="'+l.id+'">@'+esc(l.handle)+'</button></td>' +
       '<td>'+esc(l.nombre||"—")+'</td>' +
-      '<td>'+(opts.motivo ? opts.motivo(l) : archivo ? motivoChip(l) : blockChip(l))+'</td>' +
+      (opts.sinMotivo ? "" :
+        '<td>'+(opts.motivo ? opts.motivo(l) : archivo ? motivoChip(l) : blockChip(l))+'</td>') +
       '<td class="mono'+(frio?' crit':'')+'" title="Días desde el último toque">'+(d>=999?"nunca":d===0?"hoy":d+"d")+'</td>' +
       '<td>'+(notas.length?esc(notas.join(" · ")):'<span style="color:var(--warn)">sin notas</span>')+'</td>' +
       '<td class="mono" title="'+esc(entryTitle(l.entry, l.subscribedAt))+'">'+fmtShort(l.entry)+'</td></tr>';
   }).join("");
   return '<div class="tablewrap"><table><thead><tr>' +
     '<th>'+(archivo ? "Estado" : "Calor")+'</th><th>Handle</th><th>Nombre</th>' +
-    /* !== undefined, no "||": una zona puede querer la columna SIN titulo, y con
-       "||" la cadena vacia caia en el valor por defecto. */
-    '<th>'+(opts.labMotivo !== undefined ? opts.labMotivo : (archivo ? "Motivo" : "Bloque"))+'</th>' +
+    /* Hay zonas donde esta columna no tiene nada que decir —estan archivados y
+       ya—, y rellenarla de guiones bajo un titulo vacio se veia peor que no
+       tenerla. En esas se quita entera, cabecera incluida. */
+    (opts.sinMotivo ? "" :
+      '<th>'+(opts.labMotivo || (archivo ? "Motivo" : "Bloque"))+'</th>') +
     '<th>Sin tocar</th><th>Notas</th><th>Entró</th></tr></thead><tbody>' +
     rows + '</tbody></table></div>';
 }
@@ -2414,14 +2417,14 @@ function viewArchivo(){
     /* Todo lo demas junto: los que se quedaron sin tags, los del import inicial
        y los que archivaste tu. No hay motivo que contar —estan archivados y ya—
        asi que la columna va vacia a proposito. */
-    { k:"archivado", lab:"Archivados", rojo:true, labMotivo:"",
+    { k:"archivado", lab:"Archivados", rojo:true, sinMotivo:true,
       ayuda:"Salieron de la secuencia en ManyChat, vinieron del import inicial, o los archivaste tú. Si a alguno le pones un tag en ManyChat, vuelve solo a tus colas." }
   ];
 
   const bloques = ZONAS.map(z => {
     const sub = list.filter(l => zonaDe(l) === z.k);
     if(!sub.length) return "";
-    const tabla = tablaSegmento(sub, true, { motivo:z.motivo, labMotivo:z.labMotivo });
+    const tabla = tablaSegmento(sub, true, { motivo:z.motivo, labMotivo:z.labMotivo, sinMotivo:z.sinMotivo });
     return '<section style="margin-bottom:22px">' +
       '<div class="qhead"><h3>'+esc(z.lab)+'</h3><span class="n">'+sub.length+'</span><span class="rule"></span></div>' +
       '<p class="helptext" style="margin:-4px 0 9px">'+z.ayuda+'</p>' +
