@@ -2322,7 +2322,13 @@ function barraToquesHTML(){
 /* En que zona de Archivo cae cada uno. Mismo orden de mando que segmento():
    el cierre manda sobre cualquier tag que arrastre de antes. */
 function zonaDe(l){
-  if(l.cierre === true || tieneTag(l,"Tag Client")) return "cliente";
+  /* Un cliente ARCHIVADO no es un cliente tuyo: o no lo cerraste tu —los que
+     vinieron en el import ya traian el cierre hecho— o lo sacaste a mano. En
+     los dos casos esta fuera de tus metricas, asi que baja con los borrados y
+     no ensucia la lista de los que si cerraste.
+     Los "no cerro" y los "no interesado" no bajan aunque esten archivados: eso
+     paso de verdad y es historial, no algo que se saco. */
+  if(l.cierre === true || tieneTag(l,"Tag Client")) return l.seed ? "archivado" : "cliente";
   if(esNoCerro(l))      return "nocerro";
   if(esNoInteresado(l)) return "nointeres";
   /* Quedarse sin tags no es un motivo aparte: el propio flow de ManyChat saca
@@ -2332,9 +2338,15 @@ function zonaDe(l){
 /* Columna izquierda en Archivo. Todos son archivados menos los clientes: a
    alguien que te esta pagando no se le pone "Archivado" delante. */
 function estadoArchivoChip(l){
-  return zonaDe(l) === "cliente"
-    ? '<span class="heat client"><i class="em">💪🏼</i>Cliente</span>'
-    : '<span class="heat dead"><i class="em">🗄️</i>Archivado</span>';
+  /* Dice QUE es cada uno, no donde esta guardado. Poner "Archivado" a un "no
+     cerro" era falso: esa llamada ocurrio y sigue contando — solo esta fuera de
+     las colas de trabajo. "Archivado" se queda para los que de verdad se
+     sacaron. */
+  const z = zonaDe(l);
+  if(z === "cliente")   return '<span class="heat client"><i class="em">💪🏼</i>Cliente</span>';
+  if(z === "nocerro")   return '<span class="heat dead"><i class="em">👎🏼</i>No cerró</span>';
+  if(z === "nointeres") return '<span class="heat dead"><i class="em">🚫</i>No interesado</span>';
+  return '<span class="heat dead"><i class="em">🗄️</i>Archivado</span>';
 }
 
 /* Esta columna solo habla cuando tiene algo que decir.
@@ -2405,20 +2417,20 @@ function viewArchivo(){
 
   const ZONAS = [
     { k:"cliente",   lab:"Clientes", rojo:false,
-      ayuda:"Pagaron. Siguen aquí por orden, no por descarte: su dinero cuenta igual en Llamadas y en Números.",
+      ayuda:"Los que cerraste tú. Su dinero cuenta igual en Llamadas y en Números — están aquí por orden, no por descarte. Si archivas a uno, baja a Archivados y deja de contar.",
       /* A un cliente no le interesa el "motivo": le interesa cuanto paga. */
       motivo: l => '<span class="mono">'+((+l.importe > 0) ? money(l.importe) : "—")+
                    (l.pago === "mensual" ? '<span class="chip" style="margin-left:6px">al mes</span>' : "")+'</span>',
       labMotivo:"Importe" },
     { k:"nocerro",   lab:"No cerraron", rojo:true, labMotivo:"Objeción",
       ayuda:"Llegaron a la llamada y no compraron. Con la objeción marcada alimentan «qué mata los deals»." },
-    { k:"nointeres", lab:"No interesados", rojo:true,
+    { k:"nointeres", lab:"No interesados", rojo:true, sinMotivo:true,
       ayuda:"Dijeron que no. Dentro de unos meses el momento puede ser otro — de aquí sale el follow-up frío." },
     /* Todo lo demas junto: los que se quedaron sin tags, los del import inicial
        y los que archivaste tu. No hay motivo que contar —estan archivados y ya—
        asi que la columna va vacia a proposito. */
     { k:"archivado", lab:"Archivados", rojo:true, sinMotivo:true,
-      ayuda:"Salieron de la secuencia en ManyChat, vinieron del import inicial, o los archivaste tú. Si a alguno le pones un tag en ManyChat, vuelve solo a tus colas." }
+      ayuda:"Fuera de todas tus métricas. Salieron de la secuencia en ManyChat, vinieron del import inicial, o los archivaste tú. Si a alguno le pones un tag en ManyChat, vuelve solo a tus colas." }
   ];
 
   const bloques = ZONAS.map(z => {
