@@ -950,3 +950,9 @@ body.vsl-page .cursor-ring { display: none; }
 
 /* El reproductor del VSL con el mismo contorno azul que las preguntas. */
 .v-video { border: 1px solid rgba(68,115,255,0.55); }
+
+@media (max-width: 680px) {
+  /* La pregunta centrada, la respuesta de izquierda a derecha: un parrafo de
+     cuatro lineas centrado obliga a buscar el principio de cada linea. */
+  .v-faq-list .v-q p { text-align: left; }
+}
