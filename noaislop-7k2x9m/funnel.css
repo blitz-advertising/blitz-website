@@ -825,3 +825,56 @@ body.vsl-page .cursor-ring { display: none; }
 @media (max-width: 560px) {
   .v-compare > .v-eyebrow { font-size: 13px; letter-spacing: 0.1em; line-height: 1.6; }
 }
+
+/* ─── TELEFONO: AJUSTES FINOS ───────────────── */
+@media (max-width: 680px) {
+  /* 1 · Botones: la caja ya iba centrada, pero al pasar a display:flex el
+     texto se quedaba pegado a la izquierda dentro de ella. */
+  .v-cta { justify-content: center; text-align: center; }
+
+  /* 2 · FAQ centradas: a una columna en telefono se leen mejor como bloques
+     sueltos que como una tabla alineada a la izquierda. */
+  .v-q { text-align: center; }
+  .v-q p { margin-left: auto; margin-right: auto; }
+
+  /* 3 · "book your call." en una linea. El tamaño sale del ancho real de la
+     caja, no de un numero fijo: la frase mide ~10.2 veces su tamaño de letra y
+     la caja deja ~80px de margen, asi que cabe en cualquier telefono. */
+  .v-booknow .v-h2 { font-size: calc((100vw - 80px) / 10.2); white-space: nowrap; }
+
+  /* 4 · Titulares de los casos. A 21px "worlds you cannot shoot" no cabia y
+     dejaba "shoot" sola en la segunda linea. Ahora el tamaño se calcula para
+     que entre en una, y los largos se reparten en dos lineas iguales en vez
+     de dejar una palabra colgando. */
+  .v-case-line {
+    font-size: min(22px, calc((100vw - 48px) / 17.5));
+    text-wrap: balance;
+    max-width: none;
+  }
+  .v-case { margin-bottom: 34px; }
+  .v-case-media { border-radius: 10px; }
+}
+@media (max-width: 680px) {
+  /* "Send and see available times" es la frase mas larga de todos los botones
+     y a 13px se partia en dos lineas, con la flecha suelta a la derecha. */
+  .v-leadsend {
+    white-space: nowrap;
+    font-size: min(12.5px, calc((100vw - 80px) / 26));
+    letter-spacing: 0.06em;
+    padding-left: 12px;
+    padding-right: 12px;
+    gap: 8px;
+  }
+}
+@media (max-width: 680px) {
+  /* "How it works" era la unica seccion alineada a la izquierda en telefono,
+     entre otras centradas. Centrada y con aire entre pasos. */
+  .v-how-grid { text-align: center; gap: 34px; }
+  .v-how-num { font-size: 40px; margin-bottom: 8px; }
+  .v-how-step h3 { font-size: 18px; }
+  .v-how-step p { max-width: 34ch; margin: 0 auto; }
+
+  /* El titulo de la comparativa partia en "…< PRODUCTION / WITH AI". Asi
+     reparte las dos lineas por igual. */
+  .v-compare > .v-eyebrow { text-wrap: balance; }
+}
