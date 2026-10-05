@@ -878,3 +878,75 @@ body.vsl-page .cursor-ring { display: none; }
      reparte las dos lineas por igual. */
   .v-compare > .v-eyebrow { text-wrap: balance; }
 }
+
+/* ─── FAQ: CADA PREGUNTA SU PROPIA TARJETA ──── */
+/* Antes las cuatro iban dentro de un solo bloque, separadas por una linea, y se
+   leian como un parrafo largo. Ahora cada una se recorta sola contra el fondo,
+   y la pregunta lleva su marca azul para que el ojo salte de una a otra sin
+   leer las respuestas. */
+.v-faq-list {
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.v-faq-list .v-q,
+.v-faq-list .v-q:last-child {
+  border: 1px solid rgba(37,80,245,0.38);
+  border-radius: 12px;
+  padding: 22px 24px 22px;
+  background: linear-gradient(180deg, rgba(37,80,245,0.10), rgba(37,80,245,0.02));
+  box-shadow: inset 0 0 60px -24px rgba(68,115,255,0.45);
+}
+.v-faq-list .v-q h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 16.5px;
+}
+.v-faq-list .v-q h3::before {
+  content: 'Q';
+  flex: none;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--f-blue-hi);
+}
+.v-faq-list .v-q p { padding-left: 25px; }
+
+@media (max-width: 680px) {
+  .v-faq-list .v-q,
+  .v-faq-list .v-q:last-child { padding: 20px 18px; }
+  /* Centradas en telefono: la marca va encima de la pregunta, no al lado, y la
+     respuesta pierde la sangria que solo tenia sentido con la marca a un lado. */
+  .v-faq-list .v-q h3 { flex-direction: column; align-items: center; gap: 4px; }
+  .v-faq-list .v-q p { padding-left: 0; }
+}
+
+/* ─── FAQ SIN GLOW ──────────────────────────── */
+/* El resplandor interior queda reservado para lo que cierra la venta: la
+   garantia y la caja de reserva. Si todo brilla, nada destaca. Las preguntas
+   se separan por forma (tarjeta propia) y por la marca azul, no por luz. */
+.v-faq-list .v-q,
+.v-faq-list .v-q:last-child {
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.025);
+  box-shadow: none;
+  transition: border-color .2s;
+}
+.v-faq-list .v-q:hover { border-color: rgba(68,115,255,0.45); }
+
+/* Contorno azul, sin glow ni tinte: se distingue cada pregunta sin competir
+   con la garantia y la caja de reserva, que son las unicas que brillan. */
+.v-faq-list .v-q,
+.v-faq-list .v-q:last-child {
+  border: 1px solid rgba(68,115,255,0.55);
+  background: transparent;
+  box-shadow: none;
+}
+.v-faq-list .v-q:hover { border-color: var(--f-blue-hi); }
+
+/* El reproductor del VSL con el mismo contorno azul que las preguntas. */
+.v-video { border: 1px solid rgba(68,115,255,0.55); }
