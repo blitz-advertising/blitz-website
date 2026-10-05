@@ -17,7 +17,7 @@
   <meta property="og:image" content="https://adsbyblitz.com/assets/work/work_03.jpg">
 
   <link rel="stylesheet" href="../styles.css?v=61">
-  <link rel="stylesheet" href="funnel.css?v=30">
+  <link rel="stylesheet" href="funnel.css?v=31">
   <script src="https://assets.calendly.com/assets/external/widget.js" async></script>
   <link rel="icon" type="image/png" href="../assets/blitz-favicon.png">
 
@@ -163,8 +163,8 @@
           <select class="form-select" id="budget" name="budget" required>
             <option value="" disabled selected>Select a range</option>
             <option value="Less than $500">Less than $500</option>
-            <option value="$500 \u2013 $1,500">$500 &ndash; $1,500</option>
-            <option value="$1,500 \u2013 $5,000">$1,500 &ndash; $5,000</option>
+            <option value="$500 – $1,500">$500 &ndash; $1,500</option>
+            <option value="$1,500 – $5,000">$1,500 &ndash; $5,000</option>
             <option value="$5,000+">$5,000+</option>
           </select>
         </div>
@@ -318,13 +318,15 @@
       </div>
 
       <div class="v-q">
-        <h3>What if I hate it?</h3>
-        <p>We lock all the content direction and the main assets with you before the ten day timer starts, and before we generate any video or images at scale. You are approving the direction, not reacting to a finished file.</p>
+        <h3>How much is this?</h3>
+        <p>Projects start at $500. Past that, it depends on what you need: you pick only the pieces you want and see the number on the call.</p>
       </div>
 
       <div class="v-q">
-        <h3>How much is this?</h3>
-        <p>It depends on what you need. You pick only the pieces you want and see the number on the call.</p>
+        <h3>Is this the right fit for my project?</h3>
+        <p>If your budget is under $500, we&rsquo;re not a good fit yet.</p>
+        <p>We run a premium AI studio where every project is directed by a real person, finished by hand in post, and backed by our money-back guarantee. That level of work requires a minimum investment of $500 for us to work together.</p>
+        <p>If your budget is $500 or more, we&rsquo;d love to hear about your project and see what we can create together.</p>
       </div>
 
     </div>
@@ -461,7 +463,11 @@
        agenda de gente que no puede pagar.
        Los parametros del anuncio viajan con el click para no perder de que
        campaña vino la persona al cambiar de pagina. */
-    document.querySelectorAll(".v-cta").forEach(b => {
+    /* :not(.v-leadsend). El boton de enviar comparte la clase de estilo con los
+       CTA, y este manejador hace preventDefault para bajar a la caja. Sin la
+       exclusion, pulsar "Send" solo hacia scroll y el formulario NUNCA se
+       enviaba: nadie podia reservar. */
+    document.querySelectorAll(".v-cta:not(.v-leadsend)").forEach(b => {
       b.addEventListener("click", (e) => {
         e.preventDefault();
         if(typeof fbq !== "undefined") fbq("trackCustom", "FunnelCTA", { pos: b.dataset.cta || "?" });

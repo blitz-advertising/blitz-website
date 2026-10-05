@@ -956,3 +956,6 @@ body.vsl-page .cursor-ring { display: none; }
      cuatro lineas centrado obliga a buscar el principio de cada linea. */
   .v-faq-list .v-q p { text-align: left; }
 }
+
+/* Respuestas de mas de un parrafo: un poco de aire entre ellos. */
+.v-faq-list .v-q p + p { margin-top: 10px; }
