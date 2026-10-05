@@ -810,3 +810,18 @@ body.vsl-page .cursor-ring { display: none; }
 .v-bookbox .v-calprev-grid span { background: rgba(255,255,255,0.06); }
 .v-bookbox .v-thanks p,
 .v-bookbox #calIntro { color: rgba(255,255,255,0.88); }
+
+/* ─── TITULO DE LA COMPARATIVA ──────────────── */
+/* Es el titulo de la tabla, no una etiqueta: a 11px y gris se perdia y la
+   tabla empezaba sin decir que estaba comparando. */
+.v-compare > .v-eyebrow {
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  font-weight: 500;
+  color: rgba(255,255,255,0.92);
+  margin-bottom: 28px;
+}
+.v-compare > .v-eyebrow .v-accent { color: var(--f-blue-hi); font-size: 17px; margin: 0 4px; }
+@media (max-width: 560px) {
+  .v-compare > .v-eyebrow { font-size: 13px; letter-spacing: 0.1em; line-height: 1.6; }
+}
