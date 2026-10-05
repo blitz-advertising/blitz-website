@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Book Your Call — Blitz</title>
+  <meta name="description" content="Tell us what you are making and book your call.">
+  <!-- noindex: es el segundo paso de un embudo de pago, no una pagina de busqueda. -->
+  <meta name="robots" content="noindex, nofollow">
+
+  <link rel="stylesheet" href="../../styles.css?v=61">
+  <link rel="stylesheet" href="../funnel.css?v=11">
+  <link rel="icon" type="image/png" href="../../assets/blitz-favicon.png">
+
+  <!-- Meta Pixel Code -->
+  <script>
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version="2.0";
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,"script",
+  "https://connect.facebook.net/en_US/fbevents.js");
+  fbq("init", "775347661459841");
+  fbq("track", "PageView");
+  </script>
+  <noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=775347661459841&ev=PageView&noscript=1"
+  /></noscript>
+  <!-- End Meta Pixel Code -->
+  <!-- Whop Pixel -->
+  <script>!function(w,d,s,u,n,a,b){if(w[n])return;a=w[n]={q:[],t:+new Date,s:[],o:u,track:function(){a.q.push([+new Date].concat([].slice.call(arguments)))},setScope:function(){a.s=[].slice.call(arguments).filter(function(x){return typeof x==="string"});a.q.push([+new Date,"setScope"].concat(a.s))},scope:function(){var c=[].slice.call(arguments);return{track:function(){a.q.push([+new Date].concat([].slice.call(arguments)).concat([{__scope:c}]))}}}};b=d.createElement(s);b.async=1;b.src=u+"/s.js";d.getElementsByTagName(s)[0].parentNode.insertBefore(b,d.getElementsByTagName(s)[0])}(window,document,"script","https://t.whop.tw","whop");whop.setScope("biz_LjYJNK8Vo7Cqlr");whop.track("page");</script>
+</head>
+<body class="vsl-page">
+
+  <!-- La marca lleva de vuelta a la landing, no a la home: el unico camino que
+       existe aqui es hacia delante o un paso atras dentro del embudo. -->
+  <header class="v-top">
+    <a id="volver" class="v-back" href="../">
+      <img src="../../assets/blitz-icon-white.png" alt="Blitz" class="v-logo-icon">
+      <span class="v-logo-word">blitz</span>
+    </a>
+  </header>
+
+  <section class="v-book-page">
+
+    <!-- El encabezado del paso 1 se esconde al pasar al 2: dejarlo puesto hacia
+         que se vieran los dos pasos a la vez, uno debajo del otro. -->
+    <div id="paso1">
+      <p class="v-step">Step 1 of 2</p>
+      <h1 class="v-h2">tell us what<br>you need.</h1>
+      <p class="v-sub v-sub--tight">
+        Two minutes. If it is a fit, the calendar opens on this same page and we
+        price it on the call.
+      </p>
+    </div>
+
+    <div class="v-form-wrap">
+      <form id="funnelForm" class="contact-form" onsubmit="handleSubmit(event)">
+
+        <input type="hidden" name="access_key" value="27aeeb56-b1e2-402e-bf45-d9bee9b41a8e">
+        <input type="hidden" name="subject" value="New AI funnel lead — Blitz">
+        <input type="hidden" name="from_name" value="Blitz AI Funnel">
+        <!-- De donde vino. Sin esto, un lead del anuncio y uno de /apply/ caen
+             en el mismo correo y no hay forma de distinguirlos. -->
+        <input type="hidden" name="source" value="/ai/ VSL funnel">
+        <input type="hidden" name="ad_ref" id="adRef" value="">
+        <input type="checkbox" name="botcheck" style="display:none" tabindex="-1" autocomplete="off">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="name">Full Name</label>
+            <input class="form-input" type="text" id="name" name="name" placeholder="Your name" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="email">Email</label>
+            <input class="form-input" type="email" id="email" name="email" placeholder="you@email.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="company">Brand / Company</label>
+            <input class="form-input" type="text" id="company" name="company" placeholder="Your brand" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="phone">Phone</label>
+            <input class="form-input" type="tel" inputmode="tel" id="phone" name="phone"
+                   placeholder="+1 555 123 4567" required minlength="7" maxlength="20"
+                   pattern="[\d+\-\(\) ]{7,20}" title="Enter a valid phone number (at least 7 digits)">
+          </div>
+          <div class="form-group full">
+            <label class="form-label" for="service">What do you need?</label>
+            <select class="form-select" id="service" name="service" required>
+              <option value="" disabled selected>Select what you need</option>
+              <option value="Commercial / brand film">Commercial / brand film</option>
+              <option value="Short form (reels, ad creatives)">Short form — reels, ad creatives</option>
+              <option value="Product imagery">Product imagery / stills</option>
+              <option value="Mixed — video and stills">Mixed — video and stills</option>
+              <option value="Not sure yet">Not sure yet</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label class="form-label" for="budget">Budget for this project</label>
+            <select class="form-select" id="budget" name="budget" required>
+              <option value="" disabled selected>Select a range</option>
+              <option value="Less than $500">Less than $500</option>
+              <option value="$500 – $1,500">$500 – $1,500</option>
+              <option value="$1,500 – $5,000">$1,500 – $5,000</option>
+              <option value="$5,000+">$5,000+</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label class="form-label" for="message">What are you making?</label>
+            <textarea class="form-textarea" id="message" name="message" placeholder="The product, the campaign, where it runs, when you need it." required></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="form-submit">Continue <span>↗</span></button>
+      </form>
+
+      <!-- No califica: se le agradece y no ve calendario. -->
+      <div id="formSuccess" class="form-success">
+        <span class="section-num">STATUS</span>
+        <h2 class="contact-headline">received.</h2>
+        <p class="contact-sub">Thanks for reaching out. Expect to hear from us within 24 hours.</p>
+      </div>
+
+      <!-- Califica ($500+): el calendario sale aqui mismo, sin cambiar de
+           pagina. Cada salto extra entre el formulario y la agenda cuesta
+           reservas. -->
+      <div id="formSuccessQualified" class="form-success" style="display:none;">
+        <p class="v-step">Step 2 of 2</p>
+        <h2 class="contact-headline">pick a time.</h2>
+        <p class="contact-sub">15 minutes. Bring what you are making and you leave with the exact price.</p>
+        <div class="booking-embed">
+          <div class="calendly-inline-widget" id="cal"
+               data-url="https://calendly.com/adsbyblitz/15min?hide_event_type_details=1&hide_gdpr_banner=1"
+               style="min-width:320px;height:700px;"></div>
+          <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" async></script>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="v-foot">
+    <div class="v-foot-links">
+      <a href="/privacy-policy/">Privacy</a><span>|</span>
+      <a href="/terms-of-service/">Terms of Service</a><span>|</span>
+      <a href="mailto:adsbyblitz@gmail.com">Contact</a>
+    </div>
+    <p class="v-legal">
+      By submitting this form you agree to the Privacy Policy and Terms of Service,
+      and consent to be contacted using the details you provide.
+    </p>
+    <p class="v-copy">Blitz Advertising LLC &copy; 2026 &middot; All rights reserved</p>
+  </footer>
+
+  <script>
+    /* De que anuncio vino. Viaja desde la landing en la URL y acaba dentro del
+       correo del lead, para saber que campaña y que boton lo trajo. */
+    (function(){
+      const p = new URLSearchParams(location.search);
+      const campos = ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","fbclid","ad_id","from"];
+      const traidos = campos.filter(k => p.get(k)).map(k => k + "=" + p.get(k));
+      const el = document.getElementById("adRef");
+      if(el) el.value = traidos.length ? traidos.join(" | ") : "sin parametros";
+      /* Volver a la landing conservando los parametros, para no romper el
+         rastro si la persona retrocede y vuelve a entrar. */
+      const v = document.getElementById("volver");
+      if(v && location.search) v.href = "../" + location.search;
+    })();
+
+    /* Telefono: limpia lo que no es telefono y exige 10 digitos. Mismo criterio
+       que /apply/ — un telefono corto es un lead inservible. */
+    const phoneInput = document.getElementById("phone");
+    const MIN_PHONE_DIGITS = 10;
+    function countDigits(s){ return (s.match(/\d/g) || []).length; }
+    function validatePhone(){
+      const digits = countDigits(phoneInput.value);
+      if(digits === 0) phoneInput.setCustomValidity("Please enter your phone number.");
+      else if(digits < MIN_PHONE_DIGITS) phoneInput.setCustomValidity(`Phone number is too short — please enter at least ${MIN_PHONE_DIGITS} digits (you have ${digits}).`);
+      else phoneInput.setCustomValidity("");
+    }
+    if(phoneInput){
+      phoneInput.addEventListener("input", (e) => {
+        const cleaned = e.target.value.replace(/[^\d+\-() ]/g, "");
+        if(cleaned !== e.target.value) e.target.value = cleaned;
+        validatePhone();
+      });
+      phoneInput.addEventListener("paste", (e) => {
+        const pasted = (e.clipboardData || window.clipboardData).getData("text");
+        if(/[^\d+\-() ]/.test(pasted)){
+          e.preventDefault();
+          const cleaned = pasted.replace(/[^\d+\-() ]/g, "");
+          const start = phoneInput.selectionStart, end = phoneInput.selectionEnd;
+          phoneInput.value = phoneInput.value.slice(0, start) + cleaned + phoneInput.value.slice(end);
+          validatePhone();
+        }
+      });
+      phoneInput.addEventListener("blur", validatePhone);
+    }
+
+    async function handleSubmit(e){
+      e.preventDefault();
+      const form = document.getElementById("funnelForm");
+      const btn = form.querySelector(".form-submit");
+      const originalBtnHTML = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = 'Sending… <span>↗</span>';
+
+      const formData = new FormData(form);
+      try{
+        const res = await fetch("https://api.web3forms.com/submit", { method:"POST", body:formData });
+        const data = await res.json();
+        if(data.success){
+          if(typeof fbq !== "undefined") fbq("track", "Lead");
+
+          /* Mismo corte que /apply/: $500 es la linea. */
+          const budget = document.getElementById("budget").value;
+          const isQualified = budget && budget !== "Less than $500";
+
+          form.style.display = "none";
+          const intro = document.getElementById("paso1");
+          if(intro) intro.style.display = "none";
+          const successEl = isQualified
+            ? document.getElementById("formSuccessQualified")
+            : document.getElementById("formSuccess");
+          successEl.style.display = "block";
+
+          /* Evento aparte para optimizar la campaña contra los que SI califican.
+             Optimizando contra "Lead" a secas, Meta trae volumen barato de gente
+             sin presupuesto — justo lo que se filtra aqui. */
+          if(isQualified && typeof fbq !== "undefined"){
+            fbq("trackCustom", "QualifiedLead", { budget: budget });
+          }
+
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+          throw new Error(data.message || "Submission failed");
+        }
+      }catch(err){
+        btn.disabled = false;
+        btn.innerHTML = originalBtnHTML;
+        alert("Sorry, something went wrong. Please try again or email us directly at adsbyblitz@gmail.com");
+        console.error(err);
+      }
+    }
+
+    /* Cuando Calendly confirma la reserva avisa por mensaje. Ese es el evento
+       que vale para optimizar: una llamada agendada, no un formulario enviado. */
+    window.addEventListener("message", (e) => {
+      if(!e.data || typeof e.data.event !== "string") return;
+      if(e.data.event === "calendly.event_scheduled" && typeof fbq !== "undefined"){
+        fbq("track", "Schedule");
+        fbq("trackCustom", "CallBooked");
+      }
+    });
+  </script>
+</body>
+</html>

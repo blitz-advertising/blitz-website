@@ -1,0 +1,15 @@
+Capturas CRUDAS de reacciones de clientes (WhatsApp, DMs, mensajes).
+
+Como usarlas:
+  1. Deja aqui los archivos .jpg o .png tal cual, sin retocar ni maquetar.
+     Cuanto mas crudas, mejor convierten: una captura fea se lee como real,
+     una bonita se lee como diseñada.
+  2. Abre noaislop-7k2x9m/index.html y busca la linea  const PROOF = [
+  3. Escribe ahi los nombres de los archivos, por ejemplo:
+        const PROOF = ["wa-01.jpg", "wa-02.jpg", "wa-03.jpg"];
+
+Mientras la lista este vacia, la seccion no se pinta: la pagina no enseña un
+hueco roto a trafico pagado.
+
+TAPA LOS APELLIDOS Y LOS TELEFONOS antes de subirlas. El nombre de pila y la
+foto de perfil se pueden quedar — son los que hacen que parezca real.

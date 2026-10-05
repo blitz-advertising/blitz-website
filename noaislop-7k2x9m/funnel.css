@@ -1,0 +1,812 @@
+/* ─────────────────────────────────────────────
+   BLITZ — VSL funnel (/ai/)
+
+   Una columna, centrada, sin salidas. Hereda los tokens y el formulario de
+   styles.css; todo lo demas vive aqui porque esta pagina NO es el sitio: el
+   sitio enseña, esta vende y pide una sola cosa.
+───────────────────────────────────────────── */
+
+/* Sin cursor propio ni grano. En una pagina de conversion el cursor
+   personalizado es un riesgo: si el JS falla, el visitante se queda sin
+   puntero encima del boton. */
+/* Azules del embudo. Mas SATURADOS que los del sitio, no mas claros: el error
+   anterior fue aclararlos, y un azul claro contra fondo negro se lee lavado.
+   Mismo brillo que --blue-bright, pero 91% de saturacion contra 73%. */
+:root {
+  --f-blue:    #2550f5;
+  --f-blue-hi: #4473ff;
+  --f-glow:    rgba(68,115,255,0.70);
+  --f-glow-sm: rgba(68,115,255,0.55);
+}
+
+body.vsl-page { cursor: auto; }
+body.vsl-page::after { display: none; }
+body.vsl-page .cursor,
+body.vsl-page .cursor-ring { display: none; }
+
+.vsl-page {
+  background: var(--bg);
+  /* Un halo frio detras del hero, como el resto de la marca, pero contenido:
+     la atencion tiene que ir al titular y al boton, no al fondo. */
+  background-image: radial-gradient(ellipse 80% 55% at 50% 0%, rgba(77,126,212,0.20) 0%, transparent 70%);
+  background-repeat: no-repeat;
+}
+
+/* Columna unica. 820px es el ancho de la referencia y funciona: a mas ancho
+   el titular se lee de lado y el ojo pierde el hilo. */
+.v-top, .v-hero, .v-cases, .v-compare, .v-book, .v-foot {
+  max-width: 820px;
+  margin: 0 auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+/* ─── CABECERA ──────────────────────────────── */
+.v-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding-top: 30px;
+  padding-bottom: 6px;
+}
+.v-logo-icon { height: 26px; width: auto; }
+.v-logo-word {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 23px;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+/* ─── HERO ──────────────────────────────────── */
+.v-hero { text-align: center; padding-top: 22px; padding-bottom: 64px; }
+
+.v-proof {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-size: 13.5px;
+  color: var(--muted-mid);
+  margin-bottom: 26px;
+}
+.v-proof b { color: #fff; font-weight: 500; }
+.v-stars { color: var(--f-blue-hi); letter-spacing: 0.12em; font-size: 12px; }
+
+.v-headline {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: normal;
+  /* 64px es el techo real, no un gusto: por encima de ahi "or you dont pay."
+     no cabe en los 772px de la columna y la promesa se parte en dos. */
+  font-size: clamp(28px, 7.4vw, 64px);
+  line-height: 1.0;
+  letter-spacing: -0.045em;
+  text-transform: lowercase;
+  margin-bottom: 24px;
+}
+/* La segunda linea es la consecuencia, y por eso va en color: es lo que hace
+   que la promesa se lea como un compromiso y no como un eslogan. */
+.v-accent { color: var(--f-blue); }
+/* Sin resplandor: borroneaba la palabra y la hacia parecer menos solida. El
+   azul vivo solo, que contra este fondo ya destaca de sobra. */
+.v-headline .v-accent,
+.v-g-title  .v-accent { color: var(--f-blue-hi); text-shadow: none; }
+
+.v-sub {
+  font-size: clamp(15.5px, 1.75vw, 18px);
+  line-height: 1.62;
+  color: var(--muted-mid);
+  max-width: 620px;
+  margin: 0 auto 36px;
+}
+.v-sub b { color: #fff; font-weight: 500; }
+.v-sub--tight { margin-bottom: 30px; }
+
+/* ─── VSL ───────────────────────────────────── */
+.v-video {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  margin: 0 auto 32px;
+  border: 1px solid var(--border-mid);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #04060d;
+  /* El resplandor que separa el reproductor del fondo. Es la pieza principal
+     de la pagina; tiene que leerse como una pantalla, no como un hueco. */
+  box-shadow: 0 0 70px -18px var(--blue-glow), 0 20px 60px -30px rgba(0,0,0,0.9);
+}
+.v-video video,
+.v-video iframe { width: 100%; height: 100%; display: block; border: 0; }
+
+/* Hueco mientras no hay video. Marcado a proposito: mejor un hueco que avisa
+   que un reproductor roto delante de trafico pagado. */
+.v-video-slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.016) 0 12px, transparent 12px 24px),
+    #04060d;
+}
+.v-slot-tag {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--f-blue-hi);
+  border: 1px solid var(--border-mid);
+  border-radius: 100px;
+  padding: 5px 13px;
+}
+.v-slot-msg {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted-mid);
+  text-align: center;
+  max-width: 34ch;
+}
+.v-slot-msg span { font-size: 12.5px; color: var(--muted); }
+.v-slot-msg code {
+  font-family: ui-monospace, monospace;
+  font-size: 11.5px;
+  color: #fff;
+  background: rgba(255,255,255,0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* ─── BOTON ─────────────────────────────────── */
+/* Azul solido en reposo y glow al pasar el cursor. En el sitio el boton va
+   transparente porque convive con otras cosas; aqui es lo UNICO que se puede
+   pulsar y tiene que verse como tal desde el primer segundo.
+   Los valores del glow son los mismos de .cta-btn:hover en styles.css. */
+.v-cta {
+  padding: 18px 44px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  /* --blue (#1f48c8) se leia apagado contra el fondo casi negro, como si el
+     boton tuviera transparencia. No la tenia: la opacidad era 1 y el problema
+     era el tono. Se sube al azul vivo de la marca y en hover al del glow. */
+  background: var(--f-blue);
+  border-color: var(--f-blue);
+  box-shadow: none;
+  transition: background .25s, box-shadow .25s, border-color .25s, transform .18s var(--ease-out);
+}
+.v-cta:hover {
+  background: var(--f-blue-hi);
+  border-color: var(--f-blue-hi);
+  box-shadow: 0 0 64px var(--f-glow), 0 0 22px var(--f-glow-sm);
+  transform: translateY(-2px);
+}
+.v-cta span { transition: transform .18s var(--ease-out); }
+.v-cta:hover span { transform: translateX(4px); }
+
+/* El de enviar el formulario, igual: es el mismo gesto en el paso 2. */
+.v-book-page .form-submit {
+  background: var(--f-blue);
+  border-color: var(--f-blue);
+  transition: background .25s, box-shadow .25s, border-color .25s;
+}
+.v-book-page .form-submit:hover {
+  background: var(--f-blue-hi);
+  border-color: var(--f-blue-hi);
+  box-shadow: 0 0 64px var(--f-glow), 0 0 22px var(--f-glow-sm);
+}
+
+.v-micro {
+  margin-top: 16px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* ─── SECCIONES ─────────────────────────────── */
+.v-eyebrow {
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 36px;
+}
+.v-cases, .v-compare { padding-top: 64px; padding-bottom: 64px; text-align: center; }
+.v-cases { border-top: 1px solid var(--border); }
+.v-compare { border-top: 1px solid var(--border); }
+
+/* ─── CASOS ─────────────────────────────────── */
+/* Titular encima, pieza debajo, resultado debajo. El texto hace el argumento;
+   la imagen solo lo prueba. Sin el titular esto seria un portfolio. */
+.v-case { margin-bottom: 52px; }
+.v-case-line {
+  /* La fuente de los titulares, no la de cuerpo. Es ancha, asi que va mas
+     pequeña de lo que pediria su peso visual para que entre en dos lineas. */
+  font-family: var(--font-display);
+  font-style: italic;
+  text-transform: lowercase;
+  color: #fff;
+  font-size: clamp(21px, 3vw, 32px);
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  margin-bottom: 18px;
+  max-width: 24ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+/* A partir de tablet cabe en una linea mas larga sin romper la lectura. */
+@media (min-width: 720px) { .v-case-line { max-width: 30ch; } }
+.v-case-media {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #04060d;
+}
+.v-case-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.v-wide img { aspect-ratio: 16 / 9; }
+.v-trio {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+.v-trio img { aspect-ratio: 4 / 5; }
+.v-case-tag {
+  margin-top: 14px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ─── CONTRASTE ─────────────────────────────── */
+.v-compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  text-align: left;
+  margin-bottom: 44px;
+}
+.v-col { background: var(--bg); padding: 30px 26px; }
+.v-col h3 {
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+.v-col--old h3 { color: rgba(255,255,255,0.62); }
+.v-col--new h3 { color: var(--f-blue-hi); }
+.v-col ul { list-style: none; display: flex; flex-direction: column; gap: 15px; }
+.v-col li {
+  font-size: 14.5px;
+  line-height: 1.55;
+  padding-left: 24px;
+  position: relative;
+}
+.v-col li b { color: #fff; font-weight: 500; }
+/* La columna vieja va algo mas apagada que la nueva, pero legible: el contraste
+   lo hacen la cruz y el check, no esconder el texto. Antes estaba tan oscura
+   que el argumento no se leia. */
+.v-col--old li { color: rgba(255,255,255,0.66); }
+.v-col--old li::before {
+  content: '\00d7';
+  position: absolute; left: 0; top: -1px;
+  color: rgba(255,255,255,0.45);
+  font-size: 16px;
+}
+.v-col--new li { color: rgba(255,255,255,0.78); }
+.v-col--new li::before {
+  content: '\2713';
+  position: absolute; left: 0; top: 0;
+  color: var(--f-blue-hi);
+  font-size: 13px;
+}
+
+/* ─── RESERVA ───────────────────────────────── */
+.v-book {
+  padding-top: 64px;
+  padding-bottom: 56px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.v-h2 {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: normal;
+  font-size: clamp(38px, 6vw, 62px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-transform: lowercase;
+  margin-bottom: 18px;
+}
+.v-form-wrap { text-align: left; }
+/* El formulario hereda .contact-form de styles.css; aqui solo se centra y se
+   le da el ancho de la columna. */
+.v-form-wrap .contact-form { max-width: 620px; margin: 0 auto; }
+.v-form-wrap .form-success { max-width: 620px; margin: 0 auto; text-align: center; }
+.v-form-wrap .booking-embed { text-align: left; }
+
+/* ─── PIE ───────────────────────────────────── */
+.v-foot {
+  padding-top: 34px;
+  padding-bottom: 46px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.v-foot-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+  font-size: 12.5px;
+}
+.v-foot-links a { color: var(--muted-mid); text-decoration: none; transition: color .2s; }
+.v-foot-links a:hover { color: #fff; }
+.v-foot-links span { color: rgba(255,255,255,0.14); }
+/* Las condiciones de la garantia van legibles, no escondidas: una garantia que
+   hay que buscar con lupa no genera confianza, la quita. */
+.v-legal {
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.28);
+  max-width: 660px;
+  margin: 0 auto 14px;
+}
+.v-copy { font-size: 11px; color: rgba(255,255,255,0.18); margin-top: 18px; }
+
+/* ─── MOVIL ─────────────────────────────────── */
+/* Casi todo el trafico de anuncios llega por telefono: esta no es la version
+   reducida, es la que de verdad se va a ver. */
+@media (max-width: 680px) {
+  /* 18px de margen en vez de 24: son 12px por linea que el titular necesita
+     para no partirse en cuatro trozos a 375px. */
+  .v-top, .v-hero, .v-cases, .v-compare, .v-book, .v-foot {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .v-hero { padding-bottom: 48px; }
+  .v-cases, .v-compare, .v-book { padding-top: 48px; padding-bottom: 48px; }
+  .v-compare-grid { grid-template-columns: 1fr; }
+  .v-trio { grid-template-columns: 1fr; }
+  .v-trio img { aspect-ratio: 16 / 10; }
+  .v-case { margin-bottom: 40px; }
+  /* El boton a ancho completo: es lo unico que esta pagina quiere que pulses. */
+  .v-cta { display: flex; width: 100%; padding: 18px 20px; }
+  .v-video { border-radius: 10px; }
+}
+
+/* El popup de Calendly por encima de todo lo demas. */
+.calendly-overlay { z-index: 9999; }
+
+/* ─── PASO 2: LA PAGINA DE FILTRO (/ai/book/) ── */
+.v-book-page {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 30px 24px 64px;
+  text-align: center;
+}
+/* Decir en que paso esta quita el miedo a que esto sea un formulario infinito:
+   la gente abandona cuando no sabe cuanto falta. */
+.v-step {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--f-blue-hi);
+  margin-bottom: 16px;
+}
+.v-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  color: inherit;
+  opacity: .9;
+  transition: opacity .2s;
+}
+.v-back:hover { opacity: 1; }
+.v-book-page .v-h2 { margin-bottom: 16px; }
+.v-book-page .v-sub { margin-bottom: 34px; }
+/* El boton de enviar, al ancho del formulario y centrado: es la unica accion. */
+.v-book-page .form-submit { width: 100%; justify-content: center; }
+@media (max-width: 680px) {
+  .v-book-page { padding-left: 18px; padding-right: 18px; }
+}
+
+
+/* ─── GARANTIA PEGADA AL BOTON ──────────────── */
+/* Va justo debajo del CTA, no en el pie: el momento de dudar es el de pulsar. */
+.v-micro--guard {
+  max-width: 40ch;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted-mid);
+}
+.v-micro--guard b { color: #fff; font-weight: 500; }
+
+/* ─── PARA QUIEN ES / NO ES ─────────────────── */
+.v-fit {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 56px 24px;
+  border-top: 1px solid var(--border);
+}
+.v-fit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.v-fit-col { background: var(--bg); padding: 28px 24px; text-align: left; }
+/* Verde y rojo por dentro, no en el borde: el color tiene que leerse como el
+   ambiente de la columna, no como una caja de alerta. Es lo primero que dice
+   cual es cual, antes de leer una sola palabra. */
+.v-fit-col--yes {
+  background:
+    radial-gradient(ellipse 120% 90% at 50% 0%, rgba(79,214,154,0.16) 0%, transparent 72%),
+    var(--bg);
+  box-shadow: inset 0 0 90px -26px rgba(79,214,154,0.55);
+}
+.v-fit-col--no {
+  background:
+    radial-gradient(ellipse 120% 90% at 50% 0%, rgba(255,120,100,0.15) 0%, transparent 72%),
+    var(--bg);
+  box-shadow: inset 0 0 90px -26px rgba(255,120,100,0.50);
+}
+.v-fit-col h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+.v-fit-icon { font-size: 15px; }
+.v-fit-col--yes h3 { color: #5ee0a8; }
+.v-fit-col--no  h3 { color: #ffb2a6; }
+.v-fit-col ul { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+/* Con viñeta, como la tabla de comparacion: el check y la cruz dicen de que va
+   cada columna antes de leer, y alinean el texto cuando ocupa varias lineas. */
+.v-fit-col li {
+  font-size: 14.5px;
+  line-height: 1.55;
+  padding-left: 25px;
+  position: relative;
+}
+.v-fit-col--yes li::before {
+  content: '\2713';
+  position: absolute; left: 0; top: 1px;
+  color: #5ee0a8;
+  font-size: 13px;
+}
+.v-fit-col--no li::before {
+  content: '\00d7';
+  position: absolute; left: 0; top: -1px;
+  color: #ffb2a6;
+  font-size: 16px;
+}
+.v-fit-col li b { color: #fff; font-weight: 500; }
+.v-fit-col--yes li { color: rgba(255,255,255,0.80); }
+/* Casi tan legible como la otra columna. Si no se lee, el que no encaja no se
+   entera de que no encaja y te reserva la llamada igual — que es justo lo que
+   esta seccion existe para evitar. */
+.v-fit-col--no  li { color: rgba(255,255,255,0.68); }
+
+/* ─── PRUEBA CRUDA ──────────────────────────── */
+/* Las capturas se enseñan tal cual, sin recortar ni enmarcar: una captura fea
+   se lee como real y una bonita se lee como diseñada. Solo un borde fino para
+   despegarlas del fondo. */
+/* Dos columnas que rellena el script, cada captura a la que menos alto lleva.
+   Ver montarPrueba(): dejandoselo al navegador quedaba un hueco grande debajo
+   de las capturas cortas. */
+.v-proof-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: 12px;
+}
+.v-proof-col { display: flex; flex-direction: column; gap: 12px; }
+.v-proof-shot {
+  margin: 0;
+  width: 100%;
+  max-width: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  /* Las capturas son claras y la pagina es negra: un punto de brillo bajado
+     las despega del fondo sin que parezcan retocadas. */
+  background: #fff;
+  box-shadow: 0 18px 50px -28px rgba(0,0,0,0.9);
+}
+.v-proof-shot img { width: 100%; height: auto; display: block; }
+
+/* ─── CUATRO STILLS ─────────────────────────── */
+.v-quad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+.v-quad img { aspect-ratio: 4 / 5; }
+
+/* ─── COMO FUNCIONA ─────────────────────────── */
+.v-how {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 56px 24px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.v-how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; text-align: left; }
+.v-how-num {
+  display: block;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 34px;
+  line-height: 1;
+  color: var(--f-blue-hi);
+  margin-bottom: 12px;
+}
+.v-how-step h3 { font-size: 17px; font-weight: 500; margin-bottom: 8px; }
+.v-how-step p { font-size: 14px; line-height: 1.6; color: var(--muted-mid); }
+
+/* ─── GARANTIA ──────────────────────────────── */
+.v-guarantee {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 56px 24px;
+  border-top: 1px solid var(--border);
+}
+.v-guarantee-box {
+  border: 1px solid rgba(31,72,200,0.5);
+  border-radius: 14px;
+  padding: 36px 32px;
+  text-align: left;
+  background: linear-gradient(180deg, rgba(31,72,200,0.18), rgba(31,72,200,0.04));
+  box-shadow: inset 0 0 120px -24px rgba(74,125,240,0.55),
+              inset 0 0 40px -12px rgba(74,125,240,0.30),
+              0 0 60px -30px var(--blue-glow);
+}
+.v-eyebrow--left { text-align: left; margin-bottom: 14px; }
+.v-g-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: normal;
+  font-size: clamp(30px, 4.6vw, 48px);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  text-transform: lowercase;
+  margin-bottom: 20px;
+}
+.v-g-body { font-size: 15px; line-height: 1.65; color: var(--muted-mid); margin-bottom: 16px; }
+.v-g-body b { color: #fff; font-weight: 500; }
+.v-g-body--punch { color: rgba(255,255,255,0.82); }
+.v-guarantee-box .v-cta { margin-top: 12px; }
+
+/* ─── FAQ ───────────────────────────────────── */
+.v-faq {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 56px 24px 64px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.v-faq-list {
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 36px;
+}
+/* Abiertas y legibles, sin acordeon: lo que esta escondido detras de un click
+   no contesta a nadie. Cuatro preguntas caben enteras sin cansar. */
+.v-q { border-bottom: 1px solid var(--border); padding: 22px 24px; }
+.v-q:last-child { border-bottom: 0; }
+.v-q h3 {
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: #fff;
+  margin-bottom: 9px;
+}
+.v-q p {
+  font-size: 15px;
+  line-height: 1.65;
+  color: rgba(255,255,255,0.72);
+  max-width: 68ch;
+}
+
+/* ─── CALENDARIO EN LA PROPIA PAGINA ────────── */
+.v-booknow {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 56px 24px 64px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.v-booknow .v-h2 { margin-bottom: 14px; }
+.v-booknow .v-sub { margin-bottom: 26px; }
+#cal {
+  border: 1px solid var(--border-mid);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 0 70px -24px var(--f-glow);
+}
+
+/* ─── MOVIL ─────────────────────────────────── */
+@media (max-width: 680px) {
+  .v-fit, .v-how, .v-guarantee, .v-faq { padding-left: 18px; padding-right: 18px; }
+  .v-fit-grid  { grid-template-columns: 1fr; }
+  .v-how-grid  { grid-template-columns: 1fr; gap: 26px; }
+  /* Cuatro stills no caben en un telefono: dos y dos. */
+  .v-quad { grid-template-columns: 1fr 1fr; }
+  .v-guarantee-box { padding: 28px 20px; }
+  .v-q { padding: 19px 18px; }
+  /* En telefono una columna: a la mitad de 375px no se leeria nada. */
+  .v-proof-grid { grid-template-columns: 1fr; }
+  .v-proof-sec, .v-booknow { padding-left: 18px; padding-right: 18px; }
+  #cal { border-radius: 10px; }
+}
+
+
+/* ─── TRADUCCION DE LAS CAPTURAS ────────────── */
+/* Fuera de la imagen y claramente marcada como traduccion. Retocar la captura
+   para traducirla dentro la convertiria en un montaje, y entonces ya no prueba
+   nada. */
+.v-case-note {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: -8px 0 18px;
+}
+.v-proof-en {
+  padding: 11px 14px 13px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted-mid);
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  text-align: left;
+}
+
+
+/* ─── PRUEBA CRUDA, SECCION PROPIA ──────────── */
+.v-proof-sec {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 56px 24px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.v-proof-sec .v-case-line { margin-bottom: 6px; }
+
+
+/* ─── FORMULARIO SOBRE EL CALENDARIO ────────── */
+/* Cuatro campos y a la vista, encima del calendario. No tapa nada: quien
+   prefiera reservar directo baja y reserva. */
+.v-leadform { max-width: 560px; margin: 0 auto 30px; text-align: left; }
+.v-leadgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.v-leadsend { width: 100%; justify-content: center; }
+.v-leadnote {
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-align: center;
+}
+.v-leadnote--ok { color: rgba(255,255,255,0.78); font-size: 14px; }
+.v-leadnote--ok b { color: #5ee0a8; }
+@media (max-width: 560px) { .v-leadgrid { grid-template-columns: 1fr; } }
+
+
+/* ─── NO CALIFICA ───────────────────────────── */
+.v-thanks {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 34px 28px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+.v-thanks h3 {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: normal;
+  text-transform: lowercase;
+  font-size: 30px;
+  letter-spacing: -0.03em;
+  margin-bottom: 10px;
+}
+.v-thanks p { font-size: 15px; line-height: 1.6; color: var(--muted-mid); }
+#calIntro { margin-bottom: 20px; }
+
+
+/* ─── LA CAJA DE RESERVA ────────────────────── */
+/* Es lo que esta pagina quiere que pase, asi que se separa del fondo en vez de
+   fundirse con el. Mismo tratamiento que la caja de la garantia, un punto mas
+   marcado. */
+.v-bookbox {
+  border: 1px solid rgba(37,80,245,0.55);
+  border-radius: 16px;
+  padding: 40px 34px 36px;
+  background: linear-gradient(180deg, rgba(37,80,245,0.16), rgba(37,80,245,0.03));
+  box-shadow: inset 0 0 140px -30px rgba(68,115,255,0.55),
+              inset 0 0 44px -14px rgba(68,115,255,0.30),
+              0 0 90px -40px var(--f-glow);
+}
+
+/* ─── CALENDARIO APAGADO ────────────────────── */
+/* Una silueta del calendario, no el calendario. Dice "esto se abre aqui mismo"
+   sin dejar reservar a quien no ha pasado el filtro. */
+.v-calprev {
+  margin-top: 26px;
+  padding: 26px 20px 22px;
+  border: 1px dashed var(--border-mid);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.015);
+}
+.v-calprev-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 9px;
+  max-width: 330px;
+  margin: 0 auto 16px;
+}
+.v-calprev-grid span {
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.05);
+}
+.v-calprev p {
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  color: var(--muted-mid);
+}
+.v-calprev-arrow { color: var(--f-blue-hi); font-size: 14px; margin-right: 3px; }
+/* Las casillas, mas apagadas que el texto: la frase es lo que hay que leer, no
+   los huecos. Antes competian y parecian un calendario sin horas. */
+.v-calprev-grid span { background: rgba(255,255,255,0.035); }
+@media (max-width: 560px) { .v-bookbox { padding: 28px 18px 26px; } }
+
+/* ─── CONTRASTE DENTRO DE LA CAJA DE RESERVA ── */
+/* El glow azul aclara el fondo, y el texto gris que en el resto de la pagina
+   se lee bien aqui se hundia. Todo sube: el subtitulo casi a blanco, las
+   etiquetas a legibles, y los campos con fondo oscuro de verdad para que se
+   recorten contra el azul en vez de fundirse con el. */
+.v-bookbox .v-sub { color: rgba(255,255,255,0.88); }
+.v-bookbox .form-label { color: rgba(255,255,255,0.78); }
+.v-bookbox .form-input,
+.v-bookbox .form-select {
+  background: rgba(3,5,12,0.72);
+  border-color: rgba(255,255,255,0.24);
+  color: #fff;
+}
+.v-bookbox .form-input::placeholder { color: rgba(255,255,255,0.42); }
+.v-bookbox .form-input:focus,
+.v-bookbox .form-select:focus { border-color: var(--f-blue-hi); }
+.v-bookbox .v-calprev { background: rgba(3,5,12,0.45); border-color: rgba(255,255,255,0.22); }
+.v-bookbox .v-calprev p { color: rgba(255,255,255,0.82); }
+.v-bookbox .v-calprev-grid span { background: rgba(255,255,255,0.06); }
+.v-bookbox .v-thanks p,
+.v-bookbox #calIntro { color: rgba(255,255,255,0.88); }
