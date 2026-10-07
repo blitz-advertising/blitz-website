@@ -2632,7 +2632,7 @@ function viewArchivo(){
 /* El resultado va por pasos. Paso 1: ¿vino o no vino? Si vino, se pregunta en
    el acto si cerró (preguntarCierre), y si cerró, la venta (pedirVenta). */
 function resultadoBtns(l){
-  return '<button class="btn sm" data-show="'+l.id+'|1">Vino</button>' +
+  return '<button class="btn sm primary" data-show="'+l.id+'|1">Vino</button>' +
          '<button class="btn sm" data-show="'+l.id+'|0">No vino</button>' +
          '<button class="btn sm ghost" data-open="'+l.id+'">Ver</button>';
 }
@@ -3898,7 +3898,7 @@ function drawer(){
       (l.show == null ?
         '<p class="f" style="margin:0 0 6px">¿Se presentó?</p>' +
         '<div class="resultbtns">' +
-          '<button class="btn" data-show="'+l.id+'|1">Vino</button>' +
+          '<button class="btn primary" data-show="'+l.id+'|1">Vino</button>' +
           '<button class="btn" data-show="'+l.id+'|0">No vino</button>' +
         '</div>'
       : l.show === true && l.cierre === null ?
