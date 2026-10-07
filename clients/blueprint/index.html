@@ -633,6 +633,7 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
 .modal-h p{font-size:13px; line-height:1.55; color:var(--muted); margin:0}
 .modal-b{padding:16px 20px 0}
 .modal-b input{font-size:19px; padding:11px 13px; text-align:center; font-family:"IBM Plex Mono",monospace}
+.modal-b input[type=url]{font-size:14px; text-align:left}
 .modal-b.venta label.f{margin-top:10px}
 .modal-b.venta label.f:first-child{margin-top:0}
 .modal-b.venta select{width:100%}
@@ -1499,12 +1500,11 @@ async function pedirImporte(l){
    "Guardar venta". Si cancela no se guarda nada y el lead sigue en "Vino".
    Mes a mes: `importe` es la CUOTA (asi lo leen valorContrato y pagosDe), y
    los meses salen de la oferta; si la oferta no los dice ("Select"), se piden.
-   La salida "Todavía no pagó" existe porque a veces se cierra pero el pago
-   llega despues: queda Closed sin importe (lo demas se guarda si lo eligio),
-   sale en "Cerradas" con "Completar venta" y en el aviso de arriba hasta que
-   se ponga el numero. Solo se ofrece al marcar Closed (conLuego).
-   Devuelve "ok", "luego" o false. No persiste: lo hace quien llama. */
-function pedirVenta(l, conLuego){
+   No hay salida de "todavia no pago": si no pago, no se marca Closed (para
+   eso esta "Esperando confirmación" en el paso 2). "Completar venta" queda
+   solo para las cerradas que llegan incompletas (Tag Client o anteriores).
+   Devuelve "ok" o false. No persiste: lo hace quien llama. */
+function pedirVenta(l){
   return new Promise((resolve) => {
     const host = document.getElementById("modalHost");
     const q = (id) => host.querySelector("#"+id);
@@ -1537,12 +1537,6 @@ function pedirVenta(l, conLuego){
       l.meses = (mensual && !mesesOferta(of)) ? nm : null;
       cerrar("ok");
     };
-    const luego = () => {
-      if(q("mv_pago").value)   l.pago   = q("mv_pago").value;
-      if(q("mv_oferta").value) l.oferta = q("mv_oferta").value;
-      if(+q("mv_meses").value >= 1) l.meses = Math.round(+q("mv_meses").value);
-      cerrar("luego");
-    };
     const tecla = (e) => {
       if(e.key === "Escape"){ e.preventDefault(); cerrar(false); }
       if(e.key === "Enter"){ e.preventDefault(); guardar(); }
@@ -1550,7 +1544,7 @@ function pedirVenta(l, conLuego){
     host.innerHTML =
       '<div class="modal-bg" data-bg="1"><div class="modal" role="dialog" aria-modal="true">' +
         '<div class="modal-h"><h3>Venta de @'+esc(l.handle)+'</h3>' +
-          '<p>Cómo paga, cuánto y qué oferta compró.'+(conLuego ? ' Si todavía no ha pagado, márcalo abajo y lo completas cuando pague.' : '')+'</p></div>' +
+          '<p>Cómo paga, cuánto y qué oferta compró. Todo es obligatorio.</p></div>' +
         '<div class="modal-b venta">' +
           '<label class="f" for="mv_pago">¿Cómo paga?</label>' +
           '<select id="mv_pago"><option value="">Elige…</option>' +
@@ -1570,13 +1564,12 @@ function pedirVenta(l, conLuego){
         '<div class="modal-f">' +
           '<button class="btn primary" data-mv="ok">Guardar venta</button>' +
           '<button class="btn ghost" data-mv="no">Cancelar</button>' +
-          (conLuego ? '<button class="btn ghost wide" data-mv="luego">Todavía no pagó — lo pongo después</button>' : '') +
         '</div>' +
       '</div></div>';
     host.querySelector(".modal-bg").addEventListener("click", (e) => {
       if(e.target.dataset.bg) return cerrar(false);
       const b = e.target.closest("[data-mv]");
-      if(b) b.dataset.mv === "ok" ? guardar() : b.dataset.mv === "luego" ? luego() : cerrar(false);
+      if(b) b.dataset.mv === "ok" ? guardar() : cerrar(false);
     });
     host.querySelector(".modal").addEventListener("input", pintar);
     host.querySelector(".modal").addEventListener("change", pintar);
@@ -1586,17 +1579,39 @@ function pedirVenta(l, conLuego){
   });
 }
 
+/* Ultimo paso, sea cual sea el resultado (Closed, Not Closed o No vino): el
+   link de la grabacion. Se puede saltar; queda el campo en la ficha. Solo lo
+   pide al closer, que es quien la sube (el setter no puede escribirla). */
+async function pedirGrabacion(l){
+  if(ROLE !== "closer" || String(l.grabacion||"").trim()) return;
+  const r = await modal({
+    titulo: "Link de la llamada",
+    texto: "Zoom, Meet, Fathom, Loom, Drive — cualquier link sirve. Sin esto el setter no puede oír la llamada.",
+    campo: { tipo:"url", placeholder:"Pega aquí el link" },
+    botones: [
+      { k:"ok",    lab:"Guardar link", clase:"primary", primario:true },
+      { k:"luego", lab:"Ahora no", clase:"ghost" }
+    ]
+  });
+  if(!r || r.accion !== "ok" || !String(r.valor||"").trim()) return;
+  const u = normUrl(r.valor);
+  if(!enlaceSeguro(u)){ toast("Eso no es un link que se pueda abrir. Ponlo desde la ficha."); return; }
+  l.grabacion = u;
+  await persist(l);
+  toast("Link de la llamada guardado.");
+}
+
 /* Marcar "Closed": primero se pide la venta completa y solo entonces se guarda. */
 async function marcarClosed(l){
-  const r = await pedirVenta(l, true);
+  const r = await pedirVenta(l);
   if(!r){ toast("No se guardó. Sigue como Vino, falta decir si cerró."); render(); return false; }
   l.cierre = true;
   if(!l.cierreAt) l.cierreAt = l.callDate || todayStr();
   if(l.show !== true){ l.show = true; l.showAt = l.callDate || todayStr(); }
   l.estado = "cliente";
   await persist(l);
-  toast(r === "ok" ? "Closed · "+money2(l.importe)+" · "+l.oferta+"."
-                   : "Closed, pendiente de pago. Te avisaré hasta que pongas el importe.");
+  toast("Closed · "+money2(l.importe)+" · "+l.oferta+".");
+  await pedirGrabacion(l);
   return true;
 }
 async function marcarNotClosed(l){
@@ -1605,22 +1620,23 @@ async function marcarNotClosed(l){
   if(l.show !== true){ l.show = true; l.showAt = l.callDate || todayStr(); }
   await persist(l);
   await pedirObjecion(l);
+  await pedirGrabacion(l);
 }
 /* Paso 2: vino, ¿cerró? Se abre solo al marcar "Vino". No obliga: a veces
-   la persona se lo piensa unos dias. "Todavía no decide" (o cerrar la
-   ventana) la deja en "Vinieron · esperando decisión", con Closed / Not
+   la persona se lo piensa unos dias. "Esperando confirmación" (o cerrar la
+   ventana) la deja en "Vinieron · esperando confirmación", con Closed / Not
    Closed a mano para cuando conteste. */
 async function preguntarCierre(l){
   const r = await modal({
     titulo: "@"+esc(l.handle)+" vino. ¿Cerró?",
-    texto: "Si se lo está pensando, déjalo pendiente y lo marcas cuando decida.",
+    texto: "Si falta que confirme, déjalo pendiente y lo marcas después.",
     botones: [
       { k:"si", lab:"Closed",     clase:"good" },
       { k:"no", lab:"Not Closed", clase:"crit" },
-      { k:"espera", lab:"Todavía no decide — lo marco después", clase:"ghost", ancho:true }
+      { k:"espera", lab:"Esperando confirmación — lo marco después", clase:"ghost", ancho:true }
     ]
   });
-  if(!r || r.accion === "espera"){ toast("Vino. Queda esperando decisión."); render(); return; }
+  if(!r || r.accion === "espera"){ toast("Vino. Queda esperando confirmación."); render(); return; }
   if(r.accion === "si") await marcarClosed(l);
   else await marcarNotClosed(l);
 }
@@ -2616,8 +2632,8 @@ function viewArchivo(){
 /* El resultado va por pasos. Paso 1: ¿vino o no vino? Si vino, se pregunta en
    el acto si cerró (preguntarCierre), y si cerró, la venta (pedirVenta). */
 function resultadoBtns(l){
-  return '<button class="btn sm good" data-show="'+l.id+'|1">Vino</button>' +
-         '<button class="btn sm crit" data-show="'+l.id+'|0">No vino</button>' +
+  return '<button class="btn sm" data-show="'+l.id+'|1">Vino</button>' +
+         '<button class="btn sm" data-show="'+l.id+'|0">No vino</button>' +
          '<button class="btn sm ghost" data-open="'+l.id+'">Ver</button>';
 }
 /* Paso 2: ya vino, falta decir si cerró. */
@@ -3060,7 +3076,7 @@ function viewLlamadas(){
     '<div class="h-row"><h2>Llamadas</h2><span class="sub">Show, cierre e importe</span></div>' + head + avisoImporte + alerta +
     proximas +
     grp("Por registrar", c.porRegistrar, "reg", "Ya pasó el día y nadie marcó el resultado. Mientras estén aquí, el show rate está incompleto.") +
-    grp("Vinieron · esperando decisión", c.porResultado.filter(l => l.cierre === null), "resultado", "Se presentaron y todavía no hay respuesta. Marca Closed o Not Closed cuando decidan.") +
+    grp("Vinieron · esperando confirmación", c.porResultado.filter(l => l.cierre === null), "resultado", "Se presentaron y todavía no hay respuesta. Marca Closed o Not Closed cuando decidan.") +
     sinFecha +
     grp("Agendadas · falta la hora", c.sinHora, "next", "Tienen día pero no hora, así que todavía no están confirmadas.") +
     /* El pie cambia con el rol: el closer no tiene el tab de Archivo (sus vistas
@@ -3882,8 +3898,8 @@ function drawer(){
       (l.show == null ?
         '<p class="f" style="margin:0 0 6px">¿Se presentó?</p>' +
         '<div class="resultbtns">' +
-          '<button class="btn good" data-show="'+l.id+'|1">Vino</button>' +
-          '<button class="btn crit" data-show="'+l.id+'|0">No vino</button>' +
+          '<button class="btn" data-show="'+l.id+'|1">Vino</button>' +
+          '<button class="btn" data-show="'+l.id+'|0">No vino</button>' +
         '</div>'
       : l.show === true && l.cierre === null ?
         '<p class="f" style="margin:0 0 6px">Vino. ¿Cerró?</p>' +
@@ -3912,9 +3928,10 @@ function drawer(){
         (l.cierre === false ?
           '<div><label class="f" for="d_objecion">Objeción principal</label>' +
             '<select id="d_objecion" data-f="objecion"><option value=""></option>'+opt(OBJECIONES,l.objecion)+'</select></div>' : "") +
-        planPagoHTML(l) +
-        grabacionHTML(l)
+        planPagoHTML(l)
       : "") +
+      /* La grabacion va con cualquier resultado, tambien No vino. */
+      (l.show != null ? grabacionHTML(l) : "") +
       (l.show != null ?
         '<button class="btn sm ghost undo" data-undo="'+l.id+'">↩ Deshacer resultado</button>' : "") +
     '</div>' : "";
@@ -4098,7 +4115,7 @@ document.addEventListener("click", async (e) => {
     if(l.show === false){ l.cierre = false; l.cierreAt = null; }
     await persist(l);
     if(l.show) await preguntarCierre(l);
-    else toast("Marcado: no se presentó. Si fue un error, pulsa Deshacer.");
+    else { toast("Marcado: no se presentó. Si fue un error, pulsa Deshacer."); await pedirGrabacion(l); }
     return;
   }
   if(t.dataset.undo){
@@ -4165,7 +4182,7 @@ document.addEventListener("click", async (e) => {
     const l = getLead(t.dataset.askamount); if(!l) return;
     /* "Completar venta": la misma ventana de importe + oferta. Aqui el lead ya
        esta como Closed, asi que cancelar no lo cambia. */
-    if(await pedirVenta(l, false)){
+    if(await pedirVenta(l)){
       if(!l.cierreAt) l.cierreAt = l.callDate || todayStr();
       await persist(l);
       toast("Venta completa · "+money2(l.importe)+" · "+l.oferta+".");
