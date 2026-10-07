@@ -632,6 +632,11 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
 .modal-h p{font-size:13px; line-height:1.55; color:var(--muted); margin:0}
 .modal-b{padding:16px 20px 0}
 .modal-b input{font-size:19px; padding:11px 13px; text-align:center; font-family:"IBM Plex Mono",monospace}
+.modal-b.venta label.f{margin-top:10px}
+.modal-b.venta label.f:first-child{margin-top:0}
+.modal-b.venta select{width:100%}
+.mv-err{color:var(--crit); font-size:13px; margin:10px 0 0; min-height:1em}
+.undo{width:100%; justify-content:center; margin-top:12px}
 .modal-f{display:flex; gap:8px; padding:18px 20px 20px; flex-wrap:wrap}
 .modal-f .btn{flex:1; min-width:120px; justify-content:center}
 .modal-f .btn.wide{flex:1 0 100%}
@@ -1455,7 +1460,7 @@ function modal({titulo, texto, campo, botones}){
     });
     document.addEventListener("keydown", tecla);
     const i = host.querySelector("#modalInput");
-    if(i) setTimeout(() => { i.focus(); i.select(); }, 40);
+    if(i) setTimeout(() => { i.focus(); if(i.select) i.select(); }, 40);
   });
 }
 /* Al marcar "Cerró" se pide el importe en el acto. Se puede aplazar, porque
@@ -1486,6 +1491,129 @@ async function pedirImporte(l){
   await persist(l);
   toast(money2(l.importe) + " registrado.");
   return true;
+}
+
+/* Paso 3 del resultado. Al pulsar "Closed" se piden importe Y oferta, los dos
+   obligatorios para "Guardar venta". Si cancela no se guarda nada y el lead
+   sigue en "Vino · falta el resultado".
+   La salida "Todavía no pagó" existe porque a veces se cierra pero el pago
+   llega despues: queda Closed sin importe (la oferta se guarda si la eligio),
+   sale en "Cerradas" con "Completar venta" y en el aviso de arriba hasta que
+   se ponga el numero. Solo se ofrece al marcar Closed (conLuego).
+   Devuelve "ok", "luego" o false. No persiste: lo hace quien llama. */
+function pedirVenta(l, conLuego){
+  return new Promise((resolve) => {
+    const host = document.getElementById("modalHost");
+    const cerrar = (ok) => {
+      host.innerHTML = "";
+      document.removeEventListener("keydown", tecla);
+      resolve(ok);
+    };
+    const guardar = () => {
+      const iImp = host.querySelector("#mv_importe"), iOf = host.querySelector("#mv_oferta");
+      const err  = host.querySelector("#mv_err");
+      const v = Number(iImp.value);
+      if(!(v > 0)){ err.textContent = "Escribe cuánto pagó."; iImp.focus(); return; }
+      if(!iOf.value){ err.textContent = "Elige la oferta."; iOf.focus(); return; }
+      l.importe = Math.round(v * 100) / 100;
+      l.oferta  = iOf.value;
+      cerrar("ok");
+    };
+    const luego = () => {
+      const iOf = host.querySelector("#mv_oferta");
+      if(iOf.value) l.oferta = iOf.value;
+      cerrar("luego");
+    };
+    const tecla = (e) => {
+      if(e.key === "Escape"){ e.preventDefault(); cerrar(false); }
+      if(e.key === "Enter"){ e.preventDefault(); guardar(); }
+    };
+    host.innerHTML =
+      '<div class="modal-bg" data-bg="1"><div class="modal" role="dialog" aria-modal="true">' +
+        '<div class="modal-h"><h3>Venta de @'+esc(l.handle)+'</h3>' +
+          '<p>Pon cuánto pagó y qué oferta compró.'+(conLuego ? ' Si todavía no ha pagado, márcalo abajo y lo completas cuando pague.' : '')+'</p></div>' +
+        '<div class="modal-b venta">' +
+          '<label class="f" for="mv_importe">¿Cuánto pagó?</label>' +
+          '<input type="number" id="mv_importe" inputmode="decimal" placeholder="0.00" min="0" step="25" ' +
+            'value="'+((+l.importe > 0) ? l.importe : "")+'">' +
+          '<label class="f" for="mv_oferta">¿Qué oferta compró?</label>' +
+          '<select id="mv_oferta"><option value="">Elige una…</option>' +
+            OFERTAS.map(o => '<option'+(o===l.oferta?" selected":"")+'>'+esc(o)+'</option>').join("") + '</select>' +
+          '<p class="mv-err" id="mv_err"></p>' +
+        '</div>' +
+        '<div class="modal-f">' +
+          '<button class="btn primary" data-mv="ok">Guardar venta</button>' +
+          '<button class="btn ghost" data-mv="no">Cancelar</button>' +
+          (conLuego ? '<button class="btn ghost wide" data-mv="luego">Todavía no pagó — lo pongo después</button>' : '') +
+        '</div>' +
+      '</div></div>';
+    host.querySelector(".modal-bg").addEventListener("click", (e) => {
+      if(e.target.dataset.bg) return cerrar(false);
+      const b = e.target.closest("[data-mv]");
+      if(b) b.dataset.mv === "ok" ? guardar() : b.dataset.mv === "luego" ? luego() : cerrar(false);
+    });
+    document.addEventListener("keydown", tecla);
+    setTimeout(() => { const i = host.querySelector("#mv_importe"); if(i) i.focus(); }, 40);
+  });
+}
+
+/* Marcar "Closed": primero se pide la venta completa y solo entonces se guarda. */
+async function marcarClosed(l){
+  const r = await pedirVenta(l, true);
+  if(!r){ toast("No se guardó. Sigue como Vino, falta decir si cerró."); render(); return false; }
+  l.cierre = true;
+  if(!l.cierreAt) l.cierreAt = l.callDate || todayStr();
+  if(l.show !== true){ l.show = true; l.showAt = l.callDate || todayStr(); }
+  l.estado = "cliente";
+  await persist(l);
+  toast(r === "ok" ? "Closed · "+money2(l.importe)+" · "+l.oferta+"."
+                   : "Closed, pendiente de pago. Te avisaré hasta que pongas el importe.");
+  return true;
+}
+async function marcarNotClosed(l){
+  l.cierre = false;
+  l.cierreAt = l.callDate || todayStr();
+  if(l.show !== true){ l.show = true; l.showAt = l.callDate || todayStr(); }
+  await persist(l);
+  await pedirObjecion(l);
+}
+/* Paso 2: vino, ¿cerró? Se abre solo al marcar "Vino". Cerrarlo sin elegir
+   deja el lead en "Vinieron · falta el resultado", con los mismos botones. */
+async function preguntarCierre(l){
+  const r = await modal({
+    titulo: "@"+esc(l.handle)+" vino. ¿Cerró?",
+    botones: [
+      { k:"si", lab:"Closed",     clase:"good" },
+      { k:"no", lab:"Not Closed", clase:"crit" }
+    ]
+  });
+  if(!r){ toast("Vino. Falta decir si cerró."); render(); return; }
+  if(r.accion === "si") await marcarClosed(l);
+  else await marcarNotClosed(l);
+}
+
+/* Deshacer: el lead vuelve a "sin registrar", como si la llamada no se hubiera
+   marcado. Se va todo lo que cuelga del resultado (importe, oferta, objecion,
+   plan de pago y cobros). Las notas y la grabacion se quedan. */
+async function deshacerResultado(l){
+  const terminal = tieneTag(l,"Tag Client") ? "Tag Client" : esNoCerro(l) ? "Tag Not Closed" : null;
+  const antes = l.show === false ? "No vino"
+              : l.cierre === true ? "Closed"+((+l.importe > 0) ? " · "+money2(l.importe) : "")
+              : l.cierre === false ? "Not Closed" : "Vino";
+  const ok = await confirmar({
+    titulo: "¿Deshacer el resultado de @"+esc(l.handle)+"?",
+    texto: "Ahora está como <b>"+esc(antes)+"</b>. Vuelve a \"sin registrar\" y se borran el importe, la oferta, " +
+           "la objeción y el plan de pago. Las notas no se tocan." +
+           (terminal ? "<br><br><b>Ojo:</b> en ManyChat sigue con "+terminal+". Quítaselo allí o el robot " +
+                       "volverá a ponerle el resultado en la próxima corrida." : ""),
+    ok: "Deshacer resultado", peligro: true
+  });
+  if(!ok) return;
+  Object.assign(l, { show:null, showAt:null, cierre:null, cierreAt:null, importe:null, oferta:"",
+                     objecion:"", pago:"", meses:null, cobros:{} });
+  if(l.estado === "cliente") l.estado = "activo";
+  await persist(l); render();
+  toast("@"+l.handle+" vuelve a sin registrar.");
 }
 
 /* Al marcar "Not Closed" se pregunta la objecion en el acto, mientras la llamada
@@ -2452,14 +2580,21 @@ function viewArchivo(){
 }
 
 /* ===================== render: LLAMADAS ===================== */
-/* El closer decide en un solo paso, y los botones están siempre a la vista:
-   verde cierra, rojo no cierra, Ver abre la ficha (ahí adentro está "no vino",
-   que es un caso raro y no merece un botón en la tarjeta). */
+/* El resultado va por pasos. Paso 1: ¿vino o no vino? Si vino, se pregunta en
+   el acto si cerró (preguntarCierre), y si cerró, la venta (pedirVenta). */
 function resultadoBtns(l){
-  return '<button class="btn sm good" data-close="'+l.id+'|1">Closed</button>' +
-         '<button class="btn sm crit" data-close="'+l.id+'|0">Not Closed</button>' +
+  return '<button class="btn sm good" data-show="'+l.id+'|1">Vino</button>' +
+         '<button class="btn sm crit" data-show="'+l.id+'|0">No vino</button>' +
          '<button class="btn sm ghost" data-open="'+l.id+'">Ver</button>';
 }
+/* Paso 2: ya vino, falta decir si cerró. */
+function cierreBtns(l){
+  return '<button class="btn sm good" data-close="'+l.id+'|1">Closed</button>' +
+         '<button class="btn sm crit" data-close="'+l.id+'|0">Not Closed</button>';
+}
+/* Venta completa = importe y oferta. Las cerradas que llegan por Tag Client
+   (o las de antes de este cambio) pueden traer uno sin el otro. */
+function ventaCompleta(l){ return +l.importe > 0 && !!l.oferta; }
 function callRow(l, kind){
   const when = l.agendo ? fmtCita(l) : (l.callDate ? fmtLongDate(l.callDate) : "sin fecha");
   let right = "", tone = "done", tags = "";
@@ -2470,46 +2605,35 @@ function callRow(l, kind){
   } else if(kind === "cerrada"){
     tone = "done";
     tags = '<span class="chip good">Closed</span>';
-    right = (+l.importe > 0)
+    right = ventaCompleta(l)
       ? '<span class="chip good">'+money2(l.importe)+'</span>' +
         '<button class="btn sm ghost" data-open="'+l.id+'">Editar</button>'
-      : '<span class="amountbox">' +
-        '<input type="number" data-amount="'+l.id+'" placeholder="¿Cuánto?" min="0" step="25" inputmode="decimal" class="mono">' +
-        '<button class="btn sm primary" data-saveamount="'+l.id+'">Guardar</button>' +
-        '<button class="btn sm ghost" data-close="'+l.id+'|x" title="Deshacer">↩</button></span>';
+      : '<button class="btn sm primary" data-askamount="'+l.id+'">Completar venta</button>' +
+        '<button class="btn sm ghost" data-undo="'+l.id+'">Deshacer</button>';
+    if(!ventaCompleta(l)) tags += '<span class="chip crit">falta '+
+      [!(+l.importe > 0) ? "importe" : "", !l.oferta ? "oferta" : ""].filter(Boolean).join(" y ")+'</span>';
   } else if(kind === "nocerro"){
     tone = "done";
     tags = l.show === false
       ? '<span class="chip crit">No vino</span>'
       : '<span class="chip">No cerró'+(l.objecion?" · "+esc(l.objecion):" · falta la objeción")+'</span>';
-    right = '<button class="btn sm ghost" data-open="'+l.id+'">Editar</button>';
-  } else if(kind === "resultado"){
-    /* Un solo paso: Cerró / No cerró, y si cerró el importe se abre aquí mismo. */
+    right = '<button class="btn sm ghost" data-open="'+l.id+'">Editar</button>' +
+            '<button class="btn sm ghost" data-undo="'+l.id+'">Deshacer</button>';
+  } else if(kind === "resultado" || kind === "cerrar"){
+    /* Paso 2: vino; ¿cerró? Closed abre la venta (importe + oferta). */
     tone = "late";
     tags = '<span class="chip good">Vino</span>';
     if(l.cierre === true){
       tags += '<span class="chip good">Closed</span>';
-      right = '<span class="amountbox">' +
-              '<input type="number" data-amount="'+l.id+'" placeholder="¿Cuánto?" min="0" step="25" ' +
-              'inputmode="decimal" class="mono">' +
-              '<button class="btn sm primary" data-saveamount="'+l.id+'">Guardar</button>' +
-              '<button class="btn sm ghost" data-close="'+l.id+'|x" title="Deshacer">↩</button></span>';
+      right = '<button class="btn sm primary" data-askamount="'+l.id+'">Completar venta</button>' +
+              '<button class="btn sm ghost" data-undo="'+l.id+'">Deshacer</button>';
     } else {
-      right = '<button class="btn sm good" data-close="'+l.id+'|1">Closed</button>' +
-              '<button class="btn sm" data-close="'+l.id+'|0">Not Closed</button>';
+      right = cierreBtns(l) + '<button class="btn sm ghost" data-undo="'+l.id+'">Deshacer</button>';
     }
-  } else if(kind === "cerrar"){
-    tone = "late";
-    tags = '<span class="chip good">Vino</span>';
-    right = '<button class="btn sm good" data-close="'+l.id+'|1">Closed</button>' +
-            '<button class="btn sm" data-close="'+l.id+'|0">Not Closed</button>';
   } else if(kind === "importe"){
     tone = "late";
     tags = '<span class="chip good">Closed</span>';
-    right = '<span class="amountbox">' +
-            '<input type="number" data-amount="'+l.id+'" placeholder="¿Cuánto?" min="0" step="25" ' +
-            'inputmode="decimal" class="mono">' +
-            '<button class="btn sm primary" data-saveamount="'+l.id+'">Guardar</button></span>';
+    right = '<button class="btn sm primary" data-askamount="'+l.id+'">Completar venta</button>';
   } else if(kind === "proxima"){
     tone = "booked";
     const falta = municionFaltante(l);
@@ -3715,30 +3839,37 @@ function drawer(){
 
   const ventaBlock = l.agendo ?
     '<div class="fieldset"><p class="eyebrow">Llamada · lo llena el closer</p>' +
-      /* Dos botones, no tres: si cerro o no cerro, es que vino. El caso de que
-         no se presentara se marca en el desplegable de abajo, que es raro y no
-         merece ocupar sitio arriba.
-         "Closed" abre el modal del importe; "Not Closed", el de la objecion. */
-      (l.cierre === null && l.show !== false ?
+      /* Por pasos, igual que en las filas: primero vino / no vino; si vino,
+         Closed / Not Closed; Closed pide importe y oferta. Lo ya contestado
+         queda como resumen, y "Deshacer resultado" lo devuelve todo al paso 1. */
+      (l.show == null ?
+        '<p class="f" style="margin:0 0 6px">¿Se presentó?</p>' +
+        '<div class="resultbtns">' +
+          '<button class="btn good" data-show="'+l.id+'|1">Vino</button>' +
+          '<button class="btn crit" data-show="'+l.id+'|0">No vino</button>' +
+        '</div>'
+      : l.show === true && l.cierre === null ?
+        '<p class="f" style="margin:0 0 6px">Vino. ¿Cerró?</p>' +
         '<div class="resultbtns">' +
           '<button class="btn good" data-close="'+l.id+'|1">Closed</button>' +
           '<button class="btn crit" data-close="'+l.id+'|0">Not Closed</button>' +
         '</div>'
-      : "") +
-      (l.cierre === true && !(+l.importe > 0) ?
+      : '<p style="margin:0 0 10px;font-size:15px;font-weight:600">' +
+          (l.show === false ? '<span class="chip crit">No vino</span>'
+           : l.cierre === true ? '<span class="chip good">Vino</span> <span class="chip good">Closed</span>'
+           : '<span class="chip good">Vino</span> <span class="chip">Not Closed</span>') +
+        '</p>') +
+      (l.cierre === true && !ventaCompleta(l) ?
         '<button class="btn primary" style="width:100%;margin-bottom:12px" data-askamount="'+l.id+'">' +
-          'Falta el importe — escribirlo</button>' : "") +
-      '<div><label class="f" for="d_show">¿Se presentó?</label><select id="d_show" data-f="show">' +
-        '<option value=""'+(l.show===null?" selected":"")+'>Sin registrar</option>' +
-        '<option value="1"'+(l.show===true?" selected":"")+'>Vino</option>' +
-        '<option value="0"'+(l.show===false?" selected":"")+'>No vino</option></select></div>' +
-      /* Sin desplegable de "¿Cerró?": eso ya lo deciden los botones de arriba.
-         Tener las dos cosas invitaba a contradecirse entre ellas. */
-      (l.show === true ?
+          'Completar venta (falta '+[!(+l.importe > 0) ? "importe" : "", !l.oferta ? "oferta" : ""].filter(Boolean).join(" y ")+')</button>' : "") +
+      /* Importe y oferta solo cuando hubo venta: antes salian con solo "Vino",
+         y se podian llenar sin haber marcado Closed. */
+      (l.cierre === true ?
         '<div class="grid2">' +
           '<div><label class="f" for="d_importe">Importe</label><input type="number" id="d_importe" data-f="importe" value="'+(l.importe||"")+'" min="0" step="25"></div>' +
           '<div><label class="f" for="d_oferta">Oferta</label><select id="d_oferta" data-f="oferta"><option value=""></option>'+opt(OFERTAS,l.oferta)+'</select></div>' +
-        '</div>' +
+        '</div>' : "") +
+      (l.show === true ?
         /* La objecion solo tiene sentido si NO cerro. Se pregunta en un modal al
            pulsar "Not Closed"; aqui queda por si hay que corregirla despues. */
         (l.cierre === false ?
@@ -3747,6 +3878,8 @@ function drawer(){
         planPagoHTML(l) +
         grabacionHTML(l)
       : "") +
+      (l.show != null ?
+        '<button class="btn sm ghost undo" data-undo="'+l.id+'">↩ Deshacer resultado</button>' : "") +
     '</div>' : "";
 
   host.innerHTML =
@@ -3927,8 +4060,13 @@ document.addEventListener("click", async (e) => {
     l.show = parts[1] === "1"; l.showAt = l.callDate || todayStr();
     if(l.show === false){ l.cierre = false; l.cierreAt = null; }
     await persist(l);
-    if(l.show){ OPEN = l.id; drawer(); toast("Vino. Registra el resultado."); }
-    else toast("Marcado: no se presentó.");
+    if(l.show) await preguntarCierre(l);
+    else toast("Marcado: no se presentó. Si fue un error, pulsa Deshacer.");
+    return;
+  }
+  if(t.dataset.undo){
+    const l = getLead(t.dataset.undo); if(!l) return;
+    await deshacerResultado(l);
     return;
   }
   /* Devolver al pipeline a alguien archivado o cerrado al que has vuelto a tocar.
@@ -3988,7 +4126,13 @@ document.addEventListener("click", async (e) => {
   }
   if(t.dataset.askamount){
     const l = getLead(t.dataset.askamount); if(!l) return;
-    await pedirImporte(l);
+    /* "Completar venta": la misma ventana de importe + oferta. Aqui el lead ya
+       esta como Closed, asi que cancelar no lo cambia. */
+    if(await pedirVenta(l, false)){
+      if(!l.cierreAt) l.cierreAt = l.callDate || todayStr();
+      await persist(l);
+      toast("Venta completa · "+money2(l.importe)+" · "+l.oferta+".");
+    }
     return;
   }
   if(t.dataset.close){
@@ -4001,14 +4145,9 @@ document.addEventListener("click", async (e) => {
       if(l.estado === "cliente") l.estado = "activo";
       await persist(l); return;
     }
-    l.cierre = parts[1] === "1";
-    l.cierreAt = l.callDate || todayStr();
-    /* Si hubo cierre o no-cierre, es porque la persona se presentó. */
-    if(l.show !== true){ l.show = true; l.showAt = l.callDate || todayStr(); }
-    if(l.cierre){ l.estado = "cliente"; }
-    await persist(l);
-    if(l.cierre) await pedirImporte(l);
-    else await pedirObjecion(l);
+    /* Closed no se guarda hasta tener importe y oferta (marcarClosed). */
+    if(parts[1] === "1") await marcarClosed(l);
+    else await marcarNotClosed(l);
     return;
   }
   if(t.dataset.saveamount){
