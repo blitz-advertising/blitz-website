@@ -624,7 +624,8 @@ td.r,th.r{text-align:right; font-variant-numeric:tabular-nums}
 @keyframes modalIn{from{opacity:0}to{opacity:1}}
 .modal{
   width:100%; max-width:400px; background:var(--surface);
-  border:1px solid var(--line-2); border-radius:14px; overflow:hidden;
+  border:1px solid var(--line-2); border-radius:14px; overflow:hidden auto;
+  max-height:calc(100dvh - 40px);
   box-shadow:0 30px 90px rgba(0,0,0,.6);
 }
 .modal-h{padding:20px 20px 0}
@@ -1493,35 +1494,53 @@ async function pedirImporte(l){
   return true;
 }
 
-/* Paso 3 del resultado. Al pulsar "Closed" se piden importe Y oferta, los dos
-   obligatorios para "Guardar venta". Si cancela no se guarda nada y el lead
-   sigue en "Vino · falta el resultado".
+/* Paso 3 del resultado. Al pulsar "Closed" se pide la venta entera: como
+   paga (completo o mes a mes), cuanto y que oferta. Todo obligatorio para
+   "Guardar venta". Si cancela no se guarda nada y el lead sigue en "Vino".
+   Mes a mes: `importe` es la CUOTA (asi lo leen valorContrato y pagosDe), y
+   los meses salen de la oferta; si la oferta no los dice ("Select"), se piden.
    La salida "Todavía no pagó" existe porque a veces se cierra pero el pago
-   llega despues: queda Closed sin importe (la oferta se guarda si la eligio),
+   llega despues: queda Closed sin importe (lo demas se guarda si lo eligio),
    sale en "Cerradas" con "Completar venta" y en el aviso de arriba hasta que
    se ponga el numero. Solo se ofrece al marcar Closed (conLuego).
    Devuelve "ok", "luego" o false. No persiste: lo hace quien llama. */
 function pedirVenta(l, conLuego){
   return new Promise((resolve) => {
     const host = document.getElementById("modalHost");
+    const q = (id) => host.querySelector("#"+id);
     const cerrar = (ok) => {
       host.innerHTML = "";
       document.removeEventListener("keydown", tecla);
       resolve(ok);
     };
+    const mesesOferta = (of) => { const m = String(of||"").match(/(\d+)\s*m\b/i); return m ? +m[1] : 0; };
+    /* Repinta lo que depende de la forma de pago: la etiqueta del importe,
+       el campo de meses y el total del contrato. */
+    const pintar = () => {
+      const mensual = q("mv_pago").value === "mensual";
+      const nOf = mesesOferta(q("mv_oferta").value);
+      q("mv_lblimp").textContent = mensual ? "¿Cuánto paga cada mes?" : "¿Cuánto pagó?";
+      q("mv_meseswrap").hidden = !(mensual && !nOf);
+      const n = nOf || +q("mv_meses").value || 0, v = +q("mv_importe").value || 0;
+      q("mv_total").textContent = (mensual && n > 0 && v > 0)
+        ? "Contrato: "+n+" × "+money2(v)+" = "+money2(n*v)+". Este mes se cuenta la primera cuota." : "";
+    };
     const guardar = () => {
-      const iImp = host.querySelector("#mv_importe"), iOf = host.querySelector("#mv_oferta");
-      const err  = host.querySelector("#mv_err");
-      const v = Number(iImp.value);
-      if(!(v > 0)){ err.textContent = "Escribe cuánto pagó."; iImp.focus(); return; }
-      if(!iOf.value){ err.textContent = "Elige la oferta."; iOf.focus(); return; }
-      l.importe = Math.round(v * 100) / 100;
-      l.oferta  = iOf.value;
+      const err = q("mv_err"), pago = q("mv_pago").value, of = q("mv_oferta").value;
+      const v = Number(q("mv_importe").value), mensual = pago === "mensual";
+      if(!pago){ err.textContent = "Elige cómo paga."; q("mv_pago").focus(); return; }
+      if(!(v > 0)){ err.textContent = mensual ? "Escribe cuánto paga al mes." : "Escribe cuánto pagó."; q("mv_importe").focus(); return; }
+      if(!of){ err.textContent = "Elige la oferta."; q("mv_oferta").focus(); return; }
+      const nm = Math.round(+q("mv_meses").value);
+      if(mensual && !mesesOferta(of) && !(nm >= 1)){ err.textContent = "Escribe cuántos meses."; q("mv_meses").focus(); return; }
+      l.pago = pago; l.importe = Math.round(v * 100) / 100; l.oferta = of;
+      l.meses = (mensual && !mesesOferta(of)) ? nm : null;
       cerrar("ok");
     };
     const luego = () => {
-      const iOf = host.querySelector("#mv_oferta");
-      if(iOf.value) l.oferta = iOf.value;
+      if(q("mv_pago").value)   l.pago   = q("mv_pago").value;
+      if(q("mv_oferta").value) l.oferta = q("mv_oferta").value;
+      if(+q("mv_meses").value >= 1) l.meses = Math.round(+q("mv_meses").value);
       cerrar("luego");
     };
     const tecla = (e) => {
@@ -1531,14 +1550,21 @@ function pedirVenta(l, conLuego){
     host.innerHTML =
       '<div class="modal-bg" data-bg="1"><div class="modal" role="dialog" aria-modal="true">' +
         '<div class="modal-h"><h3>Venta de @'+esc(l.handle)+'</h3>' +
-          '<p>Pon cuánto pagó y qué oferta compró.'+(conLuego ? ' Si todavía no ha pagado, márcalo abajo y lo completas cuando pague.' : '')+'</p></div>' +
+          '<p>Cómo paga, cuánto y qué oferta compró.'+(conLuego ? ' Si todavía no ha pagado, márcalo abajo y lo completas cuando pague.' : '')+'</p></div>' +
         '<div class="modal-b venta">' +
-          '<label class="f" for="mv_importe">¿Cuánto pagó?</label>' +
+          '<label class="f" for="mv_pago">¿Cómo paga?</label>' +
+          '<select id="mv_pago"><option value="">Elige…</option>' +
+            '<option value="full"'+(l.pago==="full"?" selected":"")+'>Pago completo</option>' +
+            '<option value="mensual"'+(l.pago==="mensual"?" selected":"")+'>Mes a mes</option></select>' +
+          '<label class="f" for="mv_importe" id="mv_lblimp">¿Cuánto pagó?</label>' +
           '<input type="number" id="mv_importe" inputmode="decimal" placeholder="0.00" min="0" step="25" ' +
             'value="'+((+l.importe > 0) ? l.importe : "")+'">' +
           '<label class="f" for="mv_oferta">¿Qué oferta compró?</label>' +
           '<select id="mv_oferta"><option value="">Elige una…</option>' +
             OFERTAS.map(o => '<option'+(o===l.oferta?" selected":"")+'>'+esc(o)+'</option>').join("") + '</select>' +
+          '<div id="mv_meseswrap" hidden><label class="f" for="mv_meses">¿Cuántos meses?</label>' +
+            '<input type="number" id="mv_meses" inputmode="numeric" min="1" max="36" step="1" value="'+(l.meses||"")+'"></div>' +
+          '<p class="helptext" id="mv_total" style="margin:10px 0 0"></p>' +
           '<p class="mv-err" id="mv_err"></p>' +
         '</div>' +
         '<div class="modal-f">' +
@@ -1552,8 +1578,11 @@ function pedirVenta(l, conLuego){
       const b = e.target.closest("[data-mv]");
       if(b) b.dataset.mv === "ok" ? guardar() : b.dataset.mv === "luego" ? luego() : cerrar(false);
     });
+    host.querySelector(".modal").addEventListener("input", pintar);
+    host.querySelector(".modal").addEventListener("change", pintar);
     document.addEventListener("keydown", tecla);
-    setTimeout(() => { const i = host.querySelector("#mv_importe"); if(i) i.focus(); }, 40);
+    pintar();
+    setTimeout(() => { const i = q(l.pago ? "mv_importe" : "mv_pago"); if(i) i.focus(); }, 40);
   });
 }
 
@@ -1577,17 +1606,21 @@ async function marcarNotClosed(l){
   await persist(l);
   await pedirObjecion(l);
 }
-/* Paso 2: vino, ¿cerró? Se abre solo al marcar "Vino". Cerrarlo sin elegir
-   deja el lead en "Vinieron · falta el resultado", con los mismos botones. */
+/* Paso 2: vino, ¿cerró? Se abre solo al marcar "Vino". No obliga: a veces
+   la persona se lo piensa unos dias. "Todavía no decide" (o cerrar la
+   ventana) la deja en "Vinieron · esperando decisión", con Closed / Not
+   Closed a mano para cuando conteste. */
 async function preguntarCierre(l){
   const r = await modal({
     titulo: "@"+esc(l.handle)+" vino. ¿Cerró?",
+    texto: "Si se lo está pensando, déjalo pendiente y lo marcas cuando decida.",
     botones: [
       { k:"si", lab:"Closed",     clase:"good" },
-      { k:"no", lab:"Not Closed", clase:"crit" }
+      { k:"no", lab:"Not Closed", clase:"crit" },
+      { k:"espera", lab:"Todavía no decide — lo marco después", clase:"ghost", ancho:true }
     ]
   });
-  if(!r){ toast("Vino. Falta decir si cerró."); render(); return; }
+  if(!r || r.accion === "espera"){ toast("Vino. Queda esperando decisión."); render(); return; }
   if(r.accion === "si") await marcarClosed(l);
   else await marcarNotClosed(l);
 }
@@ -2594,7 +2627,11 @@ function cierreBtns(l){
 }
 /* Venta completa = importe y oferta. Las cerradas que llegan por Tag Client
    (o las de antes de este cambio) pueden traer uno sin el otro. */
-function ventaCompleta(l){ return +l.importe > 0 && !!l.oferta; }
+function ventaCompleta(l){ return +l.importe > 0 && !!l.oferta && !!l.pago; }
+function faltaVenta(l){
+  return [!l.pago ? "cómo paga" : "", !(+l.importe > 0) ? "importe" : "", !l.oferta ? "oferta" : ""]
+    .filter(Boolean).join(", ").replace(/, ([^,]*)$/, " y $1");
+}
 function callRow(l, kind){
   const when = l.agendo ? fmtCita(l) : (l.callDate ? fmtLongDate(l.callDate) : "sin fecha");
   let right = "", tone = "done", tags = "";
@@ -2611,7 +2648,7 @@ function callRow(l, kind){
       : '<button class="btn sm primary" data-askamount="'+l.id+'">Completar venta</button>' +
         '<button class="btn sm ghost" data-undo="'+l.id+'">Deshacer</button>';
     if(!ventaCompleta(l)) tags += '<span class="chip crit">falta '+
-      [!(+l.importe > 0) ? "importe" : "", !l.oferta ? "oferta" : ""].filter(Boolean).join(" y ")+'</span>';
+      faltaVenta(l)+'</span>';
   } else if(kind === "nocerro"){
     tone = "done";
     tags = l.show === false
@@ -3023,7 +3060,7 @@ function viewLlamadas(){
     '<div class="h-row"><h2>Llamadas</h2><span class="sub">Show, cierre e importe</span></div>' + head + avisoImporte + alerta +
     proximas +
     grp("Por registrar", c.porRegistrar, "reg", "Ya pasó el día y nadie marcó el resultado. Mientras estén aquí, el show rate está incompleto.") +
-    grp("Vinieron · falta el resultado", c.porResultado.filter(l => l.cierre === null), "resultado", "Se presentaron. ¿Cerró o no cerró?") +
+    grp("Vinieron · esperando decisión", c.porResultado.filter(l => l.cierre === null), "resultado", "Se presentaron y todavía no hay respuesta. Marca Closed o Not Closed cuando decidan.") +
     sinFecha +
     grp("Agendadas · falta la hora", c.sinHora, "next", "Tienen día pero no hora, así que todavía no están confirmadas.") +
     /* El pie cambia con el rol: el closer no tiene el tab de Archivo (sus vistas
@@ -3861,7 +3898,7 @@ function drawer(){
         '</p>') +
       (l.cierre === true && !ventaCompleta(l) ?
         '<button class="btn primary" style="width:100%;margin-bottom:12px" data-askamount="'+l.id+'">' +
-          'Completar venta (falta '+[!(+l.importe > 0) ? "importe" : "", !l.oferta ? "oferta" : ""].filter(Boolean).join(" y ")+')</button>' : "") +
+          'Completar venta (falta '+faltaVenta(l)+')</button>' : "") +
       /* Importe y oferta solo cuando hubo venta: antes salian con solo "Vino",
          y se podian llenar sin haber marcado Closed. */
       (l.cierre === true ?
