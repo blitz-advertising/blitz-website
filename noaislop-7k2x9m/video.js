@@ -48,8 +48,12 @@
     var id = ytId(o.src);
 
     if(id){
-      box.innerHTML = '<div class="yt-host"></div><div class="yt-tapa" hidden></div>' +
-        '<div class="yt-barra" hidden><i></i></div>';
+      /* Antes del primer play solo queda libre el centro (el boton de play de
+         YouTube): arriba (titulo y canal) y abajo ("Ver en YouTube") se tapan
+         para que nadie salga a YouTube. Un toque ahi tambien arranca el video. */
+      box.innerHTML = '<div class="yt-host"></div>' +
+        '<div class="yt-bloq yt-bloq--arriba"></div><div class="yt-bloq yt-bloq--abajo"></div>' +
+        '<div class="yt-tapa" hidden></div><div class="yt-barra" hidden><i></i></div>';
       var tapa = box.querySelector(".yt-tapa");
       /* Barra de progreso solo para mirar: dice cuanto falta (sin ella la gente
          se desespera y se va), pero no deja adelantar. */
@@ -70,18 +74,24 @@
                 /* El primer toque va directo a YouTube (iPhone no deja arrancar
                    con sonido de otra forma). Despues se tapa el video: asi no
                    se puede pinchar el titulo ni salir a YouTube. */
-                tapa.hidden = false; barra.hidden = false;
+                tapa.hidden = false; barra.hidden = false; box.classList.add("yt-arrancado");
                 if(!arrancado){ arrancado = true; pixel(o.evPlay); }
                 if(!reloj) reloj = setInterval(function(){ mide(p.getCurrentTime(), p.getDuration()); pintarBarra(); }, 250);
               } else if(reloj){ clearInterval(reloj); reloj = null; pintarBarra(); }
-              box.classList.toggle("yt-pausado", e.data === YT.PlayerState.PAUSED);
-              if(e.data === YT.PlayerState.ENDED){ mide(1, 1); tapa.hidden = true; relleno.style.width = "100%"; }
+              /* Al terminar la tapa se queda puesta (con el boton de play para
+                 verlo otra vez): asi no se pueden pinchar los videos sugeridos. */
+              box.classList.toggle("yt-pausado", e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED);
+              if(e.data === YT.PlayerState.ENDED){ mide(1, 1); relleno.style.width = "100%"; }
             }
           }
         });
         tapa.addEventListener("click", function(){
           var st = p.getPlayerState();
-          if(st === YT.PlayerState.PLAYING) p.pauseVideo(); else p.playVideo();
+          if(st === YT.PlayerState.PLAYING) p.pauseVideo();
+          else { if(st === YT.PlayerState.ENDED) p.seekTo(0, true); p.playVideo(); }
+        });
+        box.querySelectorAll(".yt-bloq").forEach(function(b){
+          b.addEventListener("click", function(){ p.playVideo(); });
         });
       });
       return;

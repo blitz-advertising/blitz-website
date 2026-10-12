@@ -995,3 +995,8 @@ body.vsl-page .cursor-ring { display: none; }
 .v-how-grid--4 { grid-template-columns: repeat(4, 1fr); gap: 24px; }
 @media (max-width: 1000px) { .v-how-grid--4 { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 680px) { .v-how-grid--4 { grid-template-columns: 1fr; } }
+/* Bloqueos antes del primer play: titulo/canal arriba y "Ver en YouTube" abajo. */
+.yt-bloq { position: absolute; left: 0; right: 0; height: 24%; cursor: pointer; }
+.yt-bloq--arriba { top: 0; }
+.yt-bloq--abajo  { bottom: 0; }
+.yt-arrancado .yt-bloq { display: none; }
