@@ -3,6 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Sin la "/" final, el navegador busca el CSS, el video y las imagenes en
+       la carpeta equivocada y la pagina sale vacia. Se le pone la "/" antes de
+       cargar nada (y antes del pixel, para que la visita cuente una vez). -->
+  <script>(function(){ var p = location.pathname; if(p.endsWith("/")) return;
+    p = p.replace(/\/index\.html$/, "/"); if(!p.endsWith("/")) p += "/";
+    location.replace(p + location.search + location.hash); })();</script>
 
   <!-- noindex Y nofollow: la direccion es intencionadamente dificil de adivinar
        y esta pagina solo debe llegarle a quien pincha el anuncio. -->
