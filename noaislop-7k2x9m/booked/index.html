@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Pagina de gracias. Solo se llega aqui al reservar en el calendario de la
+       landing, y el calendario solo se abre a quien califica ($500+). -->
+  <title>You Are Booked — Blitz</title>
+  <meta name="robots" content="noindex, nofollow">
+
+  <link rel="stylesheet" href="../../styles.css?v=61">
+  <link rel="stylesheet" href="../funnel.css?v=35">
+  <link rel="icon" type="image/png" href="../../assets/blitz-favicon.png">
+
+  <!-- Meta Pixel Code -->
+  <script>
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version="2.0";
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,"script",
+  "https://connect.facebook.net/en_US/fbevents.js");
+  fbq("init", "775347661459841");
+  fbq("track", "PageView");
+  /* Schedule solo si se viene de una reserva de verdad (la landing deja la
+     marca justo antes de mandar aqui). Se borra al usarla: recargar la pagina
+     o volver a entrar no cuenta otra llamada. */
+  (function(){
+    var ok = false;
+    try{
+      var t = +sessionStorage.getItem("blitzBooked");
+      ok = t > 0 && (Date.now() - t) < 10 * 60 * 1000;
+      sessionStorage.removeItem("blitzBooked");
+    }catch(_){}
+    if(ok){
+      fbq("track", "Schedule");
+      fbq("trackCustom", "CallBooked");
+    }
+  })();
+  </script>
+  <noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=775347661459841&ev=PageView&noscript=1"
+  /></noscript>
+  <!-- End Meta Pixel Code -->
+  <!-- Whop Pixel -->
+  <script>!function(w,d,s,u,n,a,b){if(w[n])return;a=w[n]={q:[],t:+new Date,s:[],o:u,track:function(){a.q.push([+new Date].concat([].slice.call(arguments)))},setScope:function(){a.s=[].slice.call(arguments).filter(function(x){return typeof x==="string"});a.q.push([+new Date,"setScope"].concat(a.s))},scope:function(){var c=[].slice.call(arguments);return{track:function(){a.q.push([+new Date].concat([].slice.call(arguments)).concat([{__scope:c}]))}}}};b=d.createElement(s);b.async=1;b.src=u+"/s.js";d.getElementsByTagName(s)[0].parentNode.insertBefore(b,d.getElementsByTagName(s)[0])}(window,document,"script","https://t.whop.tw","whop");whop.setScope("biz_LjYJNK8Vo7Cqlr");whop.track("page");</script>
+</head>
+<body class="vsl-page">
+
+  <header class="v-top">
+    <img src="../../assets/blitz-icon-white.png" alt="Blitz" class="v-logo-icon">
+    <span class="v-logo-word">blitz</span>
+  </header>
+
+  <section class="v-hero">
+
+    <div class="v-proof">
+      <span class="v-booked-check">✓</span>
+      <span><b>Call confirmed</b></span>
+    </div>
+
+    <h1 class="v-headline">
+      you are<br>
+      <span class="v-accent">booked.</span>
+    </h1>
+
+    <p class="v-sub">
+      The meeting link invite is on its way to your email.
+      <b>Watch the video below before the call.</b>
+    </p>
+
+    <!-- EL VSL. Para publicarlo: deja el archivo en assets/vsl.mp4 y pon su
+         nombre en VSL_SRC, abajo en el script. Vacio = sale el hueco marcado. -->
+    <div class="v-video" id="vslBox">
+      <div class="v-video-slot" id="vslSlot">
+        <span class="v-slot-tag">VSL</span>
+        <p class="v-slot-msg">El vídeo va aquí.<br><span>Sube el archivo a <code>assets/vsl.mp4</code> y escribe su nombre en <code>VSL_SRC</code>.</span></p>
+      </div>
+    </div>
+
+  </section>
+
+
+  <footer class="v-foot">
+    <div class="v-foot-links">
+      <a href="/privacy-policy/">Privacy</a><span>|</span>
+      <a href="/terms-of-service/">Terms of Service</a>
+    </div>
+    <p class="v-copy">Blitz Advertising LLC &copy; 2026 &middot; All rights reserved</p>
+  </footer>
+
+  <script src="../video.js?v=3"></script>
+  <script>
+    /* ─── EL VSL ─────────────────────────────────
+       Pon aqui el nombre del archivo cuando lo tengas:
+           const VSL_SRC = "../../assets/vsl.mp4";
+       O pega el link de YouTube tal cual (sale sin barra para adelantar y se
+       mide cuanto lo ven; ver video.js). Vacio = sale el hueco marcado. */
+    const VSL_SRC    = "";
+    const VSL_POSTER = "../../assets/work/work_03.jpg";
+
+    montarVideo({
+      box: document.getElementById("vslBox"), src: VSL_SRC, poster: VSL_POSTER,
+      evPlay: "VSLPlay", evProgress: "VSLProgress"
+    });
+  </script>
+</body>
+</html>

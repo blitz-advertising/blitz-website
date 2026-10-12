@@ -17,7 +17,7 @@
   <meta property="og:image" content="https://adsbyblitz.com/assets/work/work_03.jpg">
 
   <link rel="stylesheet" href="../styles.css?v=61">
-  <link rel="stylesheet" href="funnel.css?v=31">
+  <link rel="stylesheet" href="funnel.css?v=35">
   <script src="https://assets.calendly.com/assets/external/widget.js" async></script>
   <link rel="icon" type="image/png" href="../assets/blitz-favicon.png">
 
@@ -70,16 +70,17 @@
       <b>you&rsquo;ll get 100% of your money back.</b>
     </p>
 
-    <!-- Para publicar el video: deja el archivo en assets/vsl.mp4 y pon su
-         nombre en VSL_SRC, abajo en el script. Vacio = sale el hueco marcado. -->
+    <!-- Video de la landing (NO es el VSL: el VSL vive en la pagina de gracias,
+         booked/). Para publicarlo: deja el archivo en assets/landing.mp4 y pon
+         su nombre en VIDEO_SRC, abajo en el script. Vacio = sale el hueco. -->
     <div class="v-video" id="vslBox">
       <div class="v-video-slot" id="vslSlot">
-        <span class="v-slot-tag">VSL</span>
-        <p class="v-slot-msg">El vídeo va aquí.<br><span>Sube el archivo a <code>assets/vsl.mp4</code> y escribe su nombre en <code>VSL_SRC</code>.</span></p>
+        <span class="v-slot-tag">Landing video</span>
+        <p class="v-slot-msg">El vídeo va aquí.<br><span>Sube el archivo a <code>assets/landing.mp4</code> y escribe su nombre en <code>VIDEO_SRC</code>.</span></p>
       </div>
     </div>
 
-    <button class="cta-btn v-cta" data-cta="hero">Book your call <span>→</span></button>
+    <button class="cta-btn v-cta" data-cta="hero">Book my call <span>→</span></button>
 
   </section>
 
@@ -169,7 +170,7 @@
           </select>
         </div>
       </div>
-      <button type="submit" class="cta-btn v-cta v-leadsend">Send and see available times <span>&#8594;</span></button>
+      <button type="submit" class="cta-btn v-cta v-leadsend">Show me available times <span>&#8594;</span></button>
     </form>
 
     <!-- El calendario vive aqui mismo pero sale despues de calificar: sin el
@@ -226,27 +227,34 @@
       </div>
     </div>
 
-    <button class="cta-btn v-cta" data-cta="cases">Book your call <span>→</span></button>
+    <button class="cta-btn v-cta" data-cta="cases">Book my call <span>→</span></button>
   </section>
 
   <!-- ─── COMO FUNCIONA ────────────────────────── -->
   <section class="v-how">
     <p class="v-eyebrow">How it works</p>
-    <div class="v-how-grid">
+    <!-- Las mismas cuatro fases que los Terminos (seccion 5): la garantia de
+         glitches solo vale en el Concepto, asi que el cliente tiene que verlo. -->
+    <div class="v-how-grid v-how-grid--4">
       <div class="v-how-step">
         <span class="v-how-num">01</span>
-        <h3>The call</h3>
-        <p>15 to 30 minutes. You tell us what you are making and where it runs. You leave with the exact price before the call ends.</p>
+        <h3>Briefing</h3>
+        <p>We talk through your project and your ideas, then lock references and deliverables in writing. The moment we hold everything we need from you, the clock starts.</p>
       </div>
       <div class="v-how-step">
         <span class="v-how-num">02</span>
-        <h3>The brief</h3>
-        <p>We lock direction, references and deliverables in writing. The moment we hold everything we need from you, the clock starts.</p>
+        <h3>Concept</h3>
+        <p>We shape the creative direction and lock the look. You see frame stills of your brief before production starts.</p>
       </div>
       <div class="v-how-step">
         <span class="v-how-num">03</span>
-        <h3>The delivery</h3>
-        <p>Ten business days or less. Directed, generated, then finished by hand in post. You approve it before anything ships.</p>
+        <h3>Production</h3>
+        <p>We generate and finish everything in post: footage, edits, effects, color and sound design.</p>
+      </div>
+      <div class="v-how-step">
+        <span class="v-how-num">04</span>
+        <h3>Delivery</h3>
+        <p>Ten business days or less. You approve it before anything ships.</p>
       </div>
     </div>
   </section>
@@ -296,7 +304,7 @@
         that our team cannot fix within 24 hours, <b>you&rsquo;ll get 100% of your
         money back.</b>
       </p>
-      <button class="cta-btn v-cta" data-cta="guarantee">Book your call <span>→</span></button>
+      <button class="cta-btn v-cta" data-cta="guarantee">Book my call <span>→</span></button>
     </div>
   </section>
 
@@ -339,6 +347,9 @@
       <a href="/terms-of-service/">Terms of Service</a>
     </div>
     <p class="v-legal">
+      The technical AI glitch guarantee applies during the concept phase, when we deliver
+      frame stills of your brief for approval. Once you approve the concept and production
+      starts, the guarantee covers on-time delivery.
       The ten day guarantee runs in business days from kickoff, meaning the point
       where the brief is approved and we hold every asset and access we need from you.
       Days spent waiting on feedback or materials do not count against it. Full terms,
@@ -356,14 +367,15 @@
     <p class="v-copy">Blitz Advertising LLC &copy; 2026 &middot; All rights reserved</p>
   </footer>
 
+  <script src="video.js?v=3"></script>
   <script>
-    /* ─── EL VIDEO ───────────────────────────────
+    /* ─── EL VIDEO DE LA LANDING ─────────────────
        Pon aqui el nombre del archivo cuando lo tengas:
-           const VSL_SRC = "../assets/vsl.mp4";
-       Tambien acepta un link incrustable de YouTube, Vimeo o Loom.
-       Vacio = sale el hueco marcado. */
-    const VSL_SRC    = "";
-    const VSL_POSTER = "../assets/work/work_03.jpg";
+           const VIDEO_SRC = "../assets/landing.mp4";
+       O pega el link de YouTube tal cual (sale sin barra para adelantar y se
+       mide cuanto lo ven; ver video.js). Vacio = sale el hueco marcado. */
+    const VIDEO_SRC    = "https://youtu.be/-QCEafnHBFs";
+    const VIDEO_POSTER = "../assets/work/work_03.jpg";
 
     /* ─── PRUEBA CRUDA ───────────────────────────
        Nombres de los archivos que dejes en assets/raw-client-proof/.
@@ -380,34 +392,10 @@
         en:"\u201cBro, the thumbnail.\u201d" }
     ];
 
-    (function montarVideo(){
-      if(!VSL_SRC) return;
-      const box = document.getElementById("vslBox");
-      const esIncrustado = /^https?:\/\//i.test(VSL_SRC);
-      box.innerHTML = esIncrustado
-        ? '<iframe src="'+VSL_SRC+'" title="Blitz" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>'
-        : '<video id="vsl" playsinline preload="metadata" poster="'+VSL_POSTER+'" controls>' +
-          '<source src="'+VSL_SRC+'" type="video/mp4"></video>';
-
-      /* Cuanto del video se ve. Dice si hay que arreglar el video o el anuncio. */
-      const v = document.getElementById("vsl");
-      if(v){
-        const hitos = { 25:false, 50:false, 75:false, 95:false };
-        v.addEventListener("timeupdate", () => {
-          if(!v.duration) return;
-          const pct = (v.currentTime / v.duration) * 100;
-          Object.keys(hitos).forEach(k => {
-            if(!hitos[k] && pct >= +k){
-              hitos[k] = true;
-              if(typeof fbq !== "undefined") fbq("trackCustom", "VSLProgress", { pct: +k });
-            }
-          });
-        });
-        v.addEventListener("play", () => {
-          if(typeof fbq !== "undefined") fbq("trackCustom", "VSLPlay");
-        }, { once:true });
-      }
-    })();
+    montarVideo({
+      box: document.getElementById("vslBox"), src: VIDEO_SRC, poster: VIDEO_POSTER,
+      evPlay: "LandingVideoPlay", evProgress: "LandingVideoProgress"
+    });
 
     (function montarPrueba(){
       if(!PROOF.length) return;
@@ -586,14 +574,25 @@
       cal.dataset.url = u.toString();
     })();
 
-    /* Cuando Calendly confirma la reserva avisa por mensaje. Ese es el evento
-       que vale para optimizar: una llamada agendada, no una visita. */
+    /* Cuando Calendly confirma la reserva avisa por mensaje. Entonces se manda a
+       la pagina de gracias (booked/), que es la que dispara Schedule en Meta y
+       donde vive el VSL. Solo llega quien califico: el calendario no se abre
+       sin $500+. La marca en sessionStorage es para que booked/ dispare el
+       evento solo tras una reserva de verdad, no si alguien entra a mano.
+       Si el navegador no deja guardarla, se dispara aqui antes de salir. */
+    let reservado = false;
     window.addEventListener("message", (e) => {
-      if(!e.data || typeof e.data.event !== "string") return;
-      if(e.data.event === "calendly.event_scheduled" && typeof fbq !== "undefined"){
+      if(e.origin !== "https://calendly.com") return;
+      if(!e.data || e.data.event !== "calendly.event_scheduled" || reservado) return;
+      reservado = true;
+      let marcado = false;
+      try{ sessionStorage.setItem("blitzBooked", String(Date.now())); marcado = true; }catch(_){}
+      if(!marcado && typeof fbq !== "undefined"){
         fbq("track", "Schedule");
         fbq("trackCustom", "CallBooked");
       }
+      /* Un respiro para que se vea el "confirmado" de Calendly y salga el pixel. */
+      setTimeout(() => { location.href = "booked/" + location.search; }, marcado ? 600 : 1200);
     });
 
   </script>

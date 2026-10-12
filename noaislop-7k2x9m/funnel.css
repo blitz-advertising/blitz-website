@@ -959,3 +959,39 @@ body.vsl-page .cursor-ring { display: none; }
 
 /* Respuestas de mas de un parrafo: un poco de aire entre ellos. */
 .v-faq-list .v-q p + p { margin-top: 10px; }
+
+/* ─── PAGINA DE GRACIAS (booked/) ───────────── */
+.v-booked-check{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:20px; height:20px; border-radius:50%;
+  background:#5ee0a8; color:#04231a; font-size:12px; font-weight:700; line-height:1;
+}
+
+/* ─── REPRODUCTOR DE YOUTUBE LIMPIO (video.js) ─ */
+/* La tapa cubre el video en cuanto arranca: un toque pausa o sigue, y no se
+   puede pinchar el titulo ni salir a YouTube. */
+.yt-tapa { position: absolute; inset: 0; cursor: pointer; background: transparent; }
+.yt-pausado .yt-tapa { background: rgba(1,2,5,0.55); }
+.yt-pausado .yt-tapa::after {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  width: 72px; height: 72px; margin: -36px 0 0 -36px; border-radius: 50%;
+  background: var(--f-blue) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5v14l11-7z' fill='white'/%3E%3C/svg%3E") center / 34px no-repeat;
+  box-shadow: 0 0 44px rgba(68,115,255,0.7);
+}
+/* Barra de progreso de la marca: solo indica, no se puede arrastrar. */
+.yt-barra {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 5px;
+  background: rgba(255,255,255,0.14); pointer-events: none;
+}
+.yt-barra i {
+  display: block; height: 100%; width: 0;
+  background: linear-gradient(90deg, var(--f-blue), var(--f-blue-hi));
+  box-shadow: 0 0 12px rgba(68,115,255,0.85);
+  transition: width .25s linear;
+}
+
+/* Como funciona en cuatro fases: cuatro columnas en escritorio, dos y dos en
+   tablet; en telefono sigue la regla de una columna de arriba. */
+.v-how-grid--4 { grid-template-columns: repeat(4, 1fr); gap: 24px; }
+@media (max-width: 1000px) { .v-how-grid--4 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 680px) { .v-how-grid--4 { grid-template-columns: 1fr; } }
