@@ -284,6 +284,20 @@
       phoneInput.addEventListener('blur', validatePhone);
     }
 
+    /* Al reservar en Calendly se manda a la pagina de gracias del funnel (la
+       del VSL). La marca en sessionStorage hace que alli se dispare Schedule
+       una sola vez; src=apply lo separa de las reservas que vienen del anuncio. */
+    let reservado = false;
+    window.addEventListener('message', (e) => {
+      if (e.origin !== 'https://calendly.com') return;
+      if (!e.data || e.data.event !== 'calendly.event_scheduled' || reservado) return;
+      reservado = true;
+      let marcado = false;
+      try { sessionStorage.setItem('blitzBooked', String(Date.now())); marcado = true; } catch (_) {}
+      if (!marcado && typeof fbq !== 'undefined') fbq('track', 'Schedule', { source: 'apply' });
+      setTimeout(() => { location.href = '/noaislop-7k2x9m/booked/?src=apply'; }, marcado ? 600 : 1200);
+    });
+
     async function handleSubmit(e) {
       e.preventDefault();
       const form = document.getElementById('applyForm');

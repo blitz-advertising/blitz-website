@@ -599,8 +599,8 @@
       let marcado = false;
       try{ sessionStorage.setItem("blitzBooked", String(Date.now())); marcado = true; }catch(_){}
       if(!marcado && typeof fbq !== "undefined"){
-        fbq("track", "Schedule");
-        fbq("trackCustom", "CallBooked");
+        fbq("track", "Schedule", { source: "funnel" });
+        fbq("trackCustom", "CallBooked", { source: "funnel" });
       }
       /* Un respiro para que se vea el "confirmado" de Calendly y salga el pixel. */
       setTimeout(() => { location.href = "booked/" + location.search; }, marcado ? 600 : 1200);

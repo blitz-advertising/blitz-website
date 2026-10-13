@@ -42,8 +42,11 @@
       sessionStorage.removeItem("blitzBooked");
     }catch(_){}
     if(ok){
-      fbq("track", "Schedule");
-      fbq("trackCustom", "CallBooked");
+      /* De donde viene la reserva: el funnel del anuncio o el formulario de la
+         web principal (/apply/ manda ?src=apply). Asi se pueden separar en Meta. */
+      var src = /[?&]src=apply\b/.test(location.search) ? "apply" : "funnel";
+      fbq("track", "Schedule", { source: src });
+      fbq("trackCustom", "CallBooked", { source: src });
     }
   })();
   </script>
