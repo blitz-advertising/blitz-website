@@ -389,14 +389,17 @@
        Nombres de los archivos que dejes en assets/raw-client-proof/.
        Ejemplo:  const PROOF = ["wa-01.jpg", "wa-02.jpg", "wa-03.jpg"];
        Vacio = la seccion no se pinta. */
+    /* Sube este numero cada vez que cambies o renumeres las capturas: si no,
+       el navegador enseña la version vieja guardada con el mismo nombre. */
+    const PROOF_V = 2;
     const PROOF = [
-      { img:"raw-client-proof-7.jpg",
-        en:"\u201cHow the hell do these come out so sick. I have never seen AI like this in my life.\u201d" },
-      { img:"raw-client-proof-3.jpg",
-        en:"\u201cLook at this.\u201d \u00b7 \u201cThese wins are yours too.\u201d" },
-      { img:"raw-client-proof-8.jpg",
+      { img:"client-proof-1.jpg",
+        en:"\u201cI have never seen AI like this in my life.\u201d" },
+      { img:"client-proof-2.jpg",
+        en:"\u201cThanks for helping the content look higher quality. It is your win too.\u201d" },
+      { img:"client-proof-3.jpg",
         en:"\u201cDamn, that is hard. Thanks bro. I am posting them right now.\u201d" },
-      { img:"raw-client-proof-5.jpg",
+      { img:"client-proof-4.jpg",
         en:"\u201cBro, the thumbnail.\u201d" }
     ];
 
@@ -415,7 +418,7 @@
         const img = typeof f === "string" ? f : f.img;
         const en  = typeof f === "string" ? "" : (f.en || "");
         return '<figure class="v-proof-shot">' +
-          '<img src="../assets/raw-client-proof/' + encodeURIComponent(img) + '" alt="Client message">' +
+          '<img src="../assets/raw-client-proof/' + encodeURIComponent(img) + '?v=' + PROOF_V + '" alt="Client message">' +
           (en ? '<figcaption class="v-proof-en">' + en + '</figcaption>' : "") +
         '</figure>';
       };
