@@ -239,7 +239,10 @@ const nuevoId = () => "l" + Date.now().toString(36) + Math.random().toString(36)
         touchedAt: toque, seed: !tags.length, seedAuto: !tags.length, tags,
         createdAt: AHORA, updatedAt: AHORA
       };
-      if (cliente) Object.assign(l, { show: true, cierre: true, cierreAt: HOY, estado: "cliente", pendingBook: false });
+      /* Entra ya como cliente (se cerro fuera del CRM): pasa como booked, a
+         "falta la fecha". El setter pone el dia de la llamada y el closer
+         registra el resultado a mano, como cualquier otra llamada. */
+      if (cliente) Object.assign(l, { pendingBook: true, clienteFuera: true });
       else if (notClosed) Object.assign(l, { show: true, showAt: HOY, cierre: false, cierreAt: HOY });
       else if (tiene(tags, "Tag Not Interested")) l.estado = "muerto";
 
@@ -283,7 +286,9 @@ const nuevoId = () => "l" + Date.now().toString(36) + Math.random().toString(36)
       if (tiene(tags, "Tag VSL")) set("via", "VSL");
       if (!l.respondio) { set("respondio", true); set("respondioAt", HOY); }
       if (!l.propuesta && propuesta) { set("propuesta", true); if (!l.propuestaAt) set("propuestaAt", HOY); }
-      if (!l.agendoAt && (booked || notClosed || cliente)) set("agendoAt", HOY);
+      /* Un archivado (seed) que recibe un tag no agendó HOY: es un cliente o un
+         contacto de antes del CRM. Ponerle fecha lo colaba en "Agendó". */
+      if (!l.agendoAt && !l.seed && (booked || notClosed || cliente)) set("agendoAt", HOY);
       if (booked && !cliente && !notClosed && !l.agendo) set("pendingBook", true);
       if (tiene(tags, "Tag Not Interested") && !cliente) set("estado", "muerto");
       informe.avanzados++;
@@ -301,14 +306,33 @@ const nuevoId = () => "l" + Date.now().toString(36) + Math.random().toString(36)
     /* LA EXCEPCIÓN · Tag Client manda sobre el closer.
        Si ManyChat dice que pagó, pagó. Pero el importe NO se toca: lo pone
        el closer, y así el lead sale en "Cerradas · falta el dinero". */
-    if (cliente && l.cierre !== true) {
+    if (cliente && l.cierre !== true && !l.clienteFuera) {
       set("cierre", true);
       set("show", true);
       set("estado", "cliente");
       set("pendingBook", false);
-      if (!l.cierreAt) set("cierreAt", HOY);
+      /* Fechas solo si es una venta de ahora. Un archivado (seed) con Tag Client
+         es un cliente viejo: con fecha de hoy contaba como cierre de este mes
+         (y el close rate salia 100%). Y si se le marca el show, con fecha:
+         sin ella el cierre contaba y el show no. */
+      if (!l.seed) {
+        if (!l.cierreAt) set("cierreAt", l.callDate || HOY);
+        if (!l.showAt) set("showAt", l.callDate || l.cierreAt || HOY);
+      }
       informe.clientesRecuperados.push(u);
       informe.detalle.push(`@${u}: Tag Client ganó sobre el cierre — falta el importe`);
+    }
+
+    /* LIMPIEZA · clientes viejos con fechas de hoy.
+       Antes de la regla de arriba, a los archivados (seed) que tenian Tag Client
+       se les ponia cierreAt y agendoAt del dia en que el robot vio el tag, y
+       contaban como cierres y agendas recientes. Se les quitan esas fechas si no
+       hay ninguna llamada detras (sin callDate ni showAt): un cliente que paso
+       por una llamada en el CRM siempre tiene callDate. */
+    if (l.seed && l.cierre === true && !l.callDate && !l.showAt && (l.cierreAt || l.agendoAt)) {
+      set("cierreAt", null);
+      set("agendoAt", null);
+      informe.detalle.push(`@${u}: cliente viejo (archivado) — se quitan las fechas de cierre y agenda`);
     }
 
     /* B6 · SIN NINGÚN TAG = fuera de la secuencia.
