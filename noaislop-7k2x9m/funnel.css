@@ -1000,3 +1000,21 @@ body.vsl-page .cursor-ring { display: none; }
 .yt-bloq--arriba { top: 0; }
 .yt-bloq--abajo  { bottom: 0; }
 .yt-arrancado .yt-bloq { display: none; }
+
+/* Barra que deja volver atras (video.js): zona alta para el dedo, pista fina
+   abajo. La parte clara es lo ya visto (hasta ahi se puede ir); la azul, donde
+   va el video. */
+.yt-barra { height: 26px; background: transparent; pointer-events: auto; cursor: pointer; touch-action: none; z-index: 2; }
+.yt-pista {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 5px;
+  background: rgba(255,255,255,0.14); transition: height .15s;
+}
+.yt-barra:hover .yt-pista { height: 8px; }
+.yt-pista b, .yt-pista i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; display: block; }
+.yt-pista b { background: rgba(255,255,255,0.28); }
+.yt-pista i {
+  height: auto;
+  background: linear-gradient(90deg, var(--f-blue), var(--f-blue-hi));
+  box-shadow: 0 0 12px rgba(68,115,255,0.85);
+  transition: width .25s linear;
+}

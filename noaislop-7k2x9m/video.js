@@ -53,17 +53,47 @@
          para que nadie salga a YouTube. Un toque ahi tambien arranca el video. */
       box.innerHTML = '<div class="yt-host"></div>' +
         '<div class="yt-bloq yt-bloq--arriba"></div><div class="yt-bloq yt-bloq--abajo"></div>' +
-        '<div class="yt-tapa" hidden></div><div class="yt-barra" hidden><i></i></div>';
+        '<div class="yt-tapa" hidden></div>' +
+        '<div class="yt-barra" hidden><div class="yt-pista"><b></b><i></i></div></div>';
       var tapa = box.querySelector(".yt-tapa");
-      /* Barra de progreso solo para mirar: dice cuanto falta (sin ella la gente
-         se desespera y se va), pero no deja adelantar. */
-      var barra = box.querySelector(".yt-barra"), relleno = barra.firstChild;
+      /* Barra de progreso: dice cuanto falta (sin ella la gente se desespera y
+         se va) y deja volver atras, pero nunca pasar de lo ya visto. <b> marca
+         hasta donde llego, <i> donde esta ahora. */
+      var barra = box.querySelector(".yt-barra");
+      var relleno = barra.querySelector("i"), vistoEl = barra.querySelector("b");
       cargarApiYT().then(function(){
-        var arrancado = false, reloj = null, p = null;
+        var arrancado = false, reloj = null, p = null, visto = 0;
         var pintarBarra = function(){
           var d = p && p.getDuration && p.getDuration();
-          if(d) relleno.style.width = Math.min(100, p.getCurrentTime() / d * 100) + "%";
+          if(!d) return;
+          var t = p.getCurrentTime();
+          if(t > visto) visto = t;
+          relleno.style.width = Math.min(100, t / d * 100) + "%";
+          vistoEl.style.width = Math.min(100, visto / d * 100) + "%";
         };
+        /* Velocidad por defecto (o.velocidad, p. ej. 1.25). Solo si YouTube la
+           ofrece para ese video; si no, se queda en 1. */
+        var ponerVelocidad = function(){
+          if(!o.velocidad || !p.getAvailablePlaybackRates) return;
+          if(p.getAvailablePlaybackRates().indexOf(o.velocidad) >= 0 && p.getPlaybackRate() !== o.velocidad)
+            p.setPlaybackRate(o.velocidad);
+        };
+        /* Tocar o arrastrar la barra: se mueve a ese punto, pero nunca mas alla
+           de lo ya visto. */
+        var irA = function(ev){
+          var d = p && p.getDuration && p.getDuration();
+          if(!d) return;
+          var rect = barra.getBoundingClientRect();
+          var x = (ev.touches ? ev.touches[0].clientX : ev.clientX) - rect.left;
+          var t = Math.max(0, Math.min(1, x / rect.width)) * d;
+          p.seekTo(Math.min(t, visto), true);
+          relleno.style.width = Math.min(t, visto) / d * 100 + "%";
+        };
+        var arrastrando = false;
+        barra.addEventListener("pointerdown", function(ev){ arrastrando = true; ev.preventDefault(); ev.stopPropagation(); irA(ev); });
+        window.addEventListener("pointermove", function(ev){ if(arrastrando) irA(ev); });
+        window.addEventListener("pointerup", function(){ arrastrando = false; });
+        barra.addEventListener("click", function(ev){ ev.stopPropagation(); });
         p = new YT.Player(box.querySelector(".yt-host"), {
           host: "https://www.youtube-nocookie.com",
           videoId: id,
@@ -76,12 +106,13 @@
                    se puede pinchar el titulo ni salir a YouTube. */
                 tapa.hidden = false; barra.hidden = false; box.classList.add("yt-arrancado");
                 if(!arrancado){ arrancado = true; pixel(o.evPlay); }
+                ponerVelocidad();
                 if(!reloj) reloj = setInterval(function(){ mide(p.getCurrentTime(), p.getDuration()); pintarBarra(); }, 250);
               } else if(reloj){ clearInterval(reloj); reloj = null; pintarBarra(); }
               /* Al terminar la tapa se queda puesta (con el boton de play para
                  verlo otra vez): asi no se pueden pinchar los videos sugeridos. */
               box.classList.toggle("yt-pausado", e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED);
-              if(e.data === YT.PlayerState.ENDED){ mide(1, 1); relleno.style.width = "100%"; }
+              if(e.data === YT.PlayerState.ENDED){ mide(1, 1); visto = p.getDuration(); relleno.style.width = "100%"; vistoEl.style.width = "100%"; }
             }
           }
         });
