@@ -1764,7 +1764,11 @@ function metrics(days){
   m.pendReg   = done.filter(l => l.show === null).length;
   m.futuras   = TODOS.filter(l => l.callDate && l.callDate > T).length;
   m.shows   = TODOS.filter(l => l.show === true && inW(l.showAt)).length;
-  m.cierres = TODOS.filter(l => l.cierre === true && inW(l.cierreAt)).length;
+  /* Un cierre cuenta si hubo llamada detras (show con fecha). Sin esto, un
+     cliente viejo al que el robot le puso fecha de cierre de hoy contaba como
+     venta nueva sin show, y el close rate salia 100% con gente que vino y no
+     cerro. Asi Cierre sale siempre de entre los Shows. */
+  m.cierres = TODOS.filter(l => l.cierre === true && inW(l.cierreAt) && l.show === true && !!l.showAt).length;
 
   /* Literalmente lo cobrado entre hoy y N dias atras, por fecha de cobro. Con el
      interruptor de modos esto se medía contra la fecha de ENTRADA del lead y
@@ -1772,7 +1776,7 @@ function metrics(days){
   m.cash = cobrado(TODOS, p => inW(p.fecha));
   /* Ventas firmadas DENTRO de la ventana. De aqui sale el ticket medio, que asi
      habla del mismo trozo de tiempo que el dinero de al lado. */
-  const firmadas  = TODOS.filter(l => l.cierre === true && inW(l.cierreAt));
+  const firmadas  = TODOS.filter(l => l.cierre === true && inW(l.cierreAt) && l.show === true && !!l.showAt);
   m.contratos     = firmadas.reduce((a,l) => a + valorContrato(l), 0);
   m.cierresVentana = firmadas.length;
   m.rResp  = pct(m.resp, m.leads);
