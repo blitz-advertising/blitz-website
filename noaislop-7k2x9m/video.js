@@ -62,7 +62,7 @@
       var barra = box.querySelector(".yt-barra");
       var relleno = barra.querySelector("i"), vistoEl = barra.querySelector("b");
       cargarApiYT().then(function(){
-        var arrancado = false, reloj = null, p = null, visto = 0;
+        var arrancado = false, reloj = null, p = null, visto = 0, subsPuestos = false;
         var pintarBarra = function(){
           var d = p && p.getDuration && p.getDuration();
           if(!d) return;
@@ -97,8 +97,9 @@
         p = new YT.Player(box.querySelector(".yt-host"), {
           host: "https://www.youtube-nocookie.com",
           videoId: id,
-          playerVars: { controls:0, disablekb:1, rel:0, playsinline:1, iv_load_policy:3, fs:0,
+          playerVars: Object.assign({ controls:0, disablekb:1, rel:0, playsinline:1, iv_load_policy:3, fs:0,
                         cc_load_policy: o.sinSubtitulos ? 0 : 1 },
+                        o.subtitulos ? { cc_lang_pref: o.subtitulos } : {}),
           events: {
             onStateChange: function(e){
               if(e.data === YT.PlayerState.PLAYING){
@@ -111,6 +112,15 @@
                 /* Los subtitulos de YouTube se encienden solos si el video tiene
                    una pista. En la landing van quemados en el video, asi que se
                    apagan aqui (cc_load_policy solo no basta: YouTube lo ignora). */
+                /* Subtitulos encendidos en el idioma pedido (o.subtitulos: "es" / "en").
+                   En youtube.com salen al darle a CC, pero incrustado YouTube no
+                   los carga solo aunque se le pida con cc_load_policy: hay que
+                   cargar el modulo y elegir la pista a mano. */
+                if(o.subtitulos && !subsPuestos){
+                  subsPuestos = true;
+                  try{ p.loadModule("captions"); }catch(_){}
+                  setTimeout(function(){ try{ p.setOption("captions", "track", { languageCode: o.subtitulos }); }catch(_){} }, 600);
+                }
                 if(o.sinSubtitulos){
                   try{ p.setOption("captions", "track", {}); }catch(_){}
                   try{ p.unloadModule("captions"); p.unloadModule("cc"); }catch(_){}
