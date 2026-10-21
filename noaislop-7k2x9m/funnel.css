@@ -1018,3 +1018,10 @@ body.vsl-page .cursor-ring { display: none; }
   box-shadow: 0 0 12px rgba(68,115,255,0.85);
   transition: width .25s linear;
 }
+
+/* Paso 2 tras el formulario: que se lea que todavia falta agendar. */
+.v-step2 { text-align: center; margin: 4px 0 18px; }
+.v-step2 p { margin: 0; }
+.v-step2-k { font-size: 11px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--f-blue-hi); margin-bottom: 6px !important; }
+.v-step2-t { font-size: 20px; font-weight: 500; color: #fff; line-height: 1.3; }
+.v-step2-s { font-size: 14px; color: rgba(255,255,255,0.72); margin-top: 4px !important; }

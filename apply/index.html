@@ -166,7 +166,8 @@
       <!-- Qualified lead view — shown when budget is $500+ — embeds booking calendar -->
       <div id="formSuccessQualified" class="form-success" style="display:none;">
         <span class="section-num">STATUS</span>
-        <h2 class="contact-headline">booking...</h2>
+        <h2 class="contact-headline">pick a time.</h2>
+        <p class="contact-sub"><b style="color:#fff;font-weight:500">Step 2 of 2: your call isn&rsquo;t booked yet.</b> Pick a time below to confirm it.</p>
         <div class="booking-embed">
           <!-- Calendly inline widget -->
           <div class="calendly-inline-widget"
@@ -330,6 +331,18 @@
           /* Bonus: track qualified leads separately for ad optimization */
           if (isQualified && typeof fbq !== 'undefined') {
             fbq('trackCustom', 'QualifiedLead', { budget: budget });
+          }
+
+          /* El calendario se vuelve a montar con nombre y email ya puestos, para
+             que Calendly no los pida otra vez al confirmar la hora. */
+          if (isQualified && typeof Calendly !== 'undefined' && Calendly.initInlineWidget) {
+            const cal = successEl.querySelector('.calendly-inline-widget');
+            cal.innerHTML = '';
+            /* encodeURIComponent y no searchParams: este pone "+" en los espacios
+               y Calendly los deja tal cual ("Juan+Perez"). */
+            const conDatos = cal.dataset.url + '&name=' + encodeURIComponent(document.getElementById('name').value.trim()) +
+                             '&email=' + encodeURIComponent(document.getElementById('email').value.trim());
+            Calendly.initInlineWidget({ url: conDatos, parentElement: cal });
           }
 
           window.scrollTo({ top: successEl.offsetTop - 100, behavior: 'smooth' });

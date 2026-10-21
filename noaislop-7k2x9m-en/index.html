@@ -23,7 +23,7 @@
   <meta property="og:image" content="https://adsbyblitz.com/assets/work/work_03.jpg">
 
   <link rel="stylesheet" href="../styles.css?v=61">
-  <link rel="stylesheet" href="../noaislop-7k2x9m/funnel.css?v=37">
+  <link rel="stylesheet" href="../noaislop-7k2x9m/funnel.css?v=38">
   <script src="https://assets.calendly.com/assets/external/widget.js" async></script>
   <link rel="icon" type="image/png" href="../assets/blitz-favicon.png">
 
@@ -183,7 +183,13 @@
          filtro delante, un calendario abierto llena la agenda de gente que no
          puede pagar. No hay cambio de pagina: aparece debajo, en el sitio. -->
     <div id="calWrap" hidden>
-      <p class="v-leadnote v-leadnote--ok" id="calIntro"><b>Got it.</b> Pick a time and we will be ready for you.</p>
+      <!-- Paso 2 dicho en voz alta: con "Got it." habia quien creia que ya
+           estaba agendado y se iba sin escoger hora. -->
+      <div class="v-step2" id="calIntro">
+        <p class="v-step2-k">Step 2 of 2</p>
+        <p class="v-step2-t">Your call isn&rsquo;t booked yet.</p>
+        <p class="v-step2-s">Pick a time below to confirm it.</p>
+      </div>
       <div class="calendly-inline-widget" id="cal"
            data-url="https://calendly.com/adsbyblitz/30min?hide_event_type_details=1&hide_gdpr_banner=1&background_color=0b0f17&text_color=ffffff&primary_color=2550f5"
            style="min-width:320px;height:760px;"></div>
@@ -555,7 +561,13 @@
           if(typeof Calendly !== "undefined" && Calendly.initInlineWidget){
             const cal = document.getElementById("cal");
             cal.innerHTML = "";
-            Calendly.initInlineWidget({ url: cal.dataset.url, parentElement: cal });
+            /* Nombre y email ya escritos en el formulario: se le pasan a Calendly
+               para que no los pida otra vez justo al confirmar la hora. */
+            /* encodeURIComponent y no searchParams: este pone "+" en los espacios
+               y Calendly los deja tal cual ("Juan+Perez"). */
+            const conDatos = cal.dataset.url + "&name=" + encodeURIComponent(document.getElementById("name").value.trim()) +
+                             "&email=" + encodeURIComponent(document.getElementById("email").value.trim());
+            Calendly.initInlineWidget({ url: conDatos, parentElement: cal });
           }
           window.scrollTo({ top: wrap.offsetTop - 20, behavior:"smooth" });
         } else {
