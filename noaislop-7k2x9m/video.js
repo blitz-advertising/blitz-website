@@ -97,7 +97,8 @@
         p = new YT.Player(box.querySelector(".yt-host"), {
           host: "https://www.youtube-nocookie.com",
           videoId: id,
-          playerVars: { controls:0, disablekb:1, rel:0, playsinline:1, iv_load_policy:3, fs:0 },
+          playerVars: { controls:0, disablekb:1, rel:0, playsinline:1, iv_load_policy:3, fs:0,
+                        cc_load_policy: o.sinSubtitulos ? 0 : 1 },
           events: {
             onStateChange: function(e){
               if(e.data === YT.PlayerState.PLAYING){
@@ -107,6 +108,13 @@
                 tapa.hidden = false; barra.hidden = false; box.classList.add("yt-arrancado");
                 if(!arrancado){ arrancado = true; pixel(o.evPlay); }
                 ponerVelocidad();
+                /* Los subtitulos de YouTube se encienden solos si el video tiene
+                   una pista. En la landing van quemados en el video, asi que se
+                   apagan aqui (cc_load_policy solo no basta: YouTube lo ignora). */
+                if(o.sinSubtitulos){
+                  try{ p.setOption("captions", "track", {}); }catch(_){}
+                  try{ p.unloadModule("captions"); p.unloadModule("cc"); }catch(_){}
+                }
                 if(!reloj) reloj = setInterval(function(){ mide(p.getCurrentTime(), p.getDuration()); pintarBarra(); }, 250);
               } else if(reloj){ clearInterval(reloj); reloj = null; pintarBarra(); }
               /* Al terminar la tapa se queda puesta (con el boton de play para
