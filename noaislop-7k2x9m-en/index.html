@@ -398,7 +398,10 @@
     /* Sube este numero cada vez que cambies o renumeres las capturas: si no,
        el navegador enseña la version vieja guardada con el mismo nombre. */
     const PROOF_V = 2;
-    const PROOF = [
+    /* En la version en ingles la seccion "what they say" esta quitada por ahora
+       (las capturas son en espanol). Para volver a ponerla: cambia la linea de
+       abajo a  const PROOF = PROOF_GUARDADO;  */
+    const PROOF_GUARDADO = [
       { img:"client-proof-1.jpg",
         en:"\u201cI have never seen AI like this in my life.\u201d" },
       { img:"client-proof-2.jpg",
@@ -408,6 +411,7 @@
       { img:"client-proof-4.jpg",
         en:"\u201cBro, the thumbnail.\u201d" }
     ];
+    const PROOF = [];
 
     montarVideo({
       box: document.getElementById("vslBox"), src: VIDEO_SRC, poster: VIDEO_POSTER,
