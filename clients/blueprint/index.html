@@ -1204,6 +1204,11 @@ function tagDominante(l){
 }
 const esNoInteresado = l => tieneTag(l,"Tag Not Interested");
 const esNoCerro      = l => tieneTag(l,"Tag Not Closed");
+/* La llamada ya paso y no hubo venta: no vino, o vino y no cerro. Lo dice el
+   CRM (lo marca el closer), no el tag. Antes solo contaba el tag de ManyChat:
+   alguien marcado "No vino" en el CRM sin Tag Not Closed no salia en Archivo, y
+   pasado su mes tampoco en Llamadas — no salia en ninguna pestaña. */
+const llamadaSinVenta = l => esNoCerro(l) || l.cierre === false || l.show === false;
 /* Manda el estado del CRM, no el tag suelto: el sync ya traduce "Tag Booked" a
    pendingBook. Mirar el tag ademas hacia que un lead devuelto a la cola rebotara
    a Llamadas mientras el Sheet no se actualizara. */
@@ -1224,7 +1229,7 @@ function segmento(l){
      "cliente", un segmento que no pintaba ninguna pestaña: no salian en ningun
      listado y solo se les veia en "Cerradas". */
   if(l.cierre === true || tieneTag(l,"Tag Client")) return "archivo";
-  if(esNoInteresado(l) || esNoCerro(l) || l.estado === "muerto") return "archivo";
+  if(esNoInteresado(l) || llamadaSinVenta(l) || l.estado === "muerto") return "archivo";
   if(yaAgendo(l)) return "llamadas";
   const c = calor(l);
   if(c === 40 || c === 30) return "interesados";   /* Interest / Interest Buildup */
@@ -2510,7 +2515,7 @@ function zonaDe(l){
      Los "no cerro" y los "no interesado" no bajan aunque esten archivados: eso
      paso de verdad y es historial, no algo que se saco. */
   if(l.cierre === true || tieneTag(l,"Tag Client")) return l.seed ? "archivado" : "cliente";
-  if(esNoCerro(l))      return "nocerro";
+  if(llamadaSinVenta(l)) return "nocerro";
   if(esNoInteresado(l)) return "nointeres";
   /* Quedarse sin tags no es un motivo aparte: el propio flow de ManyChat saca
      de la secuencia a quien se queda sin ninguno. Es archivado y ya. */
@@ -2525,7 +2530,9 @@ function estadoArchivoChip(l){
      sacaron. */
   const z = zonaDe(l);
   if(z === "cliente")   return '<span class="heat client"><i class="em">💪🏼</i>Cliente</span>';
-  if(z === "nocerro")   return '<span class="heat dead"><i class="em">👎🏼</i>No cerró</span>';
+  if(z === "nocerro")   return l.show === false
+    ? '<span class="heat dead"><i class="em">👻</i>No vino</span>'
+    : '<span class="heat dead"><i class="em">👎🏼</i>No cerró</span>';
   if(z === "nointeres") return '<span class="heat dead"><i class="em">🚫</i>No interesado</span>';
   return '<span class="heat dead"><i class="em">🗄️</i>Archivado</span>';
 }
@@ -2540,7 +2547,9 @@ function motivoChip(l){
   const chip = (em, txt, cls) => '<span class="heat '+(cls||"")+'"><i class="em">'+em+'</i>'+esc(txt)+'</span>';
   /* En los que no cerraron, lo que importa no es que no cerraron —eso ya lo
      dice el grupo— sino POR QUE. Y si falta, que se vea que falta. */
-  if(esNoCerro(l)) return l.objecion
+  /* Un "no vino" no tiene objecion que pedir: no hubo llamada. */
+  if(l.show === false && !esNoCerro(l)) return chip("👻", "No se presentó", "dead");
+  if(llamadaSinVenta(l)) return l.objecion
     ? chip("👎🏼", l.objecion, "dead")
     : chip("👎🏼", "falta la objeción", "warn");
   if(esNoInteresado(l)) return chip("🚫","No interesado","dead");
