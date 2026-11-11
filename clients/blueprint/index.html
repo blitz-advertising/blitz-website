@@ -2953,10 +2953,9 @@ function mesesHTML(){
           '<button class="btn sm primary" data-cobro="'+l.id+'|'+p.mes+'">Marcar cobrado</button>' +
           botonBaja(l, p.mes) + '</span>';
     return '<tr'+(p.cobrado ? '' : ' class="pendiente"')+'>' +
-      /* El nombre abre la ficha, como en el resto de tablas. Instagram va aparte,
-         en la flechita, por si hace falta. */
-      '<td><button class="linkish" data-open="'+l.id+'">@'+esc(l.handle)+'</button> ' +
-        '<a class="iglink" href="'+igUrl(l.handle)+'" target="_blank" rel="noopener noreferrer" title="Abrir en Instagram" style="text-decoration:none">↗</a></td>' +
+      /* El nombre abre la ficha, como en el resto de tablas. A Instagram solo se
+         va desde el bloque "Instagram" de la ficha. */
+      '<td><button class="linkish" data-open="'+l.id+'">@'+esc(l.handle)+'</button></td>' +
       '<td style="color:var(--ink-2)">' + esc(l.oferta || "—") + '</td>' +
       '<td class="r mono">' + (p.importe > 0
         ? money(p.importe)
@@ -3978,13 +3977,13 @@ function drawer(){
   '<div class="scrim" data-act="closeDrawer"></div>' +
   '<div class="drawer" role="dialog" aria-label="Detalle del lead">' +
     '<div class="drawer-head">' +
-      (l.handle ? '<h3 class="mono">'+igLink(l.handle)+'</h3>' : '<h3 class="mono">@nuevo</h3>') +
+      (l.handle ? '<h3 class="mono">@'+esc(l.handle)+'</h3>' : '<h3 class="mono">@nuevo</h3>') +
       '<button class="btn sm ghost" data-act="closeDrawer">Cerrar</button>' +
     '</div>' +
     '<div class="drawer-body">' +
       '<div class="fieldset">'+steps+'</div>' +
 
-      '<div class="fieldset"><p class="eyebrow">Identidad</p>' +
+      '<div class="fieldset"><p class="eyebrow">Instagram</p>' +
         (EDITID ?
           '<div class="grid2">' +
             '<div><label class="f" for="d_handle">@Handle</label><input type="text" id="d_handle" data-f="handle" value="'+esc(l.handle)+'" class="mono"></div>' +
