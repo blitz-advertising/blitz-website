@@ -2953,7 +2953,10 @@ function mesesHTML(){
           '<button class="btn sm primary" data-cobro="'+l.id+'|'+p.mes+'">Marcar cobrado</button>' +
           botonBaja(l, p.mes) + '</span>';
     return '<tr'+(p.cobrado ? '' : ' class="pendiente"')+'>' +
-      '<td>' + igLink(l.handle) + '</td>' +
+      /* El nombre abre la ficha, como en el resto de tablas. Instagram va aparte,
+         en la flechita, por si hace falta. */
+      '<td><button class="linkish" data-open="'+l.id+'">@'+esc(l.handle)+'</button> ' +
+        '<a class="iglink" href="'+igUrl(l.handle)+'" target="_blank" rel="noopener noreferrer" title="Abrir en Instagram" style="text-decoration:none">↗</a></td>' +
       '<td style="color:var(--ink-2)">' + esc(l.oferta || "—") + '</td>' +
       '<td class="r mono">' + (p.importe > 0
         ? money(p.importe)
