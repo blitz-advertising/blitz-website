@@ -2416,14 +2416,22 @@ function planPagoHTML(l){
         ? '<span class="chip good">al cerrar</span>'
         : p.cobrado
           ? '<button class="chip good cobrobtn" data-cobro="'+l.id+'|'+p.mes+'" title="Marcar como no cobrado">cobrado</button>'
-          : '<button class="btn sm primary" data-cobro="'+l.id+'|'+p.mes+'">Marcar cobrado</button>') +
+          : '<button class="btn sm primary" data-cobro="'+l.id+'|'+p.mes+'">Marcar cobrado</button>' +
+            (puedeEditar ? botonBaja(l, p.mes) : "")) +
     '</div>').join("");
+
+  const baja = l.cobros && typeof l.cobros.baja === "string" ? l.cobros.baja : "";
+  const avisoBaja = baja
+    ? '<p class="helptext" style="margin:0;color:var(--warn)">Dejó de pagar en ' + esc(nombreMes(baja)) +
+        ': pagó ' + pagos.length + ' de ' + n + ' meses. ' +
+        (puedeEditar ? '<button class="linkish" data-desbaja="'+l.id+'">Deshacer</button>' : "") + '</p>'
+    : "";
 
   return '<div class="planpago">' + selector + campoMeses +
     '<p class="helptext" style="margin:0">' +
       '<b>'+money(imp)+' cada mes · '+n+' meses</b> = '+money(imp*n)+' en total. ' +
       'Llevas '+money(cobrado)+' cobrado.' +
-    '</p>' +
+    '</p>' + avisoBaja +
     '<div class="cobros">'+lista+'</div>' +
   '</div>';
 }
@@ -2779,8 +2787,14 @@ function ofertaLlevaMeses(l){ return /(\d+)\s*m\b/i.test(String(l.oferta||"")); 
    contrato son las cuotas juntas. Es lo que vale la venta, no lo cobrado. */
 function valorContrato(l){
   const imp = +l.importe || 0;
-  return l.pago === "mensual" ? imp * mesesDelPlan(l) : imp;
+  if(l.pago !== "mensual") return imp;
+  /* Si dejo de pagar, el contrato vale lo que llego a pagar, no el plan entero. */
+  const nBaja = (l.cobros && l.cobros.baja && l.cierreAt) ? pagosDe(l).length : 0;
+  return imp * (nBaja || mesesDelPlan(l));
 }
+/* El boton "Dejó de pagar" va junto a cada cuota pendiente. */
+const botonBaja = (l, mes) =>
+  '<button class="btn sm ghost" data-baja="'+l.id+'|'+mes+'" title="Ya no va a pagar: quita este mes y los siguientes">Dejó de pagar</button>';
 
 /* La tasa de comision que regia en un mes dado. Manda la ultima entrada del
    historial cuyo "desde" ya habia llegado. */
@@ -2820,9 +2834,15 @@ function pagosDe(l){
   }
   const n = mesesDelPlan(l);
   const cobros = l.cobros || {};
+  /* cobros.baja = "2026-11": dejo de pagar ese mes. Desde ahi no se le debe
+     nada: esos meses dejan de salir como "por cobrar". Va dentro de `cobros`
+     (y no en un campo nuevo) para que el trigger guardia_leads no haya que
+     tocarlo. El primer mes nunca se quita: ese se cobro al cerrar. */
+  const baja = typeof cobros.baja === "string" ? cobros.baja : "";
   const out = [];
   for(let i = 0; i < n; i++){
     const mes = sumarMeses(base, i);
+    if(baja && i > 0 && mes >= baja) break;
     const marca = cobros[mes];
     const cobrado = i === 0 || !!marca;
     out.push({ lead:l, mes, importe:imp, n:i+1, de:n, cobrado, unico:false,
@@ -2929,7 +2949,9 @@ function mesesHTML(){
       ? (p.unico || p.n === 1
           ? '<span class="chip good">cobrado</span>'
           : '<button class="chip good cobrobtn" data-cobro="'+l.id+'|'+p.mes+'" title="Marcar como no cobrado">cobrado</button>')
-      : '<button class="btn sm primary" data-cobro="'+l.id+'|'+p.mes+'">Marcar cobrado</button>';
+      : '<span style="display:inline-flex;gap:6px;flex-wrap:wrap">' +
+          '<button class="btn sm primary" data-cobro="'+l.id+'|'+p.mes+'">Marcar cobrado</button>' +
+          botonBaja(l, p.mes) + '</span>';
     return '<tr'+(p.cobrado ? '' : ' class="pendiente"')+'>' +
       '<td>' + igLink(l.handle) + '</td>' +
       '<td style="color:var(--ink-2)">' + esc(l.oferta || "—") + '</td>' +
@@ -4117,6 +4139,31 @@ document.addEventListener("click", async (e) => {
     toast(cobros[mes]
       ? "Cobrado: "+nombreMes(mes)+" de @"+l.handle+"."
       : nombreMes(mes)+" de @"+l.handle+" vuelve a pendiente.");
+    return;
+  }
+  /* Cliente mensual que dejo de pagar: desde ese mes ya no se le debe nada.
+     No se borra ni se archiva: lo que pago sigue contando en su mes. */
+  if(t.dataset.baja){
+    const partes = t.dataset.baja.split("|");
+    const l = getLead(partes[0]); if(!l) return;
+    const mes = partes[1];
+    const ok = await confirmar({
+      titulo: "@"+l.handle+" dejó de pagar",
+      texto: "Desde "+nombreMes(mes)+" ya no se le cuenta nada por cobrar. Lo que ya pagó se queda contado. Se puede deshacer desde su ficha.",
+      ok: "Sí, dejó de pagar", peligro: true });
+    if(!ok) return;
+    l.cobros = Object.assign({}, l.cobros || {}, { baja: mes });
+    await persist(l);
+    toast("@"+l.handle+": sin cobros desde "+nombreMes(mes)+".");
+    return;
+  }
+  if(t.dataset.desbaja){
+    const l = getLead(t.dataset.desbaja); if(!l) return;
+    const cobros = Object.assign({}, l.cobros || {});
+    delete cobros.baja;
+    l.cobros = cobros;
+    await persist(l);
+    toast("@"+l.handle+" vuelve a tener sus cuotas pendientes.");
     return;
   }
   if(t.dataset.open){ OPEN = t.dataset.open; EDITID = false; drawer(); return; }
